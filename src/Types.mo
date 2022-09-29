@@ -26,7 +26,12 @@ module{
     public type TxIndex = Nat;
     public type TxLog = StableBuffer<Transaction>;
 
-    public type Value = { #Nat : Nat; #Int : Int; #Blob : Blob; #Text : Text; };
+    public type Value = { 
+        #Nat : Nat; 
+        #Int : Int; 
+        #Blob : Blob; 
+        #Text : Text; 
+    };
 
     public type MetaDatum = (Text, Value);
 
@@ -44,6 +49,20 @@ module{
         memo : Memo;
         fee : Balance;
         time : Timestamp;
+    };
+
+    public type MintArgs = {
+        to : Account;
+        amount : Balance;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
+    };
+
+    public type BurnArgs = {
+        from : Account;
+        amount : Balance;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
     };
 
     public type TransferArgs = {
@@ -99,9 +118,9 @@ module{
 
         icrc1_balance_of : query (Account) -> async Balance;
 
-        icrc1_transfer : query (TransferArgs) -> async Result.Result<Balance, TransferError>;
+        icrc1_transfer : (TransferArgs) -> async Result.Result<Balance, TransferError>;
 
-        icrc1_supported_standards : () -> async [SupportedStandard]
+        icrc1_supported_standards : query () -> async [SupportedStandard]
     };
 
     public type InitArgs = {

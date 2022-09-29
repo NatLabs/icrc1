@@ -21,7 +21,10 @@ module ICRC1 {
 
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
-    public type TransferArgs = T.TransferArgs; 
+    public type TransferArgs = T.TransferArgs;
+    public type MintArgs = T.MintArgs; 
+    public type BurnArgs = T.BurnArgs; 
+    public type InternalTransferArgs = T.InternalTransferArgs; 
     public type TransferError = T.TransferError; 
 
     public type SupportedStandard = T.SupportedStandard;
@@ -119,139 +122,49 @@ module ICRC1 {
         SB.toArray(token.supported_standards)
     };
 
-    /// Initialize a new ICRC-1 from pre-existing token data
-    // public func fromICRC1(args: InitArgs) : InternalData {
-        
-    //     var accounts : AccountStore =  STMap.new(Principal.equal, Principal.hash);
-    //     var max_supply = args.max_supply;
+    public func mint(token: InternalData, args: MintArgs) : Result.Result<(), TransferError>{
+        let internal_args = {
+            sender = token.minting_account;
+            recipient = args.to;
+            amount = args.amount;
+            fee = null;
+            memo = args.memo;
+            created_at_time = args.created_at_time;
+        };
 
-    //     let minting_account = switch(args.minting_account){
-    //         case(?main) {
-    //             if (not U.validate_subaccount(main.subaccount)){
-    //                 Debug.trap("minting_account has an invalid Subaccount");
-    //             };
+        switch(U.validate_transfer(token, internal_args)){
+            case(#err(errorType)){
+                return #err(errorType);
+            };
+            case (_){};
+        };
 
-    //             main
-    //         };
-    //         case (_) {
-    //             if (not U.validate_subaccount(args.canister.subaccount)){
-    //                 Debug.trap("canister has an invalid Subaccount");
-    //             };
+        _transfer(token.accounts, internal_args);
 
-    //             args.canister
-    //         };
-    //     };
+        #ok()
+    };
 
-    //     let minting_subaccount = switch(minting_account.subaccount){
-    //         case(?sub) sub;
-    //         case(_) U.default_subaccount();
-    //     };
+    public func burn(token: InternalData, args: BurnArgs) : Result.Result<(), TransferError>{
+        let internal_args = {
+            sender = args.from;
+            recipient = token.minting_account;
+            amount = args.amount;
+            fee = null;
+            memo = args.memo;
+            created_at_time = args.created_at_time;
+        };
 
-    //     STMap.put(
-    //         accounts, 
-    //         minting_account.owner, 
-    //         U.new_subaccount_map(
-    //             minting_account.subaccount, 
-    //             args.total_supply
-    //         )
-    //     );
+        switch(U.validate_transfer(token, internal_args)){
+            case(#err(errorType)){
+                return #err(errorType);
+            };
+            case (_){};
+        };
 
-    //     switch(args.accounts){
-    //         case (?init_accounts){
-    //             if (init_accounts.size() > 0){
-    //                 total_supply:= 0;
-    //             };
+        _transfer(token.accounts, internal_args);
 
-    //             for ((owner, subs) in init_accounts.vals()){
-    //                 if (Principal.isAnonymous(owner)){
-    //                     Debug.trap("Anonymous Principal (2vxsx-fae) is not allowed");
-    //                 };
-
-    //                 let sub_map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
-
-    //                 for ((sub, balance) in subs.vals()){
-    //                     if (U.validate_subaccount(?sub)){
-    //                         STMap.put(sub_map, sub, balance);
-    //                     }else{
-    //                         Debug.trap("Invalid Subaccount ");
-    //                     };
-
-    //                     total_supply += balance;
-    //                 };
-
-    //                 STMap.put(accounts, owner, sub_map);
-    //             };
-    //         };
-    //         case (_){};
-    //     };
-
-    //     let metadata = switch(args.metadata){
-    //         case(?data){
-    //             SB.fromArray<MetaDatum>(data)
-    //         };
-    //         case(_){
-    //             SB.initPresized<MetaDatum>(4);
-    //         };
-    //     };
-
-    //     SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
-    //     SB.add(metadata, ("icrc1:name", #Text(args.name)));
-    //     SB.add(metadata, ("icrc1:symbol", #Text(args.symbol)));
-    //     SB.add(metadata, ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))));
-        
-    //     let supported_standards = switch(args.supported_standards){
-    //         case(?standards){
-    //             SB.fromArray<SupportedStandard>(standards)
-    //         };
-    //         case(_){
-    //             SB.initPresized<SupportedStandard>(1);
-    //         };
-    //     };
-
-    //     let default_standard : SupportedStandard = {
-    //         name = "ICRC-1";
-    //         url = "https://github.com/dfinity/ICRC-1";
-    //     };
-        
-    //     SB.add(supported_standards, default_standard);
-        
-    //     let store_transactions = switch(args.store_transactions){
-    //         case (?val) val == true;
-    //         case (_) false;
-    //     };
-
-    //     let transactions : ?T.TxLog = switch((store_transactions, args.transactions)){
-    //         case (true, ?txs) ?SB.fromArray(txs);
-    //         case (_) null;
-    //     };
-
-    //     let transaction_window = switch(args.transaction_window){
-    //         case(?seconds){
-    //             Nat64.max(seconds, 60) * 1_000_000_000
-    //         };
-    //         case(_){
-    //             (24 * 60 * 60 * 1_000_000_000) : Nat64
-    //         };
-    //     };
-
-    //     {
-    //         var name = args.name;
-    //         var symbol = args.symbol;
-    //         var fee = args.fee;
-    //         var total_supply = total_supply;
-
-    //         decimals = args.decimals;
-    //         var controller = args.controller;
-    //         canister = args.canister;
-    //         accounts;
-    //         metadata;
-    //         minting_account;
-    //         supported_standards;
-    //         transaction_window;
-    //         store_transactions;
-    //         transactions;
-    //     }
-    // };
+        #ok()
+    };
 
     public func transfer(token: InternalData, args: TransferArgs, caller : Principal) : Result.Result<(), TransferError> { 
         let {
@@ -294,7 +207,7 @@ module ICRC1 {
             };
         };
         
-        switch(U.validate_transfer(accounts, internal_args)){
+        switch(U.validate_transfer(token, internal_args)){
             case(#err(errorType)){
                 return #err(errorType);
             };
@@ -304,4 +217,23 @@ module ICRC1 {
         #ok()
     };
 
+    func _transfer(accounts: AccountStore, args: InternalTransferArgs){
+        let { sender; recipient; amount } = args;
+
+        U.update_balance(
+            accounts,
+            sender,
+            func (balance){
+                balance - amount
+            }
+        );
+
+        U.update_balance(
+            accounts,
+            recipient,
+            func (balance){
+                balance + amount
+            }
+        );
+    };
 };

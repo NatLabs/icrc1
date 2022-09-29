@@ -1,7 +1,10 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Int "mo:base/Int";
+import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
+import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Time "mo:base/Time";
@@ -22,7 +25,7 @@ module{
 
         metadata
     };
-
+    
     public let default_standard : T.SupportedStandard = {
        name = "ICRC-1";
        url = "https://github.com/dfinity/ICRC-1";
@@ -65,24 +68,29 @@ module{
         };
     };
 
-    // public func validate_transaction_time(transaction_window: T.Timestamp, _created_at_time: ?T.Timestamp): Result.Result<(), T.TimeError>{
-    //     let now = Time.now();
-    //     let created_at_time = Option.get(_created_at_time, now);
+    public func validate_transaction_time(transaction_window: T.Timestamp, _created_at_time: ?T.Timestamp): Result.Result<(), T.TimeError>{
+        let now = Time.now();
+        let created_at_time = switch(_created_at_time){
+            case(?time_in_nat64){
+                Nat64.toNat(time_in_nat64) : Int
+            };
+            case(_) now;
+        };
 
-    //     let diff = now - created_at_time;
+        let diff = now - created_at_time;
         
-    //     if (created_at_time > now){
-    //         return #err(
-    //             #CreatedInFuture{
-    //                 ledger_time : now;
-    //             }
-    //         );
-    //     }else if (diff > transaction_window){
-    //         return #err(#TooOld);
-    //     };
+        if (created_at_time > now){
+            return #err(
+                #CreatedInFuture{
+                    ledger_time = Nat64.fromNat(Int.abs(now));
+                }
+            );
+        }else if (diff > (Nat64.toNat(transaction_window) : Int ) ){
+            return #err(#TooOld);
+        };
 
-    //     #ok()
-    // };
+        #ok()
+    };
 
     public func default_subaccount(): T.Subaccount {
         Blob.fromArray(
@@ -92,6 +100,7 @@ module{
 
     public func new_subaccount_map(subaccount: ?T.Subaccount, balance: T.Balance): T.SubaccountStore {
         let map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
+        
         STMap.put(
             map, 
             Option.get(subaccount, default_subaccount()), 
@@ -127,6 +136,34 @@ module{
         };
     };
 
+    public func update_balance(accounts: T.AccountStore, req: T.Account, update: (T.Balance) -> T.Balance) {
+
+        let subaccount = switch(req.subaccount){
+            case(?sub) sub;
+            case(_) default_subaccount();
+        };
+
+        switch(STMap.get(accounts, req.owner)){
+            case(?subaccounts){
+                switch(STMap.get(subaccounts, subaccount)){
+                    case(?balance){
+                        STMap.put(subaccounts, subaccount, update(balance));
+                    };
+                    case(_) {
+                        STMap.put(subaccounts, subaccount, update(0));
+                    };
+                };
+            };
+            case(_) {
+                STMap.put(
+                    accounts, 
+                    req.owner, 
+                    new_subaccount_map(?subaccount, update(0))
+                );
+            };
+        };
+    };
+
     public func transfer_args_to_internal(args: T.TransferArgs, caller : Principal) : T.InternalTransferArgs{
         {
             sender = {
@@ -141,9 +178,9 @@ module{
         }
     };
 
-    public func validate_transfer(accounts: T.AccountStore, args : T.InternalTransferArgs) : Result.Result<(), T.TransferError>{
+    public func validate_transfer(token: T.InternalData, args : T.InternalTransferArgs) : Result.Result<(), T.TransferError>{
 
-        if (validate_account(args.sender)){
+        if (not validate_account(args.sender)){
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -152,7 +189,7 @@ module{
             );
         };
 
-        if (validate_account(args.recipient)){
+        if (not validate_account(args.recipient)){
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -170,18 +207,18 @@ module{
             );
         }; 
 
-        // switch(validate_transaction_time(transaction_window, args.Collaterised)){
-        //     case(#err(errorMsg)){
-        //         return errorMsg;
-        //     };
-        //     case (_){};
-        // };
+        switch(validate_transaction_time(token.transaction_window, args.created_at_time)){
+            case(#err(errorMsg)){
+                return #err(errorMsg);
+            };
+            case (_){};
+        };
 
-        let sender_balance : T.Balance = get_balance(accounts, args.sender);
-        
-        // if (100 > sender_balance){
-        //     return #err(#InsufficientFunds);
-        // };
+        let sender_balance : T.Balance = get_balance(token.accounts, args.sender);
+
+        if (args.amount > sender_balance){
+            return #err(#InsufficientFunds { balance = sender_balance});
+        };
 
         #ok()
     };

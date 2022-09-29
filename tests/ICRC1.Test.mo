@@ -1,6 +1,7 @@
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
+import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
 
 import SB "mo:StableBuffer/StableBuffer";
@@ -22,6 +23,11 @@ let controller : ICRC1.Account = {
 
 let canister : ICRC1.Account = {
     owner = Principal.fromText("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
+    subaccount = null;
+};
+
+let user1 : ICRC1.Account = {
+    owner = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
     subaccount = null;
 };
 
@@ -128,6 +134,116 @@ let success = run([
                 ICRC1.total_supply(token) == 0
             )
         }),
+
+        it("metadata()", do{
+            let args = default_token_args;
+
+            let token= ICRC1.init(args);
+
+            assertTrue(
+                ICRC1.metadata(token) == [
+                    ("icrc1:fee", #Nat(args.fee)),
+                    ("icrc1:name", #Text(args.name)),
+                    ("icrc1:symbol", #Text(args.symbol)),
+                    ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))),
+                ]
+            )
+        }),
+
+        it("supported_standards()", do{
+            let args = default_token_args;
+
+            let token = ICRC1.init(args);
+
+            assertTrue(
+                ICRC1.supported_standards(token) == [
+                    {
+                        name = "ICRC-1";
+                        url = "https://github.com/dfinity/ICRC-1";
+                    }
+                ]
+            )
+        }),
+
+        it("mint()", do{
+            let args = default_token_args;
+
+            let token = ICRC1.init(args);
+
+            let mint_args : ICRC1.MintArgs = {
+                to = user1;
+                amount = 200 * (10 ** Nat8.toNat(args.decimals));
+                memo = null;
+                created_at_time = null;
+            };
+
+            let res = ICRC1.mint(token, mint_args);
+
+            assertAllTrue([
+                res == #ok(),
+                ICRC1.balance_of(token, user1) == mint_args.amount,
+                ICRC1.balance_of(token, args.minting_account) == args.max_supply - mint_args.amount,
+                ICRC1.total_supply(token) == mint_args.amount,
+            ])
+        }),
+
+        describe("burn()", [
+            it("from funded account", do{
+                let args = default_token_args;
+
+                let token = ICRC1.init(args);
+
+                let mint_args : ICRC1.MintArgs = {
+                    to = user1;
+                    amount = 200 * (10 ** Nat8.toNat(args.decimals));
+                    memo = null;
+                    created_at_time = null;
+                };
+
+                ignore ICRC1.mint(token, mint_args);
+
+                let burn_args : ICRC1.BurnArgs = {
+                    from = user1;
+                    amount = 50 * (10 ** Nat8.toNat(args.decimals));
+                    memo = null;
+                    created_at_time = null;
+                };
+
+                let prev_balance = ICRC1.balance_of(token, user1);
+                let prev_total_supply = ICRC1.total_supply(token);
+                let res = ICRC1.burn(token, burn_args);
+
+                assertAllTrue([
+                    res == #ok(),
+                    ICRC1.balance_of(token, user1) == prev_balance - burn_args.amount,
+                    ICRC1.total_supply(token) == prev_total_supply - burn_args.amount
+                ])
+            }),
+            it("from an empty account", do{
+                let args = default_token_args;
+
+                let token = ICRC1.init(args);
+
+                let burn_args : ICRC1.BurnArgs = {
+                    from = user1;
+                    amount = 200 * (10 ** Nat8.toNat(args.decimals));
+                    memo = null;
+                    created_at_time = null;
+                };
+
+                let prev_balance = ICRC1.balance_of(token, user1);
+                let prev_total_supply = ICRC1.total_supply(token);
+                let res = ICRC1.burn(token, burn_args);
+
+                assertAllTrue([
+                    res == #err( 
+                        #InsufficientFunds{
+                            balance = 0;
+                        }
+                    ),
+                ])
+            }),
+        ]),
     ])
 ]);
 
