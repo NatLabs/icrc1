@@ -214,6 +214,8 @@ module ICRC1 {
             case(#ok(_)){};
         };
         
+        _transfer(token.accounts, internal_args);
+
         #ok()
     };
 
