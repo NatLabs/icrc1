@@ -180,6 +180,15 @@ module{
 
     public func validate_transfer(token: T.InternalData, args : T.InternalTransferArgs) : Result.Result<(), T.TransferError>{
 
+        if (args.sender == args.recipient){
+            return #err(
+                #GenericError({
+                    error_code = 0;
+                    message = "The sender cannot have the same account as the recipient."
+                })
+            );
+        };
+
         if (not validate_account(args.sender)){
             return #err(
                 #GenericError({

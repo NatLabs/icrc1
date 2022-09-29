@@ -11,15 +11,9 @@ import ActorSpec "./utils/ActorSpec";
 import ICRC1 "../src/";
 import U "../src/Utils";
 
-
 let {
     assertTrue; assertFalse; assertAllTrue; describe; it; skip; pending; run
 } = ActorSpec;
-
-let controller : ICRC1.Account = {
-    owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
-    subaccount = null;
-};
 
 let canister : ICRC1.Account = {
     owner = Principal.fromText("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
@@ -28,6 +22,11 @@ let canister : ICRC1.Account = {
 
 let user1 : ICRC1.Account = {
     owner = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
+    subaccount = null;
+};
+
+let user2 : ICRC1.Account = {
+    owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
     subaccount = null;
 };
 
@@ -177,10 +176,10 @@ let success = run([
                 created_at_time = null;
             };
 
-            let res = ICRC1.mint(token, mint_args);
+            let res = ICRC1.mint(token, mint_args, args.minting_account.owner);
 
             assertAllTrue([
-                res == #ok(),
+                res == #ok(mint_args.amount),
                 ICRC1.balance_of(token, user1) == mint_args.amount,
                 ICRC1.balance_of(token, args.minting_account) == args.max_supply - mint_args.amount,
                 ICRC1.total_supply(token) == mint_args.amount,
@@ -200,10 +199,10 @@ let success = run([
                     created_at_time = null;
                 };
 
-                ignore ICRC1.mint(token, mint_args);
+                ignore ICRC1.mint(token, mint_args, args.minting_account.owner);
 
                 let burn_args : ICRC1.BurnArgs = {
-                    from = user1;
+                    from_subaccount = user1.subaccount;
                     amount = 50 * (10 ** Nat8.toNat(args.decimals));
                     memo = null;
                     created_at_time = null;
@@ -211,10 +210,10 @@ let success = run([
 
                 let prev_balance = ICRC1.balance_of(token, user1);
                 let prev_total_supply = ICRC1.total_supply(token);
-                let res = ICRC1.burn(token, burn_args);
+                let res = ICRC1.burn(token, burn_args, user1.owner);
 
                 assertAllTrue([
-                    res == #ok(),
+                    res == #ok(burn_args.amount),
                     ICRC1.balance_of(token, user1) == prev_balance - burn_args.amount,
                     ICRC1.total_supply(token) == prev_total_supply - burn_args.amount
                 ])
@@ -225,7 +224,7 @@ let success = run([
                 let token = ICRC1.init(args);
 
                 let burn_args : ICRC1.BurnArgs = {
-                    from = user1;
+                    from_subaccount = user1.subaccount;
                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                     memo = null;
                     created_at_time = null;
@@ -233,7 +232,7 @@ let success = run([
 
                 let prev_balance = ICRC1.balance_of(token, user1);
                 let prev_total_supply = ICRC1.total_supply(token);
-                let res = ICRC1.burn(token, burn_args);
+                let res = ICRC1.burn(token, burn_args, user1.owner);
 
                 assertAllTrue([
                     res == #err( 
@@ -244,6 +243,45 @@ let success = run([
                 ])
             }),
         ]),
+        describe("transfer()", [
+            it("Transfer from funded account", do{
+                let args = default_token_args;
+                let token = ICRC1.init(args);
+
+                let mint_args = {
+                    to = user1;
+                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                    memo = null;
+                    created_at_time = null;
+                };
+
+                ignore ICRC1.mint(token, mint_args, args.minting_account.owner);
+
+                let transfer_args : ICRC1.TransferArgs = {
+                    from_subaccount = user1.subaccount;
+                    to = user2;
+                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                    fee = ?token.fee;
+                    memo = null;
+                    created_at_time = null;
+                };
+
+                let prev = {
+                    balance1 = ICRC1.balance_of(token, user1);
+                    balance2 = ICRC1.balance_of(token, user2);
+                    total_supply = ICRC1.total_supply(token);
+                };
+
+                let res = ICRC1.transfer(token, transfer_args, user1.owner);
+
+                assertAllTrue([
+                    res == #ok(transfer_args.amount),
+                    ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
+                    ICRC1.balance_of(token, user2) == prev.balance2 + transfer_args.amount,
+                    ICRC1.total_supply(token) == prev.total_supply,
+                ])
+            }),
+        ])
     ])
 ]);
 

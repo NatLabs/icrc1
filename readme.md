@@ -2,3 +2,5 @@
 This repo contains the implementation of the 
 [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
 
+### References and other implementations
+- [demergent-labs/ICRC-1 | Typescript](https://github.com/demergent-labs/ICRC-1)

@@ -33,6 +33,7 @@ module ICRC1 {
     public type InternalData = T.InternalData;
     public type MetaDatum = T.MetaDatum;
     public type TxLog = T.TxLog;
+    public type Interface = T.Interface;
 
     /// Initialize a new ICRC-1 token
     public func init(args: InitArgs) : InternalData{
@@ -51,7 +52,7 @@ module ICRC1 {
         };
 
         if (max_supply < 10 ** Nat8.toNat(decimals)){
-            Debug.trap("max_supply >= 1");
+            Debug.trap("max_supply must be >= 1");
         };
 
         let accounts : AccountStore = STMap.new(Principal.equal, Principal.hash);
@@ -122,7 +123,17 @@ module ICRC1 {
         SB.toArray(token.supported_standards)
     };
 
-    public func mint(token: InternalData, args: MintArgs) : Result.Result<(), TransferError>{
+    public func mint(token: InternalData, args: MintArgs, caller : Principal) : Result.Result<Balance, TransferError>{
+        
+        if (not (caller == token.minting_account.owner)){
+            return #err(
+                #GenericError{ 
+                    error_code = 401; 
+                    message = "Unauthorized: Only the minting_account can mint tokens."
+                }
+            );
+        };
+
         let internal_args = {
             sender = token.minting_account;
             recipient = args.to;
@@ -141,12 +152,16 @@ module ICRC1 {
 
         _transfer(token.accounts, internal_args);
 
-        #ok()
+        #ok(internal_args.amount)
     };
 
-    public func burn(token: InternalData, args: BurnArgs) : Result.Result<(), TransferError>{
+    public func burn(token: InternalData, args: BurnArgs, caller : Principal) : Result.Result<Balance, TransferError>{
+
         let internal_args = {
-            sender = args.from;
+            sender = {
+                owner = caller;
+                subaccount = args.from_subaccount;
+            };
             recipient = token.minting_account;
             amount = args.amount;
             fee = null;
@@ -163,10 +178,10 @@ module ICRC1 {
 
         _transfer(token.accounts, internal_args);
 
-        #ok()
+        #ok(internal_args.amount)
     };
 
-    public func transfer(token: InternalData, args: TransferArgs, caller : Principal) : Result.Result<(), TransferError> { 
+    public func transfer(token: InternalData, args: TransferArgs, caller : Principal) : Result.Result<Balance, TransferError> { 
         let {
             accounts; 
             minting_account; 
@@ -216,7 +231,7 @@ module ICRC1 {
         
         _transfer(token.accounts, internal_args);
 
-        #ok()
+        #ok(internal_args.amount)
     };
 
     func _transfer(accounts: AccountStore, args: InternalTransferArgs){

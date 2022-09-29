@@ -2,14 +2,14 @@
     "version": 1,
     "dfx": "0.11.2",
     "canisters": {
-        "icrc1-stable": {
+        "example": {
             "type": "motoko",
-            "main": "example/icrc1-stable/main.mo"
+            "main": "src/main.mo"
         }
     },
     "defaults": {
         "build": {
-            "packtool": "vessel sources",
+            "packtool": "",
             "args": ""
         }
     },

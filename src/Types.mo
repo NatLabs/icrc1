@@ -59,7 +59,7 @@ module{
     };
 
     public type BurnArgs = {
-        from : Account;
+        from_subaccount : ?Subaccount;
         amount : Balance;
         memo : ?Blob;
         created_at_time : ?Nat64;
@@ -98,7 +98,7 @@ module{
     };
 
     /// Interface for the ICRC token canister
-    public type TokenAPI = actor {
+    public type Interface = actor {
 
         /// Returns the name of the token
         icrc1_name : query () -> async Text;
@@ -106,7 +106,7 @@ module{
         /// Returns the symbol of the token
         icrc1_symbol : query () -> async Text;
         
-        icrc1_decimal : query () -> async Nat8;
+        icrc1_decimals : query () -> async Nat8;
 
         icrc1_fee : query () -> async Balance;
 
