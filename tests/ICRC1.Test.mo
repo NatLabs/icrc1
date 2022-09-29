@@ -40,92 +40,92 @@ let success = run([
         it("init()", do {
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token = ICRC1.init(args);
             
-            U.debug_icrc1_data(icrc1_token);
+            U.debug_token(token);
 
             // returns without trapping
             assertAllTrue ([
-                icrc1_token.name == args.name,
-                icrc1_token.symbol == args.symbol,
-                icrc1_token.decimals == args.decimals,
-                icrc1_token.fee == args.fee,
-                icrc1_token.max_supply == args.max_supply,
+                token.name == args.name,
+                token.symbol == args.symbol,
+                token.decimals == args.decimals,
+                token.fee == args.fee,
+                token.max_supply == args.max_supply,
 
-                icrc1_token.minting_account == args.minting_account,
-                icrc1_token.store_transactions == args.store_transactions,
-                SB.toArray(icrc1_token.supported_standards) == [U.default_standard],
-                SB.size(icrc1_token.transactions) == 0,
+                token.minting_account == args.minting_account,
+                token.store_transactions == args.store_transactions,
+                SB.toArray(token.supported_standards) == [U.default_standard],
+                SB.size(token.transactions) == 0,
             ]);
         }),
 
-        it("icrc1_name()", do{
+        it("name()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_name(icrc1_token) == args.name
+                ICRC1.name(token) == args.name
             )
         }),
 
-        it("icrc1_symbol()", do{
+        it("symbol()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_symbol(icrc1_token) == args.symbol
+                ICRC1.symbol(token) == args.symbol
             )
         }),
 
-        it("icrc1_decimals()", do{
+        it("decimals()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_decimals(icrc1_token) == args.decimals
+                ICRC1.decimals(token) == args.decimals
             )
         }),
-        it("icrc1_fee()", do{
+        it("fee()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_fee(icrc1_token) == args.fee
+                ICRC1.fee(token) == args.fee
             )
         }),
-        it("icrc1_minting_account()", do{
+        it("minting_account()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_minting_account(icrc1_token) == args.minting_account
+                ICRC1.minting_account(token) == args.minting_account
             )
         }),
-        it("icrc1_balance_of()", do{
+        it("balance_of()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_balance_of(
-                    icrc1_token, 
-                    icrc1_token.minting_account
+                ICRC1.balance_of(
+                    token, 
+                    token.minting_account
                 ) == args.max_supply
             )
         }),
 
-        it("icrc1_total_supply()", do{
+        it("total_supply()", do{
             let args = default_token_args;
 
-            let icrc1_token= ICRC1.init(args);
+            let token= ICRC1.init(args);
 
             assertTrue(
-                ICRC1.icrc1_total_supply(icrc1_token) == 0
+                ICRC1.total_supply(token) == 0
             )
         }),
     ])

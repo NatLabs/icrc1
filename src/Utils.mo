@@ -186,17 +186,17 @@ module{
         #ok()
     };
 
-    public func debug_icrc1_data(icrc1_data: T.InternalData){
-        Debug.print("Name: " # icrc1_data.name);
-        Debug.print("Symbol: " # icrc1_data.symbol);
-        Debug.print("Decimals: " # debug_show icrc1_data.decimals);
-        Debug.print("Fee: " # debug_show icrc1_data.fee);
-        Debug.print("transaction_window: " # debug_show icrc1_data.transaction_window);
-        Debug.print("minting_account: " # debug_show icrc1_data.minting_account);
-        Debug.print("metadata: " # debug_show icrc1_data.metadata);
-        Debug.print("supported_standards: " # debug_show icrc1_data.supported_standards);
-        // Debug.print("accounts: " # debug_show icrc1_data.accounts);
-        Debug.print("store_transactions: " # debug_show icrc1_data.store_transactions);
-        Debug.print("transactions: " # debug_show icrc1_data.transactions);
+    public func debug_token(token: T.InternalData){
+        Debug.print("Name: " # token.name);
+        Debug.print("Symbol: " # token.symbol);
+        Debug.print("Decimals: " # debug_show token.decimals);
+        Debug.print("Fee: " # debug_show token.fee);
+        Debug.print("transaction_window: " # debug_show token.transaction_window);
+        Debug.print("minting_account: " # debug_show token.minting_account);
+        Debug.print("metadata: " # debug_show token.metadata);
+        Debug.print("supported_standards: " # debug_show token.supported_standards);
+        // Debug.print("accounts: " # debug_show token.accounts);
+        Debug.print("store_transactions: " # debug_show token.store_transactions);
+        Debug.print("transactions: " # debug_show token.transactions);
     };
 }

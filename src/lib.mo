@@ -77,48 +77,46 @@ module ICRC1 {
         }
     };
 
-    
-
-    public func icrc1_name(icrc1_token: InternalData) : Text{
-        icrc1_token.name
+    public func name(token: InternalData) : Text{
+        token.name
     };
 
-    public func icrc1_symbol(icrc1_token: InternalData) : Text{
-        icrc1_token.symbol
+    public func symbol(token: InternalData) : Text{
+        token.symbol
     };
 
-    public func icrc1_decimals({ decimals }: InternalData) : Nat8{
+    public func decimals({ decimals }: InternalData) : Nat8{
         decimals
     };
 
-    public func icrc1_fee(icrc1_token: InternalData) : Balance {
-        icrc1_token.fee
+    public func fee(token: InternalData) : Balance {
+        token.fee
     };
 
-    public func icrc1_metadata(icrc1_token: InternalData) : [MetaDatum] {
-        SB.toArray(icrc1_token.metadata)
+    public func metadata(token: InternalData) : [MetaDatum] {
+        SB.toArray(token.metadata)
     };
 
-    public func icrc1_total_supply(icrc1_token: InternalData) : Balance {
+    public func total_supply(token: InternalData) : Balance {
         let { 
             max_supply; 
             accounts; 
             minting_account;
-        } = icrc1_token;
+        } = token;
 
         max_supply - U.get_balance(accounts, minting_account)
     };
 
-    public func icrc1_minting_account(icrc1_token: InternalData) : Account {
-        icrc1_token.minting_account
+    public func minting_account(token: InternalData) : Account {
+        token.minting_account
     };
 
-    public func icrc1_balance_of({accounts}: InternalData, req: Account) : Balance {
+    public func balance_of({accounts}: InternalData, req: Account) : Balance {
         U.get_balance(accounts, req)
     };
 
-    public func icrc1_supported_standards(icrc1_token: InternalData) : [SupportedStandard] {
-        SB.toArray(icrc1_token.supported_standards)
+    public func supported_standards(token: InternalData) : [SupportedStandard] {
+        SB.toArray(token.supported_standards)
     };
 
     /// Initialize a new ICRC-1 from pre-existing token data
@@ -255,12 +253,12 @@ module ICRC1 {
     //     }
     // };
 
-    public func icrc1_transfer(icrc1_token: InternalData, args: TransferArgs, caller : Principal) : Result.Result<(), TransferError> { 
+    public func transfer(token: InternalData, args: TransferArgs, caller : Principal) : Result.Result<(), TransferError> { 
         let {
             accounts; 
             minting_account; 
             transaction_window
-        } = icrc1_token; 
+        } = token; 
 
         let internal_args = U.transfer_args_to_internal(args, caller);
 
@@ -277,19 +275,19 @@ module ICRC1 {
 
         switch(args.fee){
             case(?fee){
-                if (not (icrc1_token.fee == fee)){
+                if (not (token.fee == fee)){
                     return #err(
                         #BadFee{
-                            expected_fee = icrc1_token.fee;
+                            expected_fee = token.fee;
                         }
                     );
                 }
             };
             case(_){
-                if (not (icrc1_token.fee == 0)){
+                if (not (token.fee == 0)){
                     return #err(
                         #BadFee{
-                            expected_fee = icrc1_token.fee;
+                            expected_fee = token.fee;
                         }
                     );
                 }
