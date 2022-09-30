@@ -232,6 +232,43 @@ module{
         #ok()
     };
 
+    public func args_to_tx(args: T.InternalTransferArgs, txtype: T.TxType) : T.Transaction {
+        {
+            txtype;
+            from = args.sender;
+            to = args.recipient;
+            amount = args.amount;
+            memo = Option.get(args.memo, Blob.fromArray([]));
+            fee = Option.get(args.fee, 0);
+            time = Nat64.fromNat(Int.abs(Time.now()));
+        }
+    };
+
+    public func store_tx(token: T.InternalData, args: T.InternalTransferArgs, txtype: T.TxType){
+        let tx = args_to_tx(args, txtype);
+        SB.add(token.transactions, tx);
+    }; 
+
+    public func transfer(accounts: T.AccountStore, args: T.InternalTransferArgs){
+        let { sender; recipient; amount } = args;
+
+        update_balance(
+            accounts,
+            sender,
+            func (balance){
+                balance - amount
+            }
+        );
+
+        update_balance(
+            accounts,
+            recipient,
+            func (balance){
+                balance + amount
+            }
+        );
+    };
+
     public func debug_token(token: T.InternalData){
         Debug.print("Name: " # token.name);
         Debug.print("Symbol: " # token.symbol);
@@ -242,7 +279,6 @@ module{
         Debug.print("metadata: " # debug_show token.metadata);
         Debug.print("supported_standards: " # debug_show token.supported_standards);
         // Debug.print("accounts: " # debug_show token.accounts);
-        Debug.print("store_transactions: " # debug_show token.store_transactions);
         Debug.print("transactions: " # debug_show token.transactions);
     };
 }

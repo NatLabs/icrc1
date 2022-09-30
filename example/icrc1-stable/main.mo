@@ -1,3 +1,4 @@
+import Option "mo:base/Option";
 import Result "mo:base/Result";
 
 import ICRC1 "../../src";
@@ -7,9 +8,8 @@ shared({ caller = _owner }) actor class Token(
     _symbol: Text,
     _decimals : Nat8,
     _fee: ICRC1.Balance,
-    _minting_account : ICRC1.Account,
     _max_supply : ICRC1.Balance,
-    _store_transactions: Bool,
+    _minting_account : ?ICRC1.Account,
 ) : async ICRC1.Interface {
 
     let token = ICRC1.init({
@@ -17,9 +17,11 @@ shared({ caller = _owner }) actor class Token(
         symbol = _symbol;
         decimals = _decimals;
         fee = _fee;
-        minting_account = _minting_account;
+        minting_account = Option.get(_minting_account, {
+            owner = _owner;
+            subaccount = null;
+        });
         max_supply = _max_supply;
-        store_transactions = _store_transactions;
     });
 
     public shared query func icrc1_name() : async Text {

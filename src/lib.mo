@@ -44,7 +44,6 @@ module ICRC1 {
             fee;
             minting_account;
             max_supply;
-            store_transactions;
         } = args;
 
         if (not U.validate_account(minting_account)){
@@ -75,7 +74,6 @@ module ICRC1 {
             accounts;
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
-            store_transactions;
             transactions = SB.init();
             transaction_window = U.DAY_IN_NANO_SECONDS;
         }
@@ -150,7 +148,8 @@ module ICRC1 {
             case (_){};
         };
 
-        _transfer(token.accounts, internal_args);
+        U.transfer(token.accounts, internal_args);
+        U.store_tx(token, internal_args, #mint);
 
         #ok(internal_args.amount)
     };
@@ -176,7 +175,8 @@ module ICRC1 {
             case (_){};
         };
 
-        _transfer(token.accounts, internal_args);
+        U.transfer(token.accounts, internal_args);
+        U.store_tx(token, internal_args, #burn);
 
         #ok(internal_args.amount)
     };
@@ -229,28 +229,11 @@ module ICRC1 {
             case(#ok(_)){};
         };
         
-        _transfer(token.accounts, internal_args);
+        U.transfer(token.accounts, internal_args);
+        U.store_tx(token, internal_args, #transfer);
 
         #ok(internal_args.amount)
     };
 
-    func _transfer(accounts: AccountStore, args: InternalTransferArgs){
-        let { sender; recipient; amount } = args;
-
-        U.update_balance(
-            accounts,
-            sender,
-            func (balance){
-                balance - amount
-            }
-        );
-
-        U.update_balance(
-            accounts,
-            recipient,
-            func (balance){
-                balance + amount
-            }
-        );
-    };
+    
 };

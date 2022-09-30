@@ -37,7 +37,6 @@ let default_token_args : ICRC1.InitArgs = {
     fee = 5 * (10 ** 8);
     max_supply = 1_000_000_000 * (10 ** 8);
     minting_account = canister;
-    store_transactions = false;
 };
 
 let success = run([
@@ -58,7 +57,6 @@ let success = run([
                 token.max_supply == args.max_supply,
 
                 token.minting_account == args.minting_account,
-                token.store_transactions == args.store_transactions,
                 SB.toArray(token.supported_standards) == [U.default_standard],
                 SB.size(token.transactions) == 0,
             ]);

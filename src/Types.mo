@@ -1,3 +1,4 @@
+import List "mo:base/List";
 import Result "mo:base/Result";
 
 import StableBuffer "mo:StableBuffer/StableBuffer";
@@ -130,7 +131,6 @@ module{
         fee: Balance;
         minting_account : Account;
         max_supply : Balance;
-        store_transactions: Bool;
     };
 
     public type ExportedArgs = InitArgs and {
@@ -168,8 +168,11 @@ module{
         supported_standards: StableBuffer<SupportedStandard>;
         transaction_window : Timestamp;
 
-        store_transactions : Bool;
         transactions : StableBuffer<Transaction>;
+        // transactions : {
+        //     var size : Nat;
+        //     var list : List.List<Transaction>;
+        // };
     };
 
 }
