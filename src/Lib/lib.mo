@@ -33,7 +33,7 @@ module ICRC1 {
     public type SupportedStandard = T.SupportedStandard;
 
     public type InitArgs = T.InitArgs;
-    public type InternalData = T.InternalData;
+    public type TokenData = T.TokenData;
     public type MetaDatum = T.MetaDatum;
     public type TxLog = T.TxLog;
     public type TxIndex = T.TxIndex;
@@ -51,7 +51,7 @@ module ICRC1 {
     public let MAX_TRANSACTION_BYTES : Nat64 = 85;
 
     /// Initialize a new ICRC-1 token
-    public func init(args : InitArgs) : InternalData {
+    public func init(args : InitArgs) : TokenData {
         let {
             name;
             symbol;
@@ -111,33 +111,39 @@ module ICRC1 {
             transaction_window = U.DAY_IN_NANO_SECONDS;
 
             archive = {
-                var canister = actor ("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
+                var canister = actor (
+                    Principal.toText(
+                        Principal.fromBlob(
+                            Blob.fromArray([]),
+                        ),
+                    ),
+                );
                 var total_txs = 0;
             };
         };
     };
 
-    public func name(token : InternalData) : Text {
+    public func name(token : TokenData) : Text {
         token.name;
     };
 
-    public func symbol(token : InternalData) : Text {
+    public func symbol(token : TokenData) : Text {
         token.symbol;
     };
 
-    public func decimals({ decimals } : InternalData) : Nat8 {
+    public func decimals({ decimals } : TokenData) : Nat8 {
         decimals;
     };
 
-    public func fee(token : InternalData) : Balance {
+    public func fee(token : TokenData) : Balance {
         token.fee;
     };
 
-    public func metadata(token : InternalData) : [MetaDatum] {
+    public func metadata(token : TokenData) : [MetaDatum] {
         SB.toArray(token.metadata);
     };
 
-    public func total_supply(token : InternalData) : Balance {
+    public func total_supply(token : TokenData) : Balance {
         let {
             max_supply;
             accounts;
@@ -147,19 +153,19 @@ module ICRC1 {
         max_supply - U.get_balance(accounts, minting_account);
     };
 
-    public func minting_account(token : InternalData) : Account {
+    public func minting_account(token : TokenData) : Account {
         token.minting_account;
     };
 
-    public func balance_of({ accounts } : InternalData, req : Account) : Balance {
+    public func balance_of({ accounts } : TokenData, req : Account) : Balance {
         U.get_balance(accounts, req);
     };
 
-    public func supported_standards(token : InternalData) : [SupportedStandard] {
+    public func supported_standards(token : TokenData) : [SupportedStandard] {
         SB.toArray(token.supported_standards);
     };
 
-    public func mint(token : InternalData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
+    public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
 
         if (not (caller == token.minting_account.owner)) {
             return #err(
@@ -189,7 +195,7 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
-    public func burn(token : InternalData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
+    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
 
         let burn_op : T.Burn = {
             args with from = {
@@ -218,7 +224,7 @@ module ICRC1 {
     };
 
     public func transfer(
-        token : InternalData,
+        token : TokenData,
         args : TransferArgs,
         caller : Principal,
     ) : async Result.Result<Balance, TransferError> {
@@ -284,7 +290,7 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
-    func create_archive(token : InternalData) : async () {
+    func create_archive(token : TokenData) : async () {
         if (token.archive.total_txs == 0) {
             token.archive.canister := await ArchiveCanister.ArchiveCanister({
                 max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
@@ -292,7 +298,7 @@ module ICRC1 {
         };
     };
 
-    public func get_transaction(token : InternalData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
+    public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
         let { archive } = token;
         if (tx_index < archive.total_txs) {
             await archive.canister.get_transaction(tx_index);
@@ -302,7 +308,7 @@ module ICRC1 {
     };
 
     func _get_transactions(
-        token : InternalData,
+        token : TokenData,
         req : GetTransactionsRequest,
     ) : [Transaction] {
         let tx_index = req.start;
@@ -319,7 +325,7 @@ module ICRC1 {
         };
     };
 
-    public func get_transactions(token : InternalData, req : ICRC1.GetTransactionsRequest) : async [ICRC1.Transaction] {
+    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async [ICRC1.Transaction] {
         let { archive } = token;
 
         let txs = if (req.start < archive.total_txs) {
@@ -330,7 +336,7 @@ module ICRC1 {
     };
 
     // should be added at the end of every update call
-    func update_canister(token : InternalData) : async () {
+    func update_canister(token : TokenData) : async () {
         let { archive } = token;
 
         let txs_size = SB.size(token.transactions);

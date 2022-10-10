@@ -202,7 +202,7 @@ module {
     public type SubaccountStore = StableTrieMap<Subaccount, Balance>;
     public type AccountStore = StableTrieMap<Principal, SubaccountStore>;
 
-    public type InternalData = {
+    public type TokenData = {
         name : Text;
         symbol : Text;
         decimals : Nat8;

@@ -176,7 +176,7 @@ module {
     };
 
     public func validate_transfer(
-        token : T.InternalData,
+        token : T.TokenData,
         tx_req : T.TransactionRequest,
     ) : Result.Result<(), T.TransferError> {
 
@@ -320,7 +320,7 @@ module {
         SB.add(txs, tx);
     };
 
-    public func process_tx(token : T.InternalData, tx_req : T.TransactionRequest) : T.Transaction {
+    public func process_tx(token : T.TokenData, tx_req : T.TransactionRequest) : T.Transaction {
         transfer(token.accounts, tx_req);
 
         let tx = req_to_tx(tx_req);
@@ -329,7 +329,7 @@ module {
         tx;
     };
 
-    public func debug_token(token : T.InternalData) {
+    public func debug_token(token : T.TokenData) {
         Debug.print("Name: " # token.name);
         Debug.print("Symbol: " # token.symbol);
         Debug.print("Decimals: " # debug_show token.decimals);
