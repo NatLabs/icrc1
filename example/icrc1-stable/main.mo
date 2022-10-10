@@ -1,16 +1,16 @@
 import Option "mo:base/Option";
 import Result "mo:base/Result";
 
-import ICRC1 "../../src/Lib/ICRC1";
+import ICRC1 "../../src/Lib/";
 
-shared({ caller = _owner }) actor class (
+shared ({ caller = _owner }) actor class (
     _name : Text,
     _symbol : Text,
     _decimals : Nat8,
     _fee : ICRC1.Balance,
     _max_supply : ICRC1.Balance,
     _minting_account : ?ICRC1.Account,
-    _initial_balances : ?[(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
+    _initial_balances : [(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
 ) : async ICRC1.Interface {
 
     let token = ICRC1.init({
@@ -26,7 +26,7 @@ shared({ caller = _owner }) actor class (
                 subaccount = null;
             },
         );
-        initial_balances = Option.get(_initial_balances, []);
+        initial_balances = _initial_balances;
     });
 
     /// Functions for the ICRC1 token standard
@@ -66,15 +66,15 @@ shared({ caller = _owner }) actor class (
         ICRC1.supported_standards(token);
     };
 
-    public shared({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
-        ICRC1.transfer(token, args, caller);
+    public shared ({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+        await ICRC1.transfer(token, args, caller);
     };
 
-    public shared({ caller }) func mint(args : ICRC1.MintArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
-        ICRC1.mint(token, args, caller);
+    public shared ({ caller }) func mint(args : ICRC1.Mint) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+        await ICRC1.mint(token, args, caller);
     };
 
-    public shared({ caller }) func burn(args : ICRC1.BurnArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
-        ICRC1.burn(token, args, caller);
+    public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+        await ICRC1.burn(token, args, caller);
     };
 };

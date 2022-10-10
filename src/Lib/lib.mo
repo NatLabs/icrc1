@@ -25,9 +25,9 @@ module ICRC1 {
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
     public type TransferArgs = T.TransferArgs;
-    public type MintArgs = T.MintArgs;
+    public type Mint = T.Mint;
     public type BurnArgs = T.BurnArgs;
-    public type InternalTransferArgs = T.InternalTransferArgs;
+    public type TransactionRequest = T.TransactionRequest;
     public type TransferError = T.TransferError;
 
     public type SupportedStandard = T.SupportedStandard;
@@ -59,6 +59,7 @@ module ICRC1 {
             fee;
             minting_account;
             max_supply;
+            initial_balances;
         } = args;
 
         if (not U.validate_account(minting_account)) {
@@ -79,6 +80,23 @@ module ICRC1 {
             ),
         );
 
+        for ((owner, sub_balances) in initial_balances.vals()) {
+            let sub_map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
+
+            for ((subaccount, balance) in sub_balances.vals()) {
+                if (not U.validate_subaccount(?subaccount)) {
+                    Debug.trap(
+                        "Invalid subaccount " # Principal.toText(Principal.fromBlob(subaccount)) # " for " # Principal.toText(owner) # " is invalid in initial_balances",
+                    );
+                };
+
+                STMap.put(sub_map, subaccount, balance);
+            };
+
+            STMap.put(accounts, owner, sub_map);
+
+        };
+
         {
             name = name;
             symbol = symbol;
@@ -91,6 +109,11 @@ module ICRC1 {
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
             transaction_window = U.DAY_IN_NANO_SECONDS;
+
+            archive = {
+                var canister = actor ("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
+                var total_txs = 0;
+            };
         };
     };
 
@@ -136,7 +159,7 @@ module ICRC1 {
         SB.toArray(token.supported_standards);
     };
 
-    public func mint(token : InternalData, args : MintArgs, caller : Principal) : Result.Result<Balance, TransferError> {
+    public func mint(token : InternalData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
 
         if (not (caller == token.minting_account.owner)) {
             return #err(
@@ -147,78 +170,77 @@ module ICRC1 {
             );
         };
 
-        let internal_args = {
-            from = token.minting_account;
-            to = args.to;
-            amount = args.amount;
-            fee = null;
-            memo = args.memo;
-            created_at_time = args.created_at_time;
-        };
+        let tx_req = U.args_to_req(
+            #mint(args),
+            token.minting_account,
+        );
 
-        switch (U.validate_transfer(token, internal_args)) {
+        switch (U.validate_transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
             case (_) {};
         };
 
-        U.transfer(token.accounts, internal_args);
-        U.store_tx(token, internal_args, #mint);
+        ignore U.process_tx(token, tx_req);
 
-        #ok(internal_args.amount);
+        await update_canister(token);
+
+        #ok(tx_req.amount);
     };
 
-    public func burn(token : InternalData, args : BurnArgs, caller : Principal) : Result.Result<Balance, TransferError> {
+    public func burn(token : InternalData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
 
-        let internal_args = {
-            from = {
+        let burn_op : T.Burn = {
+            args with from = {
                 owner = caller;
                 subaccount = args.from_subaccount;
             };
-            to = token.minting_account;
-            amount = args.amount;
-            fee = null;
-            memo = args.memo;
-            created_at_time = args.created_at_time;
         };
 
-        switch (U.validate_transfer(token, internal_args)) {
+        let tx_req = U.args_to_req(
+            #burn(burn_op),
+            token.minting_account,
+        );
+
+        switch (U.validate_transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
             case (_) {};
         };
 
-        U.transfer(token.accounts, internal_args);
-        U.store_tx(token, internal_args, #burn);
+        ignore U.process_tx(token, tx_req);
 
-        #ok(internal_args.amount);
+        await update_canister(token);
+
+        #ok(tx_req.amount);
     };
 
     public func transfer(
         token : InternalData,
         args : TransferArgs,
         caller : Principal,
-    ) : Result.Result<Balance, TransferError> {
+    ) : async Result.Result<Balance, TransferError> {
         let {
             accounts;
             minting_account;
             transaction_window;
         } = token;
 
-        let internal_args = U.transfer_args_to_internal(args, caller);
-
-        let { from; to } = internal_args;
-
-        if (from == minting_account or to == minting_account) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "minting_account can only participate in minting and burning transactions not transfers";
-                }),
-            );
+        let transfer_op : T.Transfer = {
+            args with from = {
+                owner = caller;
+                subaccount = args.from_subaccount;
+            };
         };
+
+        var tx_req = U.args_to_req(
+            #transfer(transfer_op),
+            token.minting_account,
+        );
+
+        let { from; to } = tx_req;
 
         switch (args.fee) {
             case (?fee) {
@@ -230,6 +252,7 @@ module ICRC1 {
                     );
                 };
             };
+
             case (_) {
                 if (not (token.fee == 0)) {
                     return #err(
@@ -241,24 +264,44 @@ module ICRC1 {
             };
         };
 
-        switch (U.validate_transfer(token, internal_args)) {
+        switch (U.validate_transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
             case (#ok(_)) {};
         };
 
-        U.transfer(token.accounts, internal_args);
-        U.store_tx(token, internal_args, #transfer);
+        if (from == minting_account) {
+            tx_req := { tx_req with kind = #mint };
+        } else if (to == minting_account) {
+            tx_req := { tx_req with kind = #burn };
+        };
 
-        #ok(internal_args.amount);
+        ignore U.process_tx(token, tx_req);
+
+        await update_canister(token);
+
+        #ok(tx_req.amount);
     };
 
-    public func get_transaction(token : InternalData, tx_index : Nat) : ?Transaction {
-        SB.getOpt(token.transactions, tx_index);
+    func create_archive(token : InternalData) : async () {
+        if (token.archive.total_txs == 0) {
+            token.archive.canister := await ArchiveCanister.ArchiveCanister({
+                max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
+            });
+        };
     };
 
-    public func get_transactions(
+    public func get_transaction(token : InternalData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
+        let { archive } = token;
+        if (tx_index < archive.total_txs) {
+            await archive.canister.get_transaction(tx_index);
+        } else {
+            SB.getOpt(token.transactions, tx_index);
+        };
+    };
+
+    func _get_transactions(
         token : InternalData,
         req : GetTransactionsRequest,
     ) : [Transaction] {
@@ -276,10 +319,38 @@ module ICRC1 {
         };
     };
 
-    public func a() : async () {
-        let a : ArchiveInterface = await ArchiveCanister.ArchiveCanister({
-            max_memory_size_bytes = 45;
-        });
+    public func get_transactions(token : InternalData, req : ICRC1.GetTransactionsRequest) : async [ICRC1.Transaction] {
+        let { archive } = token;
 
+        let txs = if (req.start < archive.total_txs) {
+            await archive.canister.get_transactions(req);
+        } else {
+            _get_transactions(token, req);
+        };
+    };
+
+    // should be added at the end of every update call
+    func update_canister(token : InternalData) : async () {
+        let { archive } = token;
+
+        let txs_size = SB.size(token.transactions);
+
+        if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
+            if (archive.total_txs == 0) {
+                await create_archive(token);
+            };
+
+            let res = await archive.canister.append_transactions(
+                SB.toArray(token.transactions),
+            );
+
+            switch (res) {
+                case (#ok()) {
+                    archive.total_txs += txs_size;
+                    SB.clear(token.transactions);
+                };
+                case (#err(_)) {};
+            };
+        };
     };
 };

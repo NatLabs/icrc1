@@ -2,6 +2,7 @@ import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Int "mo:base/Int";
+import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
@@ -174,29 +175,12 @@ module {
         };
     };
 
-    public func transfer_args_to_internal(
-        args : T.TransferArgs,
-        caller : Principal,
-    ) : T.InternalTransferArgs {
-        {
-            from = {
-                owner = caller;
-                subaccount = args.from_subaccount;
-            };
-            to = args.to;
-            amount = args.amount;
-            fee = args.fee;
-            memo = args.memo;
-            created_at_time = args.created_at_time;
-        };
-    };
-
     public func validate_transfer(
         token : T.InternalData,
-        args : T.InternalTransferArgs,
+        tx_req : T.TransactionRequest,
     ) : Result.Result<(), T.TransferError> {
 
-        if (args.from == args.to) {
+        if (tx_req.from == tx_req.to) {
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -205,7 +189,7 @@ module {
             );
         };
 
-        if (not validate_account(args.from)) {
+        if (not validate_account(tx_req.from)) {
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -214,7 +198,7 @@ module {
             );
         };
 
-        if (not validate_account(args.to)) {
+        if (not validate_account(tx_req.to)) {
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -223,7 +207,7 @@ module {
             );
         };
 
-        if (not validate_memo(args.memo)) {
+        if (not validate_memo(tx_req.memo)) {
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -232,7 +216,7 @@ module {
             );
         };
 
-        switch (validate_transaction_time(token.transaction_window, args.created_at_time)) {
+        switch (validate_transaction_time(token.transaction_window, tx_req.created_at_time)) {
             case (#err(errorMsg)) {
                 return #err(errorMsg);
             };
@@ -241,42 +225,76 @@ module {
 
         let sender_balance : T.Balance = get_balance(
             token.accounts,
-            args.from,
+            tx_req.from,
         );
 
-        if (args.amount > sender_balance) {
+        if (tx_req.amount > sender_balance) {
             return #err(#InsufficientFunds { balance = sender_balance });
         };
 
         #ok();
     };
 
-    public func args_to_tx(args : T.InternalTransferArgs, tx_kind : T.TxKind) : T.Transaction {
-        {
-            kind = tx_kind;
-            from = args.from;
-            to = args.to;
-            amount = args.amount;
-            memo = Option.get(args.memo, Blob.fromArray([]));
-            fee = Option.get(args.fee, 0);
-            time = Nat64.fromNat(Int.abs(Time.now()));
+    public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {
+        switch (operation) {
+            case (#mint(args)) {
+                {
+                    args with kind = #mint;
+                    from = minting_account;
+                    fee = null;
+                };
+            };
+            case (#burn(args)) {
+                {
+                    args with kind = #burn;
+                    to = minting_account;
+                    fee = null;
+                };
+            };
+            case (#transfer(args)) {
+                {
+                    args with kind = #transfer;
+                };
+            };
         };
     };
 
-    public func store_tx(
-        token : T.InternalData,
-        args : T.InternalTransferArgs,
-        tx_kind : T.TxKind,
-    ) {
-        let tx = args_to_tx(args, tx_kind);
-        SB.add(token.transactions, tx);
+    public func kind_to_text(kind : T.OperationKind) : Text {
+        switch (kind) {
+            case (#mint) "mint";
+            case (#burn) "burn";
+            case (#transfer) "transfer";
+        };
+    };
+
+    public func req_to_tx(tx_req : T.TransactionRequest) : T.Transaction {
+
+        {
+            kind = kind_to_text(tx_req.kind);
+            mint = switch (tx_req.kind) {
+                case (#mint) { ?tx_req };
+                case (_) null;
+            };
+
+            burn = switch (tx_req.kind) {
+                case (#burn) { ?tx_req };
+                case (_) null;
+            };
+
+            transfer = switch (tx_req.kind) {
+                case (#transfer) { ?tx_req };
+                case (_) null;
+            };
+
+            timestamp = Nat64.fromNat(Int.abs(Time.now()));
+        };
     };
 
     public func transfer(
         accounts : T.AccountStore,
-        args : T.InternalTransferArgs,
+        tx_req : T.TransactionRequest,
     ) {
-        let { from; to; amount } = args;
+        let { from; to; amount } = tx_req;
 
         update_balance(
             accounts,
@@ -295,6 +313,22 @@ module {
         );
     };
 
+    public func store_tx(
+        txs : SB.StableBuffer<T.Transaction>,
+        tx : T.Transaction,
+    ) {
+        SB.add(txs, tx);
+    };
+
+    public func process_tx(token : T.InternalData, tx_req : T.TransactionRequest) : T.Transaction {
+        transfer(token.accounts, tx_req);
+
+        let tx = req_to_tx(tx_req);
+        store_tx(token.transactions, tx);
+
+        tx;
+    };
+
     public func debug_token(token : T.InternalData) {
         Debug.print("Name: " # token.name);
         Debug.print("Symbol: " # token.symbol);
@@ -304,7 +338,24 @@ module {
         Debug.print("minting_account: " # debug_show token.minting_account);
         Debug.print("metadata: " # debug_show token.metadata);
         Debug.print("supported_standards: " # debug_show token.supported_standards);
-        // Debug.print("accounts: " # debug_show token.accounts);
-        Debug.print("transactions: " # debug_show token.transactions);
+        // Debug.print("accounts: " # debug_show
+        //     Iter.toArray(
+        //         Iter.map(
+        //             STMap.entries(token.accounts),
+        //             func((k, v) : (Principal, STMap.StableTrieMap<Blob, Nat>)) : (Principal, [(Blob, Nat)]) {
+        //                 (k, Iter.toArray(STMap.entries(v)))
+        //             }
+        //         )
+        //     )
+        // );
+        Debug.print("transactions: " # debug_show SB.size(token.transactions));
+        Debug.print(
+            "transactions: " # debug_show Array.tabulate(
+                SB.size(token.transactions),
+                func(i : Nat) : T.Transaction {
+                    SB.get(token.transactions, i);
+                },
+            ),
+        );
     };
 };

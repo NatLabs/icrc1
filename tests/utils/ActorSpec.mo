@@ -43,7 +43,6 @@ module {
     "Failed: " # Int.toText(status.failed) # ", Passed: " # Int.toText(status.passed) # ", Pending: " # Int.toText(status.pending) # ", Skipped: " # Int.toText(status.skipped);
   };
 
-
   public func run(groups_ : [Group]) : Bool {
     let (groups, status) = getGroups(groups_);
     printGroups(groups, "");
@@ -83,20 +82,19 @@ module {
         let passed = status.passed;
         let pending = status.pending;
         let skipped = status.skipped;
-        switch(failed, passed, pending, skipped) {
-          case (0, 0, 0, 0) { ""; };
-          case (1, 0, 0, 0) { ": Failed"; };
-          case (0, 1, 0, 0) { ": Passed"; };
-          case (0, 0, 1, 0) { ": Pending"; };
-          case (0, 0, 0, 1) { ": Skipped"; };
-          case (_, _, _, _) { ":" # printStatus(status); };
+        switch (failed, passed, pending, skipped) {
+          case (0, 0, 0, 0) { "" };
+          case (1, 0, 0, 0) { ": Failed" };
+          case (0, 1, 0, 0) { ": Passed" };
+          case (0, 0, 1, 0) { ": Pending" };
+          case (0, 0, 0, 1) { ": Skipped" };
+          case (_, _, _, _) { ":" # printStatus(status) };
         };
       };
       Debug.print(newline # indent # group.name # statusText # "\n");
       printGroups(group.groups, indent # "  ");
     };
   };
-
 
   public func describe(name_ : Text, groups_ : [Group]) : Group {
     {
@@ -107,6 +105,19 @@ module {
   };
 
   public func it(name_ : Text, passed_ : Bool) : Group {
+    {
+      name = name_;
+      groups = [];
+      status = {
+        failed = if passed_ 0 else 1;
+        passed = if passed_ 1 else 0;
+        pending = 0;
+        skipped = 0;
+      };
+    };
+  };
+
+  public func itAsync(name_ : Text, passed_ : Bool) : async Group {
     {
       name = name_;
       groups = [];

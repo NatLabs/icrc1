@@ -34,13 +34,13 @@ module {
     public type MetaDatum = (Text, Value);
     public type MetaData = [MetaDatum];
 
-    public type TxKind = {
+    public type OperationKind = {
         #mint;
         #burn;
         #transfer;
     };
 
-    public type MintArgs = {
+    public type Mint = {
         to : Account;
         amount : Balance;
         memo : ?Blob;
@@ -54,8 +54,40 @@ module {
         created_at_time : ?Nat64;
     };
 
+    public type Burn = {
+        from : Account;
+        amount : Balance;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
+    };
+
     public type TransferArgs = {
         from_subaccount : ?Subaccount;
+        to : Account;
+        amount : Balance;
+        fee : ?Balance;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
+    };
+
+    public type Transfer = {
+        from : Account;
+        to : Account;
+        amount : Balance;
+        fee : ?Balance;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
+    };
+
+    public type Operation = {
+        #mint : Mint;
+        #burn : Burn;
+        #transfer : Transfer;
+    };
+
+    public type TransactionRequest = {
+        kind : OperationKind;
+        from : Account;
         to : Account;
         amount : Balance;
         fee : ?Balance;
@@ -74,22 +106,11 @@ module {
     /// ---------------------------
     /// total : 85 Bytes
     public type Transaction = {
-        kind : TxKind;
-        from : Account;
-        to : Account;
-        amount : Balance;
-        memo : Memo;
-        fee : Balance;
-        time : Timestamp;
-    };
-
-    public type InternalTransferArgs = {
-        from : Account;
-        to : Account;
-        amount : Balance;
-        fee : ?Balance;
-        memo : ?Blob;
-        created_at_time : ?Nat64;
+        kind : Text;
+        mint : ?Mint;
+        burn : ?Burn;
+        transfer : ?Transfer;
+        timestamp : Timestamp;
     };
 
     public type TimeError = {
@@ -136,7 +157,7 @@ module {
     public type TxCandidBlob = Blob;
 
     public type ArchiveInterface = actor {
-        append_transactions : shared([Transaction]) -> async Result.Result<(), ()>;
+        append_transactions : shared ([Transaction]) -> async Result.Result<(), ()>;
         get_transaction : shared query (TxIndex) -> async ?Transaction;
         get_transactions : shared query (GetTransactionsRequest) -> async [Transaction];
         remaining_capacity : shared query () -> async Nat64;
@@ -194,12 +215,10 @@ module {
         transaction_window : Timestamp;
 
         transactions : StableBuffer<Transaction>;
-
-        // transactions : {
-        //     var archive_offset : Nat;
-        //     var size : Nat;
-        //     var deque : Deque.Deque<Transaction>;
-        // };
+        archive : {
+            var canister : ArchiveInterface;
+            var total_txs : Nat;
+        };
     };
 
     // TxLog
