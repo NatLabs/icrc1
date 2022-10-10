@@ -157,7 +157,7 @@ module {
     public type TxCandidBlob = Blob;
 
     public type ArchiveInterface = actor {
-        append_transactions : shared ([Transaction]) -> async Result.Result<(), ()>;
+        append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
         get_transaction : shared query (TxIndex) -> async ?Transaction;
         get_transactions : shared query (GetTransactionsRequest) -> async [Transaction];
         remaining_capacity : shared query () -> async Nat64;
@@ -241,10 +241,14 @@ module {
 
     public type GetTransactionsResponse = {
         log_length : Nat;
+
+        // the index of the first tx in `.transactions`
+        first_index : TxIndex;
+
+        // The first prefix of transactions in the given range
         transactions : [Transaction];
 
-        first_index : ?TxIndex;
-
+        // the remaining sub array of transactions in the given range
         archived_transactions : [ArchivedTransaction];
     };
 

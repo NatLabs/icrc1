@@ -22,7 +22,13 @@ let overrides = [
        version = "v0.2.0",
        repo = "https://github.com/canscale/StableBuffer",
        dependencies = ["base"] : List Text
-    }
+    },
+    {
+       name = "Itertools",
+       version = "main",
+       repo = "https://github.com/NatLabs/Itertools.mo",
+       dependencies = ["base"] : List Text
+    },
 ] : List Package
 
 in  aviate_labs # vessel_package_set # overrides
