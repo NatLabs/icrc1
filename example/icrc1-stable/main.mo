@@ -11,7 +11,7 @@ shared ({ caller = _owner }) actor class (
     _max_supply : ICRC1.Balance,
     _minting_account : ?ICRC1.Account,
     _initial_balances : [(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
-) : async ICRC1.Interface {
+) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
         name = _name;

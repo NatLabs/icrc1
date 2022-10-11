@@ -5,7 +5,7 @@ import Result "mo:base/Result";
 import SB "mo:StableBuffer/StableBuffer";
 
 import ICRC1 "Lib/";
-import ArchiveCanister "Lib/ArchiveCanister";
+import Archive "Lib/Archive";
 
 shared ({ caller = _owner }) actor class Token(
     _name : Text,
@@ -15,7 +15,7 @@ shared ({ caller = _owner }) actor class Token(
     _max_supply : ICRC1.Balance,
     _minting_account : ?ICRC1.Account,
     _initial_balances : [(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
-) : async ICRC1.Interface {
+) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
         name = _name;

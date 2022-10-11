@@ -10,7 +10,7 @@ import Result "mo:base/Result";
 import SB "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
-import ArchiveCanister "ArchiveCanister";
+import Archive "Archive";
 import T "Types";
 import U "Utils";
 
@@ -38,7 +38,7 @@ module ICRC1 {
     public type TxLog = T.TxLog;
     public type TxIndex = T.TxIndex;
 
-    public type Interface = T.ICRC1_Interface;
+    public type TokenInterface = T.TokenInterface;
 
     public type ArchiveInterface = T.ArchiveInterface;
 
@@ -292,8 +292,8 @@ module ICRC1 {
 
     func create_archive(token : TokenData) : async () {
         if (token.archive.total_txs == 0) {
-            token.archive.canister := await ArchiveCanister.ArchiveCanister({
-                max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
+            token.archive.canister := await Archive.Archive({
+                max_memory_size_bytes = MAX_TRANSACTION_BYTES;
             });
         };
     };

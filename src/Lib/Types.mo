@@ -128,7 +128,7 @@ module {
     };
 
     /// Interface for the ICRC token canister
-    public type ICRC1_Interface = actor {
+    public type TokenInterface = actor {
 
         /// Returns the name of the token
         icrc1_name : query () -> async Text;
@@ -158,6 +158,7 @@ module {
 
     public type ArchiveInterface = actor {
         append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
+        total_transactions : shared query () -> async Nat;
         get_transaction : shared query (TxIndex) -> async ?Transaction;
         get_transactions : shared query (GetTransactionsRequest) -> async [Transaction];
         remaining_capacity : shared query () -> async Nat64;
