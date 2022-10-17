@@ -97,14 +97,14 @@ module {
 
     /// Max size
     /// kind : 8 chars (8 * 32 /8) -> 32
-    /// from : (32 + 4 + 32) -> 68 / 8 -> 8.5
-    /// to : 68 -> 8.5
+    /// from : (32 + 32) -> 68 B
+    /// to : 68  B
     /// fee : Nat64 -> 8 B
     /// amount : Nat128 -> 16 B
     /// memo: 32 -> 4 B
     /// time : Nat64 -> 8 B
     /// ---------------------------
-    /// total : 85 Bytes
+    /// total : 196 Bytes
     public type Transaction = {
         kind : Text;
         mint : ?Mint;
@@ -203,6 +203,15 @@ module {
     public type SubaccountStore = StableTrieMap<Subaccount, Balance>;
     public type AccountStore = StableTrieMap<Principal, SubaccountStore>;
 
+    public type TransactionRange = {
+        start : TxIndex;
+        length : Nat;
+    };
+
+    public type ArchiveData = {
+        canister : ArchiveInterface;
+    } and TransactionRange;
+
     public type TokenData = {
         name : Text;
         symbol : Text;
@@ -220,18 +229,13 @@ module {
             var canister : ArchiveInterface;
             var total_txs : Nat;
         };
+        archives : StableBuffer<ArchiveData>;
     };
 
     // TxLog
     /// A prefix array of the transaction range specified in the [GetTransactionsRequest](./#GetTransactionsRequest) request.
-    public type TransactionRange = {
-        transactions : [Transaction];
-    };
 
-    public type GetTransactionsRequest = {
-        start : TxIndex;
-        length : Nat;
-    };
+    public type GetTransactionsRequest = TransactionRange;
 
     public type QueryArchiveFn = (GetTransactionsRequest) -> async ([Transaction]);
 

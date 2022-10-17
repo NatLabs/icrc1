@@ -2,6 +2,7 @@ import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Int "mo:base/Int";
+import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
@@ -48,7 +49,7 @@ module ICRC1 {
     public type ArchivedTransaction = T.ArchivedTransaction;
 
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
-    public let MAX_TRANSACTION_BYTES : Nat64 = 85;
+    public let MAX_TRANSACTION_BYTES : Nat64 = 196;
 
     /// Initialize a new ICRC-1 token
     public func init(args : InitArgs) : TokenData {
@@ -120,6 +121,8 @@ module ICRC1 {
                 );
                 var total_txs = 0;
             };
+
+            archives = SB.init();
         };
     };
 
@@ -298,6 +301,10 @@ module ICRC1 {
         };
     };
 
+    public func total_transactions(token : TokenData) : Nat {
+        SB.size(token.transactions) + token.archive.total_txs;
+    };
+
     public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
         let { archive } = token;
         if (tx_index < archive.total_txs) {
@@ -325,7 +332,7 @@ module ICRC1 {
         };
     };
 
-    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async [ICRC1.Transaction] {
+    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
         let { archive } = token;
 
         let txs = if (req.start < archive.total_txs) {
@@ -333,9 +340,105 @@ module ICRC1 {
         } else {
             _get_transactions(token, req);
         };
+
+        let valid_range = {
+            var start = req.start + txs.size();
+            var end = Nat.min(req.start + txs.size() + req.length, total_transactions(token));
+        };
+
+        let res = {
+            log_length = txs.size();
+            first_index = req.start;
+            transactions = txs;
+            archived_transactions = Array.tabulate(
+                (valid_range.end - valid_range.start) : Nat / 1000,
+                func(i : Nat) : GetTransactionsRequest {
+                    let start = (i * 1000) + valid_range.start;
+                    {
+                        start;
+                        length = Nat.min(1000, valid_range.end - start);
+                    };
+                },
+            );
+        };
+
+        res;
     };
 
-    // should be added at the end of every update call
+    // Retrieves the last archive in the archives buffer
+    func get_archive(token : TokenData) : T.ArchiveData {
+        SB.get(token.archives, SB.size(token.archives) - 1);
+    };
+
+    // creates a new archive canister
+    func new_archive_canister() : async ArchiveInterface {
+        await Archive.Archive({
+            max_memory_size_bytes = MAX_TRANSACTION_BYTES;
+        });
+    };
+
+    // Adds a new archive canister to the archives array
+    func spawn_archive_canister(token : TokenData) : async () {
+        let { start; length } = get_archive(token);
+
+        let new_archive_data : T.ArchiveData = {
+            canister = await new_archive_canister();
+            start = start + length;
+            length = 0;
+        };
+
+        SB.add(token.archives, new_archive_data);
+    };
+
+    // Updates the last archive in the archives buffer
+    func update_archive(token : TokenData, update : (T.ArchiveData) -> async T.ArchiveData) : async () {
+        let old_data = get_archive(token);
+        let new_data = await update(old_data);
+
+        if (not (new_data == old_data)) {
+            SB.put(
+                token.archives,
+                SB.size(token.archives) - 1,
+                new_data,
+            );
+        };
+    };
+
+    // Moves the transactions in the ICRC1 canister to the archive canister
+    // and returns a boolean that indicates the success of the data transfer
+    func append_to_archive(token : TokenData) : async Bool {
+        var success = false;
+
+        await update_archive(
+            token,
+            func(archive : T.ArchiveData) : async T.ArchiveData {
+                let { canister; length } = archive;
+                let res = await canister.append_transactions(
+                    SB.toArray(token.transactions),
+                );
+
+                var txs_size = SB.size(token.transactions);
+
+                switch (res) {
+                    case (#ok()) {
+                        SB.clear(token.transactions);
+                        success := true;
+                    };
+                    case (#err(_)) {
+                        txs_size := 0;
+                    };
+                };
+
+                { archive with length = length + txs_size };
+            },
+        );
+
+        success;
+    };
+
+    // Updates the token's data and manages the transactions
+    //
+    // **should be added at the end of every update call**
     func update_canister(token : TokenData) : async () {
         let { archive } = token;
 
@@ -346,16 +449,9 @@ module ICRC1 {
                 await create_archive(token);
             };
 
-            let res = await archive.canister.append_transactions(
-                SB.toArray(token.transactions),
-            );
-
-            switch (res) {
-                case (#ok()) {
-                    archive.total_txs += txs_size;
-                    SB.clear(token.transactions);
-                };
-                case (#err(_)) {};
+            if (not (await append_to_archive(token))) {
+                await spawn_archive_canister(token);
+                ignore (await append_to_archive(token));
             };
         };
     };

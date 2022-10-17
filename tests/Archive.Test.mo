@@ -9,8 +9,6 @@ import ICRC1 "../src/Lib/";
 
 import ActorSpec "./utils/ActorSpec";
 
-// import [FnName] "../../src/[section]/[FnName]";
-
 let {
     assertTrue;
     assertFalse;
@@ -21,16 +19,6 @@ let {
     pending;
     run;
 } = ActorSpec;
-
-let user1 : ICRC1.Account = {
-    owner = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
-    subaccount = null;
-};
-
-let user2 : ICRC1.Account = {
-    owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
-    subaccount = null;
-};
 
 func new_tx(i : Nat64) : ICRC1.Transaction {
     {

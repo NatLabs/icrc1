@@ -1,4 +1,4 @@
 {
-  dependencies = [ "base", "StableTrieMap", "StableBuffer", "Itertools", "array"],
+  dependencies = [ "base", "StableTrieMap", "StableBuffer", "Itertools"],
   compiler = Some "0.7.0"
 }

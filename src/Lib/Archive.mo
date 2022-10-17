@@ -1,20 +1,21 @@
+import Prim "mo:prim";
+
 import Array "mo:base/Array";
 import Deque "mo:base/Deque";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Result "mo:base/Result";
 
-import ArrayModule "mo:array/Array";
 import Itertools "mo:Itertools/Iter";
 import SB "mo:StableBuffer/StableBuffer";
-
 import ICRC1 "Types";
 
 shared ({ caller = ledger_canister_id }) actor class Archive({
     max_memory_size_bytes : Nat64;
 }) : async ICRC1.ArchiveInterface {
 
-    stable let DEFAULT_MAX_MEMORY_SIZE = 1024 * 1024 * 1024;
+    stable let GB = 1024 ** 3;
+    stable let MAX_MEMORY = 7 * GB;
 
     type Transaction = ICRC1.Transaction;
 
@@ -26,48 +27,52 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
     stable var txStore : TransactionStore = Deque.empty();
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
-        if (caller == ledger_canister_id) {
-            var txs_iter = txs.vals();
 
-            switch (Deque.popBack(txStore)) {
-                case (?(store, last_bucket)) {
-                    if (last_bucket.size() < BUCKET_SIZE) {
-
-                        txStore := store;
-
-                        let new_last_bucket = Array.tabulate(
-                            Nat.min(
-                                BUCKET_SIZE,
-                                last_bucket.size() + txs.size(),
-                            ),
-                            func(i : Nat) : Transaction {
-                                if (i < last_bucket.size()) {
-                                    last_bucket[i];
-                                } else {
-                                    txs[i - last_bucket.size()];
-                                };
-                            },
-                        );
-
-                        store_bucket(new_last_bucket);
-
-                        let offset : Nat = BUCKET_SIZE - last_bucket.size();
-
-                        txs_iter := Itertools.fromArraySlice(txs, offset, txs.size());
-                    };
-                };
-                case (_) {};
-            };
-
-            for (chunk in Itertools.chunks(txs_iter, BUCKET_SIZE)) {
-                store_bucket(chunk);
-            };
-
-            #ok();
-
-        } else {
-            #err("Unauthorized Access: Only the owner can access this canister");
+        if (not (caller == ledger_canister_id)) {
+            return #err("Unauthorized Access: Only the owner can access this canister");
         };
+
+        if (Prim.rts_memory_size() >= MAX_MEMORY) {
+            return #err("Memory Limit: The archive canister cannot store any more transactions");
+        };
+
+        var txs_iter = txs.vals();
+
+        switch (Deque.popBack(txStore)) {
+            case (?(store, last_bucket)) {
+                if (last_bucket.size() < BUCKET_SIZE) {
+
+                    txStore := store;
+
+                    let new_last_bucket = Array.tabulate(
+                        Nat.min(
+                            BUCKET_SIZE,
+                            last_bucket.size() + txs.size(),
+                        ),
+                        func(i : Nat) : Transaction {
+                            if (i < last_bucket.size()) {
+                                last_bucket[i];
+                            } else {
+                                txs[i - last_bucket.size()];
+                            };
+                        },
+                    );
+
+                    store_bucket(new_last_bucket);
+
+                    let offset : Nat = BUCKET_SIZE - last_bucket.size();
+
+                    txs_iter := Itertools.fromArraySlice(txs, offset, txs.size());
+                };
+            };
+            case (_) {};
+        };
+
+        for (chunk in Itertools.chunks(txs_iter, BUCKET_SIZE)) {
+            store_bucket(chunk);
+        };
+
+        #ok();
     };
 
     public shared query func total_transactions() : async Nat {
