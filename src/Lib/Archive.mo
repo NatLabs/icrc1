@@ -121,8 +121,8 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
         );
     };
 
-    public shared query func remaining_capacity() : async Nat64 {
-        2;
+    public shared query func remaining_capacity() : async Nat {
+        MAX_MEMORY - Prim.rts_memory_size();
     };
 
     func store_bucket(bucket : [Transaction]) {

@@ -161,7 +161,7 @@ module {
         total_transactions : shared query () -> async Nat;
         get_transaction : shared query (TxIndex) -> async ?Transaction;
         get_transactions : shared query (GetTransactionsRequest) -> async [Transaction];
-        remaining_capacity : shared query () -> async Nat64;
+        remaining_capacity : shared query () -> async Nat;
     };
 
     public type InitArgs = {

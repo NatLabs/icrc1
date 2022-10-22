@@ -1,6 +1,7 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
@@ -8,7 +9,8 @@ import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 
-import SB "mo:StableBuffer/StableBuffer";
+import Itertools "mo:Itertools/Iter";
+import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import Archive "Archive";
@@ -16,8 +18,9 @@ import T "Types";
 import U "Utils";
 
 module ICRC1 {
+    public let { SB; Validate } = U;
     public type StableTrieMap<K, V> = STMap.StableTrieMap<K, V>;
-    public type StableBuffer<T> = SB.StableBuffer<T>;
+    public type StableBuffer<T> = StableBuffer.StableBuffer<T>;
 
     public type Account = T.Account;
     public type Subaccount = T.Subaccount;
@@ -50,6 +53,7 @@ module ICRC1 {
 
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
+    public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
     /// Initialize a new ICRC-1 token
     public func init(args : InitArgs) : TokenData {
@@ -63,7 +67,7 @@ module ICRC1 {
             initial_balances;
         } = args;
 
-        if (not U.validate_account(minting_account)) {
+        if (not Validate.account(minting_account)) {
             Debug.trap("minting_account is invalid");
         };
 
@@ -85,7 +89,7 @@ module ICRC1 {
             let sub_map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
 
             for ((subaccount, balance) in sub_balances.vals()) {
-                if (not U.validate_subaccount(?subaccount)) {
+                if (not Validate.subaccount(?subaccount)) {
                     Debug.trap(
                         "Invalid subaccount " # Principal.toText(Principal.fromBlob(subaccount)) # " for " # Principal.toText(owner) # " is invalid in initial_balances",
                     );
@@ -184,7 +188,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (U.validate_transfer(token, tx_req)) {
+        switch (Validate.transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -212,7 +216,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (U.validate_transfer(token, tx_req)) {
+        switch (Validate.transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -273,7 +277,7 @@ module ICRC1 {
             };
         };
 
-        switch (U.validate_transfer(token, tx_req)) {
+        switch (Validate.transfer(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -293,16 +297,8 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
-    func create_archive(token : TokenData) : async () {
-        if (token.archive.total_txs == 0) {
-            token.archive.canister := await Archive.Archive({
-                max_memory_size_bytes = MAX_TRANSACTION_BYTES;
-            });
-        };
-    };
-
     public func total_transactions(token : TokenData) : Nat {
-        SB.size(token.transactions) + token.archive.total_txs;
+        SB.size(token.transactions) + U.total_archived_txs(token.archives);
     };
 
     public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
@@ -310,36 +306,55 @@ module ICRC1 {
         if (tx_index < archive.total_txs) {
             await archive.canister.get_transaction(tx_index);
         } else {
-            SB.getOpt(token.transactions, tx_index);
+            let local_tx_index = (tx_index - U.total_archived_txs(token.archives)) : Nat;
+            SB.getOpt(token.transactions, local_tx_index);
         };
     };
 
-    func _get_transactions(
+    func get_local_txs(
         token : TokenData,
-        req : GetTransactionsRequest,
-    ) : [Transaction] {
-        let tx_index = req.start;
+        { start; length } : GetTransactionsRequest,
+    ) : Iter.Iter<Transaction> {
+        SB.toIterFromSlice(token.transactions, start, start + length);
+    };
 
-        if (SB.size(token.transactions) < tx_index) {
-            Array.tabulate<Transaction>(
-                Int.abs(SB.size(token.transactions) - tx_index - 1),
-                func(i : Nat) : Transaction {
-                    SB.get(token.transactions, i);
-                },
-            );
-        } else {
-            [];
+    func get_txs(token : TokenData, req : T.GetTransactionsRequest) : async [Transaction] {
+        var txs_size = 0;
+        var txs_iter = Itertools.empty<Transaction>();
+        let expected_size = Nat.min(req.length, MAX_TRANSACTIONS_PER_REQUEST);
+
+        // Gets transactions in the request range from archive canisters
+        label _loop for (archive in SB.toIter(token.archives)) {
+            if (req.start <= archive.start) {
+                let _txs = await archive.canister.get_transactions({
+                    start = Nat.max(req.start, archive.start);
+                    length = expected_size - txs_size;
+                });
+
+                txs_size += _txs.size();
+                txs_iter := Itertools.chain(txs_iter, _txs.vals());
+            };
+
+            if (txs_size == expected_size) {
+                break _loop;
+            };
         };
+
+        if (txs_size < expected_size) {
+            let archived_txs = U.total_archived_txs(token.archives);
+
+            let local_txs = get_local_txs(token, { start = 0; length = expected_size - txs_size });
+
+            txs_iter := Itertools.chain(txs_iter, local_txs);
+        };
+
+        Iter.toArray(txs_iter);
     };
 
     public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
-        let { archive } = token;
+        let { archive; archives } = token;
 
-        let txs = if (req.start < archive.total_txs) {
-            await archive.canister.get_transactions(req);
-        } else {
-            _get_transactions(token, req);
-        };
+        let txs = await get_txs(token, req);
 
         let valid_range = {
             var start = req.start + txs.size();
@@ -440,13 +455,13 @@ module ICRC1 {
     //
     // **should be added at the end of every update call**
     func update_canister(token : TokenData) : async () {
-        let { archive } = token;
+        let { archives } = token;
 
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
-            if (archive.total_txs == 0) {
-                await create_archive(token);
+            if (SB.size(archives) == 0) {
+                await spawn_archive_canister(token);
             };
 
             if (not (await append_to_archive(token))) {

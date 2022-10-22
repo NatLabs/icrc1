@@ -11,13 +11,14 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 
-import SB "mo:StableBuffer/StableBuffer";
+import Itertools "mo:Itertools/Iter";
+import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import T "Types";
 
 module {
-    public func init_metadata(args : T.InitArgs) : SB.StableBuffer<T.MetaDatum> {
+    public func init_metadata(args : T.InitArgs) : StableBuffer.StableBuffer<T.MetaDatum> {
         let metadata = SB.initPresized<T.MetaDatum>(4);
         SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
         SB.add(metadata, ("icrc1:name", #Text(args.name)));
@@ -34,7 +35,7 @@ module {
 
     public let DAY_IN_NANO_SECONDS : T.Timestamp = 86_400_000_000_000;
 
-    public func init_standards() : SB.StableBuffer<T.SupportedStandard> {
+    public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);
         SB.add(standards, default_standard);
 
@@ -314,7 +315,7 @@ module {
     };
 
     public func store_tx(
-        txs : SB.StableBuffer<T.Transaction>,
+        txs : StableBuffer.StableBuffer<T.Transaction>,
         tx : T.Transaction,
     ) {
         SB.add(txs, tx);
@@ -327,6 +328,16 @@ module {
         store_tx(token.transactions, tx);
 
         tx;
+    };
+
+    public func total_archived_txs(archives : T.StableBuffer<T.ArchiveData>) : Nat {
+        var total = 0;
+
+        for ({ length } in SB.toIter(archives)) {
+            total += length;
+        };
+
+        total;
     };
 
     public func debug_token(token : T.TokenData) {
@@ -357,5 +368,38 @@ module {
                 },
             ),
         );
+    };
+
+    public module Validate = {
+        public let transaction_time = validate_transaction_time;
+        public let memo = validate_memo;
+        public let account = validate_account;
+        public let subaccount = validate_subaccount;
+        public let transfer = validate_transfer;
+    };
+
+    public let SB = {
+        StableBuffer with toIter = func<A>(buffer : T.StableBuffer<A>) : Iter.Iter<A> {
+            SB.toIterFromSlice(buffer, 0, SB.size(buffer));
+        };
+
+        toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
+            if (start >= SB.size(buffer)) {
+                return Itertools.empty();
+            };
+
+            Iter.map(
+                Itertools.range(start, Nat.min(SB.size(buffer), end)),
+                func(i : Nat) : A {
+                    SB.get(buffer, i);
+                },
+            );
+        };
+
+        appendArray = func<A>(buffer : T.StableBuffer<A>, array : [A]) {
+            for (elem in array.vals()) {
+                SB.add(buffer, elem);
+            };
+        };
     };
 };
