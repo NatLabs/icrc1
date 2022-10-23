@@ -298,7 +298,7 @@ module ICRC1 {
                 func({ start; length } : T.ArchiveData) : Bool {
                     let end = start + length;
 
-                    start <= tx_index and tx_index < end;
+                    tx_index < end;
                 },
             );
 
@@ -329,7 +329,9 @@ module ICRC1 {
 
         // Gets transactions in the request range from archive canisters
         label _loop for (archive in SB.toIter(token.archives)) {
-            if (req.start <= archive.start) {
+            let archive_end = archive.start + archive.length;
+
+            if (req.start < archive_end) {
                 let _txs = await archive.canister.get_transactions({
                     start = Nat.max(req.start, archive.start);
                     length = expected_size - txs_size;

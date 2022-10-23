@@ -8,20 +8,21 @@ import Result "mo:base/Result";
 
 import Itertools "mo:Itertools/Iter";
 import SB "mo:StableBuffer/StableBuffer";
-import ICRC1 "Types";
+import Types "Types";
 
 shared ({ caller = ledger_canister_id }) actor class Archive({
     max_memory_size_bytes : Nat64;
-}) : async ICRC1.ArchiveInterface {
+}) : async Types.ArchiveInterface {
 
     stable let GB = 1024 ** 3;
     stable let MAX_MEMORY = 7 * GB;
 
-    type Transaction = ICRC1.Transaction;
+    type Transaction = Types.Transaction;
 
     type TransactionStore = Deque.Deque<[Transaction]>;
 
     stable let BUCKET_SIZE = 1000;
+    stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
     stable var txStore : TransactionStore = Deque.empty();
@@ -79,7 +80,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
         total_txs();
     };
 
-    public shared query func get_transaction(tx_index : ICRC1.TxIndex) : async ?Transaction {
+    public shared query func get_transaction(tx_index : Types.TxIndex) : async ?Transaction {
         var i = 0;
 
         func scan(txStore : TransactionStore) : ?Transaction {
@@ -110,13 +111,13 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
         };
     };
 
-    public shared query func get_transactions(req : ICRC1.GetTransactionsRequest) : async [Transaction] {
+    public shared query func get_transactions(req : Types.GetTransactionsRequest) : async [Transaction] {
         let { start; length } = req;
 
         Iter.toArray(
             Itertools.take(
                 txs_slice(start, length),
-                BUCKET_SIZE,
+                MAX_TRANSACTIONS_PER_REQUEST,
             ),
         );
     };

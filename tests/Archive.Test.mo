@@ -106,9 +106,9 @@ let success = run([
                         (await archive.total_transactions()) == 5000,
                         (await archive.get_transactions({ start = 0; length = 100 })) == txs_range(0, 100),
                         (await archive.get_transactions({ start = 225; length = 100 })) == txs_range(225, 325),
-                        (await archive.get_transactions({ start = 225; length = 1200 })) == txs_range(225, 1225), // takes only 1000 txs
+                        (await archive.get_transactions({ start = 225; length = 1200 })) == txs_range(225, 1425),
                         (await archive.get_transactions({ start = 980; length = 100 })) == txs_range(980, 1080),
-                        (await archive.get_transactions({ start = 3251; length = 2000 })) == txs_range(3251, 4251), // takes only 1000 txs
+                        (await archive.get_transactions({ start = 3251; length = 2000 })) == txs_range(3251, 5000),
                     ]);
                 },
             ),

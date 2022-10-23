@@ -1,3 +1,4 @@
+import Array "mo:base/Array";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
@@ -52,17 +53,32 @@ func mint_tx(token : ICRC1.TokenData, to : ICRC1.Account, amount : Nat) : ICRC1.
         timestamp = 0;
         mint = ?{
             to;
-            amount = add_decimals(amount, 8);
+            amount;
             memo = null;
             created_at_time = null;
         };
     };
 };
 
-func is_tx_equal(t1 : ?ICRC1.Transaction, t2 : ?ICRC1.Transaction) : Bool {
+func txs_range(token : ICRC1.TokenData, start : Nat, end : Nat) : [ICRC1.Transaction] {
+    Array.tabulate(
+        end - start,
+        func(i : Nat) : ICRC1.Transaction {
+            mint_tx(token, user1, start + i);
+        },
+    );
+};
+
+func is_tx_equal(t1 : ICRC1.Transaction, t2 : ICRC1.Transaction) : Bool {
+
+    { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
+
+};
+
+func is_opt_tx_equal(t1 : ?ICRC1.Transaction, t2 : ?ICRC1.Transaction) : Bool {
     switch (t1, t2) {
         case (?t1, ?t2) {
-            { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
+            is_tx_equal(t1, t2);
         };
         case (_, ?t2) { false };
         case (?t1, _) { false };
@@ -70,13 +86,17 @@ func is_tx_equal(t1 : ?ICRC1.Transaction, t2 : ?ICRC1.Transaction) : Bool {
     };
 };
 
-func mint_n_times(token : ICRC1.TokenData, minting_principal : Principal, n : Nat) : async () {
+func are_txs_equal(t1 : [ICRC1.Transaction], t2 : [ICRC1.Transaction]) : Bool {
+    Itertools.equal<ICRC1.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
+};
+
+func create_mints(token : ICRC1.TokenData, minting_principal : Principal, n : Nat) : async () {
     for (i in Itertools.range(0, n)) {
         ignore await ICRC1.mint(
             token,
             {
                 to = user1;
-                amount = add_decimals(i, 8);
+                amount = i;
                 memo = null;
                 created_at_time = null;
             },
@@ -410,26 +430,69 @@ let success = run([
                             let args = default_token_args;
                             let token = ICRC1.init(args);
 
-                            await mint_n_times(token, canister.owner, 2001);
+                            await create_mints(token, canister.owner, 4123);
 
+                            let txs = (
+                                await ICRC1.get_transactions(
+                                    token,
+                                    {
+                                        start = 3000;
+                                        length = 1123;
+                                    },
+                                ),
+                            ).transactions;
+
+                            Debug.print(debug_show (txs, txs.size()));
                             assertAllTrue([
-                                SB.size(token.transactions) == 1,
-                                SB.capacity(token.transactions) == 2000,
+                                SB.size(token.transactions) == 123,
+                                SB.capacity(token.transactions) == ICRC1.MAX_TRANSACTIONS_IN_LEDGER,
 
                                 SB.size(token.archives) == 1,
-                                U.total_archived_txs(token.archives) == 2000,
+                                U.total_archived_txs(token.archives) == 4000,
 
-                                is_tx_equal(
+                                is_opt_tx_equal(
                                     (await ICRC1.get_transaction(token, 0)),
                                     ?mint_tx(token, user1, 0),
                                 ),
-                                is_tx_equal(
+                                is_opt_tx_equal(
                                     (await ICRC1.get_transaction(token, 1234)),
                                     ?mint_tx(token, user1, 1234),
                                 ),
-                                is_tx_equal(
+                                is_opt_tx_equal(
                                     (await ICRC1.get_transaction(token, 2000)),
                                     ?mint_tx(token, user1, 2000),
+                                ),
+                                is_opt_tx_equal(
+                                    (await ICRC1.get_transaction(token, 4100)),
+                                    ?mint_tx(token, user1, 4100),
+                                ),
+                                is_opt_tx_equal(
+                                    (await ICRC1.get_transaction(token, 4122)),
+                                    ?mint_tx(token, user1, 4122),
+                                ),
+                                are_txs_equal(
+                                    (
+                                        await ICRC1.get_transactions(
+                                            token,
+                                            {
+                                                start = 0;
+                                                length = 2000;
+                                            },
+                                        ),
+                                    ).transactions,
+                                    txs_range(token, 0, 2000),
+                                ),
+                                are_txs_equal(
+                                    (
+                                        await ICRC1.get_transactions(
+                                            token,
+                                            {
+                                                start = 3000;
+                                                length = 1123;
+                                            },
+                                        ),
+                                    ).transactions,
+                                    txs_range(token, 3000, 4123),
                                 ),
                             ]);
                         },
