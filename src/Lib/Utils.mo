@@ -262,9 +262,9 @@ module {
 
     public func kind_to_text(kind : T.OperationKind) : Text {
         switch (kind) {
-            case (#mint) "mint";
-            case (#burn) "burn";
-            case (#transfer) "transfer";
+            case (#mint) "MINT";
+            case (#burn) "BURN";
+            case (#transfer) "TRANSFER";
         };
     };
 
@@ -400,6 +400,20 @@ module {
             for (elem in array.vals()) {
                 SB.add(buffer, elem);
             };
+        };
+
+        getLast = func<A>(buffer : T.StableBuffer<A>) : ?A {
+            let size = SB.size(buffer);
+
+            if (size > 0) {
+                SB.getOpt(buffer, (size - 1) : Nat);
+            } else {
+                null;
+            };
+        };
+
+        capacity = func<A>(buffer : T.StableBuffer<A>) : Nat {
+            buffer.elems.size();
         };
     };
 };

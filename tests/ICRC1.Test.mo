@@ -4,7 +4,8 @@ import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
 
-import SB "mo:StableBuffer/StableBuffer";
+import Itertools "mo:Itertools/Iter";
+import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import ActorSpec "./utils/ActorSpec";
 
@@ -22,6 +23,8 @@ let {
     run;
 } = ActorSpec;
 
+let { SB } = U;
+
 let canister : ICRC1.Account = {
     owner = Principal.fromText("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
     subaccount = null;
@@ -35,6 +38,51 @@ let user1 : ICRC1.Account = {
 let user2 : ICRC1.Account = {
     owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
     subaccount = null;
+};
+
+func add_decimals(n : Nat, decimals : Nat) : Nat {
+    n * (10 ** decimals);
+};
+
+func mint_tx(token : ICRC1.TokenData, to : ICRC1.Account, amount : Nat) : ICRC1.Transaction {
+    {
+        burn = null;
+        transfer = null;
+        kind = "MINT";
+        timestamp = 0;
+        mint = ?{
+            to;
+            amount = add_decimals(amount, 8);
+            memo = null;
+            created_at_time = null;
+        };
+    };
+};
+
+func is_tx_equal(t1 : ?ICRC1.Transaction, t2 : ?ICRC1.Transaction) : Bool {
+    switch (t1, t2) {
+        case (?t1, ?t2) {
+            { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
+        };
+        case (_, ?t2) { false };
+        case (?t1, _) { false };
+        case (_, _) { true };
+    };
+};
+
+func mint_n_times(token : ICRC1.TokenData, minting_principal : Principal, n : Nat) : async () {
+    for (i in Itertools.range(0, n)) {
+        ignore await ICRC1.mint(
+            token,
+            {
+                to = user1;
+                amount = add_decimals(i, 8);
+                memo = null;
+                created_at_time = null;
+            },
+            minting_principal,
+        );
+    };
 };
 
 let default_token_args : ICRC1.InitArgs = {
@@ -347,6 +395,42 @@ let success = run([
                                 // ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
                                 ICRC1.balance_of(token, user2) == prev.balance2 + transfer_args.amount,
                                 ICRC1.total_supply(token) == prev.total_supply,
+                            ]);
+                        },
+                    ),
+                ],
+            ),
+
+            describe(
+                "Testing Internal Archive",
+                [
+                    it(
+                        "Stores txs in archive",
+                        do {
+                            let args = default_token_args;
+                            let token = ICRC1.init(args);
+
+                            await mint_n_times(token, canister.owner, 2001);
+
+                            assertAllTrue([
+                                SB.size(token.transactions) == 1,
+                                SB.capacity(token.transactions) == 2000,
+
+                                SB.size(token.archives) == 1,
+                                U.total_archived_txs(token.archives) == 2000,
+
+                                is_tx_equal(
+                                    (await ICRC1.get_transaction(token, 0)),
+                                    ?mint_tx(token, user1, 0),
+                                ),
+                                is_tx_equal(
+                                    (await ICRC1.get_transaction(token, 1234)),
+                                    ?mint_tx(token, user1, 1234),
+                                ),
+                                is_tx_equal(
+                                    (await ICRC1.get_transaction(token, 2000)),
+                                    ?mint_tx(token, user1, 2000),
+                                ),
                             ]);
                         },
                     ),

@@ -173,7 +173,6 @@ module {
         max_supply : Balance;
         initial_balances : [(Principal, [(Subaccount, Balance)])];
         // archive_options : {
-        //     max_memory_size_bytes : ?Nat64;
         //     num_blocks_to_archive : Nat;
         //     trigger_threshold : Nat;
         //     controller_id : Principal;
@@ -223,12 +222,7 @@ module {
         metadata : StableBuffer<MetaDatum>;
         supported_standards : StableBuffer<SupportedStandard>;
         transaction_window : Timestamp;
-
         transactions : StableBuffer<Transaction>;
-        archive : {
-            var canister : ArchiveInterface;
-            var total_txs : Nat;
-        };
         archives : StableBuffer<ArchiveData>;
     };
 

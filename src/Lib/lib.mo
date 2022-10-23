@@ -114,18 +114,6 @@ module ICRC1 {
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
             transaction_window = U.DAY_IN_NANO_SECONDS;
-
-            archive = {
-                var canister = actor (
-                    Principal.toText(
-                        Principal.fromBlob(
-                            Blob.fromArray([]),
-                        ),
-                    ),
-                );
-                var total_txs = 0;
-            };
-
             archives = SB.init();
         };
     };
@@ -302,11 +290,27 @@ module ICRC1 {
     };
 
     public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
-        let { archive } = token;
-        if (tx_index < archive.total_txs) {
-            await archive.canister.get_transaction(tx_index);
+        let archived_txs = U.total_archived_txs(token.archives);
+        if (tx_index < archived_txs) {
+
+            let archive = Itertools.find(
+                SB.toIter(token.archives),
+                func({ start; length } : T.ArchiveData) : Bool {
+                    let end = start + length;
+
+                    start <= tx_index and tx_index < end;
+                },
+            );
+
+            switch (archive) {
+                case (?archive) {
+                    await archive.canister.get_transaction(tx_index);
+                };
+                case (_) { null };
+            };
+
         } else {
-            let local_tx_index = (tx_index - U.total_archived_txs(token.archives)) : Nat;
+            let local_tx_index = (tx_index - archived_txs) : Nat;
             SB.getOpt(token.transactions, local_tx_index);
         };
     };
@@ -352,7 +356,7 @@ module ICRC1 {
     };
 
     public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
-        let { archive; archives } = token;
+        let { archives } = token;
 
         let txs = await get_txs(token, req);
 
@@ -361,28 +365,32 @@ module ICRC1 {
             var end = Nat.min(req.start + txs.size() + req.length, total_transactions(token));
         };
 
-        let res = {
+        let size = (valid_range.end - valid_range.start) : Nat / MAX_TRANSACTIONS_PER_REQUEST;
+        let paginated_requests = Array.tabulate(
+            size,
+            func(i : Nat) : GetTransactionsRequest {
+                let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
+                let start = offset + valid_range.start;
+
+                {
+                    start;
+                    length = Nat.min(MAX_TRANSACTIONS_PER_REQUEST, valid_range.end - start);
+                };
+            },
+        );
+
+        {
             log_length = txs.size();
             first_index = req.start;
             transactions = txs;
-            archived_transactions = Array.tabulate(
-                (valid_range.end - valid_range.start) : Nat / 1000,
-                func(i : Nat) : GetTransactionsRequest {
-                    let start = (i * 1000) + valid_range.start;
-                    {
-                        start;
-                        length = Nat.min(1000, valid_range.end - start);
-                    };
-                },
-            );
+            archived_transactions = paginated_requests;
         };
 
-        res;
     };
 
     // Retrieves the last archive in the archives buffer
-    func get_archive(token : TokenData) : T.ArchiveData {
-        SB.get(token.archives, SB.size(token.archives) - 1);
+    func get_last_archive(token : TokenData) : ?T.ArchiveData {
+        SB.getLast(token.archives);
     };
 
     // creates a new archive canister
@@ -394,28 +402,40 @@ module ICRC1 {
 
     // Adds a new archive canister to the archives array
     func spawn_archive_canister(token : TokenData) : async () {
-        let { start; length } = get_archive(token);
 
-        let new_archive_data : T.ArchiveData = {
-            canister = await new_archive_canister();
-            start = start + length;
-            length = 0;
+        let start = switch (get_last_archive(token)) {
+            case (?archive) {
+                archive.start + archive.length;
+            };
+            case (_) {
+                0;
+            };
         };
 
-        SB.add(token.archives, new_archive_data);
+        let new_archive : T.ArchiveData = {
+            start;
+            length = 0;
+            canister = await new_archive_canister();
+        };
+
+        SB.add(token.archives, new_archive);
     };
 
     // Updates the last archive in the archives buffer
-    func update_archive(token : TokenData, update : (T.ArchiveData) -> async T.ArchiveData) : async () {
-        let old_data = get_archive(token);
-        let new_data = await update(old_data);
+    func update_last_archive(token : TokenData, update : (T.ArchiveData) -> async T.ArchiveData) : async () {
+        switch (get_last_archive(token)) {
+            case (?old_data) {
+                let new_data = await update(old_data);
 
-        if (not (new_data == old_data)) {
-            SB.put(
-                token.archives,
-                SB.size(token.archives) - 1,
-                new_data,
-            );
+                if (not (new_data == old_data)) {
+                    SB.put(
+                        token.archives,
+                        SB.size(token.archives) - 1,
+                        new_data,
+                    );
+                };
+            };
+            case (_) {};
         };
     };
 
@@ -424,7 +444,7 @@ module ICRC1 {
     func append_to_archive(token : TokenData) : async Bool {
         var success = false;
 
-        await update_archive(
+        await update_last_archive(
             token,
             func(archive : T.ArchiveData) : async T.ArchiveData {
                 let { canister; length } = archive;
