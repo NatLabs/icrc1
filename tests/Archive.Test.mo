@@ -4,8 +4,8 @@ import Iter "mo:base/Iter";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
 
-import Archive "../src/Lib/Archive";
-import ICRC1 "../src/Lib/";
+import Archive "../src/ICRC1/Archive";
+import ICRC1 "../src/ICRC1/";
 
 import ActorSpec "./utils/ActorSpec";
 

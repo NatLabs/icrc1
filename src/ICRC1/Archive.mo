@@ -1,7 +1,5 @@
 import Prim "mo:prim";
 
-import Array "mo:base/Array";
-import Deque "mo:base/Deque";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Hash "mo:base/Hash";
@@ -11,24 +9,19 @@ import Itertools "mo:Itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 import Types "Types";
 
-import { SB } "Utils";
-
 shared ({ caller = ledger_canister_id }) actor class Archive({
     max_memory_size_bytes : Nat64;
 }) : async Types.ArchiveInterface {
 
-    stable let GB = 1024 ** 3;
-    stable let MAX_MEMORY = 7 * GB;
-
     type Transaction = Types.Transaction;
 
-    type TransactionStore = StableTrieMap.StableTrieMap<Nat, [Transaction]>;
-
+    stable let GB = 1024 ** 3;
+    stable let MAX_MEMORY = 7 * GB;
     stable let BUCKET_SIZE = 1000;
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
-    stable let txStore : TransactionStore = StableTrieMap.new();
+    stable let txStore = StableTrieMap.new<Nat, [Transaction]>();
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
 

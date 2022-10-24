@@ -4,8 +4,8 @@ import Result "mo:base/Result";
 
 import SB "mo:StableBuffer/StableBuffer";
 
-import ICRC1 "Lib/";
-import Archive "Lib/Archive";
+import ICRC1 "ICRC1/";
+import Archive "ICRC1/Archive";
 
 shared ({ caller = _owner }) actor class Token(
     _name : Text,

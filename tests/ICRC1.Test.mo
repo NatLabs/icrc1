@@ -10,8 +10,8 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import ActorSpec "./utils/ActorSpec";
 
-import ICRC1 "../src/Lib/";
-import U "../src/Lib/Utils";
+import ICRC1 "../src/ICRC1/";
+import U "../src/ICRC1/Utils";
 
 let {
     assertTrue;

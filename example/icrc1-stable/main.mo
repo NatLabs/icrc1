@@ -1,7 +1,7 @@
 import Option "mo:base/Option";
 import Result "mo:base/Result";
 
-import ICRC1 "../../src/Lib/";
+import ICRC1 "../../src/ICRC1/";
 
 shared ({ caller = _owner }) actor class (
     _name : Text,
