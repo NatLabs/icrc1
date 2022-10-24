@@ -7,8 +7,10 @@ import Nat "mo:base/Nat";
 import Result "mo:base/Result";
 
 import Itertools "mo:Itertools/Iter";
-import SB "mo:StableBuffer/StableBuffer";
+import StableTrieMap "mo:StableTrieMap";
 import Types "Types";
+
+import { SB } "Utils";
 
 shared ({ caller = ledger_canister_id }) actor class Archive({
     max_memory_size_bytes : Nat64;

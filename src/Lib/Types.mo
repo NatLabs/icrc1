@@ -222,6 +222,7 @@ module {
         metadata : StableBuffer<MetaDatum>;
         supported_standards : StableBuffer<SupportedStandard>;
         transaction_window : Timestamp;
+        var tx_deduplication : Bool;
         transactions : StableBuffer<Transaction>;
         archives : StableBuffer<ArchiveData>;
     };

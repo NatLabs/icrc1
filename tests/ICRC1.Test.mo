@@ -429,6 +429,7 @@ let success = run([
                         do {
                             let args = default_token_args;
                             let token = ICRC1.init(args);
+                            ICRC1.set_tx_deduplication(token, false);
 
                             await create_mints(token, canister.owner, 4123);
 

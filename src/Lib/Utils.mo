@@ -18,6 +18,7 @@ import STMap "mo:StableTrieMap";
 import T "Types";
 
 module {
+    // Creates a Stable Buffer with the default metadata and returns it.
     public func init_metadata(args : T.InitArgs) : StableBuffer.StableBuffer<T.MetaDatum> {
         let metadata = SB.initPresized<T.MetaDatum>(4);
         SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
@@ -35,6 +36,7 @@ module {
 
     public let DAY_IN_NANO_SECONDS : T.Timestamp = 86_400_000_000_000;
 
+    // Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);
         SB.add(standards, default_standard);
@@ -42,67 +44,15 @@ module {
         standards;
     };
 
-    public func validate_subaccount(subaccount : ?T.Subaccount) : Bool {
-        switch (subaccount) {
-            case (?bytes) {
-                bytes.size() == 32;
-            };
-            case (_) true;
-        };
-    };
-
-    public func validate_account(account : T.Account) : Bool {
-        if (Principal.isAnonymous(account.owner)) {
-            false;
-        } else if (not validate_subaccount(account.subaccount)) {
-            false;
-        } else {
-            true;
-        };
-    };
-
-    public func validate_memo(memo : ?T.Memo) : Bool {
-        switch (memo) {
-            case (?bytes) {
-                bytes.size() <= 32;
-            };
-            case (_) true;
-        };
-    };
-
-    public func validate_transaction_time(
-        transaction_window : T.Timestamp,
-        _created_at_time : ?T.Timestamp,
-    ) : Result.Result<(), T.TimeError> {
-        let now = Time.now();
-        let created_at_time = switch (_created_at_time) {
-            case (?time_in_nat64) {
-                Nat64.toNat(time_in_nat64) : Int;
-            };
-            case (_) now;
-        };
-
-        let diff = now - created_at_time;
-
-        if (created_at_time > now) {
-            return #err(
-                #CreatedInFuture {
-                    ledger_time = Nat64.fromNat(Int.abs(now));
-                },
-            );
-        } else if (diff > (Nat64.toNat(transaction_window) : Int)) {
-            return #err(#TooOld);
-        };
-
-        #ok();
-    };
-
+    // Returns the default subaccount for cases where a user does
+    // not specify it.
     public func default_subaccount() : T.Subaccount {
         Blob.fromArray(
             Array.tabulate(32, func(_ : Nat) : Nat8 { 0 }),
         );
     };
 
+    // Creates a new triemap for storing users subaccounts and balances
     public func new_subaccount_map(
         subaccount : ?T.Subaccount,
         balance : T.Balance,
@@ -118,6 +68,7 @@ module {
         map;
     };
 
+    // Retrieves the balance of an account
     public func get_balance(accounts : T.AccountStore, req : T.Account) : T.Balance {
         switch (STMap.get(accounts, req.owner)) {
             case (?subaccounts) {
@@ -144,6 +95,7 @@ module {
         };
     };
 
+    // Updates the balance of an account
     public func update_balance(
         accounts : T.AccountStore,
         req : T.Account,
@@ -176,66 +128,69 @@ module {
         };
     };
 
-    public func validate_transfer(
-        token : T.TokenData,
-        tx_req : T.TransactionRequest,
-    ) : Result.Result<(), T.TransferError> {
+    // Checks if there is a duplicate of the given transaction
+    // stored in the main canister
+    public func tx_has_duplicates(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), Nat> {
+        let { transactions = txs } = token;
 
-        if (tx_req.from == tx_req.to) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "The from cannot have the same account as the to.";
-                }),
-            );
+        var phantom_txs_size = 0;
+        let phantom_txs = SB._clearedElemsToIter(txs);
+        let current_txs = SB.toIter(txs);
+
+        let archived_txs = total_archived_txs(token.archives);
+
+        let last_2000_txs = if (archived_txs > 0) {
+            phantom_txs_size := SB.capacity(txs) - SB.size(txs);
+            Itertools.chain(phantom_txs, current_txs);
+        } else {
+            current_txs;
         };
 
-        if (not validate_account(tx_req.from)) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "Invalid account entered for from.";
-                }),
-            );
-        };
+        for ((i, tx) in Itertools.enumerate(last_2000_txs)) {
+            let res = switch (tx_req.kind) {
+                case (#mint) {
+                    switch (tx.mint) {
+                        case (?mint) {
+                            let mint_req : T.Mint = tx_req;
 
-        if (not validate_account(tx_req.to)) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "Invalid account entered for to";
-                }),
-            );
-        };
+                            mint_req == mint;
+                        };
+                        case (_) false;
+                    };
+                };
+                case (#burn) {
+                    switch (tx.burn) {
+                        case (?burn) {
+                            let burn_req : T.Burn = tx_req;
 
-        if (not validate_memo(tx_req.memo)) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "Memo must not be more than 32 bytes";
-                }),
-            );
-        };
+                            burn_req == burn;
+                        };
+                        case (_) false;
+                    };
+                };
+                case (#transfer) {
+                    switch (tx.transfer) {
+                        case (?transfer) {
+                            let transfer_req : T.Transfer = tx_req;
 
-        switch (validate_transaction_time(token.transaction_window, tx_req.created_at_time)) {
-            case (#err(errorMsg)) {
-                return #err(errorMsg);
+                            transfer_req == transfer;
+                        };
+                        case (_) false;
+                    };
+                };
+
             };
-            case (_) {};
-        };
 
-        let sender_balance : T.Balance = get_balance(
-            token.accounts,
-            tx_req.from,
-        );
-
-        if (tx_req.amount > sender_balance) {
-            return #err(#InsufficientFunds { balance = sender_balance });
+            if (res) {
+                let index = return #err(archived_txs + i - phantom_txs_size);
+            };
         };
 
         #ok();
     };
 
+    // Formats the different operation arguements into
+    // a `TransactionRequest`, an internal type to access fields easier.
     public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {
         switch (operation) {
             case (#mint(args)) {
@@ -260,6 +215,7 @@ module {
         };
     };
 
+    // Transforms the transaction kind from `variant` to `Text`
     public func kind_to_text(kind : T.OperationKind) : Text {
         switch (kind) {
             case (#mint) "MINT";
@@ -268,6 +224,7 @@ module {
         };
     };
 
+    // Formats the tx request into a finalised transaction
     public func req_to_tx(tx_req : T.TransactionRequest) : T.Transaction {
 
         {
@@ -291,6 +248,8 @@ module {
         };
     };
 
+    // Transfers tokens from the sender to the
+    // recipient based on the given tx request
     public func transfer(
         accounts : T.AccountStore,
         tx_req : T.TransactionRequest,
@@ -314,22 +273,18 @@ module {
         );
     };
 
-    public func store_tx(
-        txs : StableBuffer.StableBuffer<T.Transaction>,
-        tx : T.Transaction,
-    ) {
-        SB.add(txs, tx);
-    };
-
+    // Transfers tokens based on the tx request
+    // and stores the transaction
     public func process_tx(token : T.TokenData, tx_req : T.TransactionRequest) : T.Transaction {
         transfer(token.accounts, tx_req);
 
         let tx = req_to_tx(tx_req);
-        store_tx(token.transactions, tx);
+        SB.add(token.transactions, tx);
 
         tx;
     };
 
+    // Get the number of all archived transactions
     public func total_archived_txs(archives : T.StableBuffer<T.ArchiveData>) : Nat {
         var total = 0;
 
@@ -340,44 +295,7 @@ module {
         total;
     };
 
-    public func debug_token(token : T.TokenData) {
-        Debug.print("Name: " # token.name);
-        Debug.print("Symbol: " # token.symbol);
-        Debug.print("Decimals: " # debug_show token.decimals);
-        Debug.print("Fee: " # debug_show token.fee);
-        Debug.print("transaction_window: " # debug_show token.transaction_window);
-        Debug.print("minting_account: " # debug_show token.minting_account);
-        Debug.print("metadata: " # debug_show token.metadata);
-        Debug.print("supported_standards: " # debug_show token.supported_standards);
-        // Debug.print("accounts: " # debug_show
-        //     Iter.toArray(
-        //         Iter.map(
-        //             STMap.entries(token.accounts),
-        //             func((k, v) : (Principal, STMap.StableTrieMap<Blob, Nat>)) : (Principal, [(Blob, Nat)]) {
-        //                 (k, Iter.toArray(STMap.entries(v)))
-        //             }
-        //         )
-        //     )
-        // );
-        Debug.print("transactions: " # debug_show SB.size(token.transactions));
-        Debug.print(
-            "transactions: " # debug_show Array.tabulate(
-                SB.size(token.transactions),
-                func(i : Nat) : T.Transaction {
-                    SB.get(token.transactions, i);
-                },
-            ),
-        );
-    };
-
-    public module Validate = {
-        public let transaction_time = validate_transaction_time;
-        public let memo = validate_memo;
-        public let account = validate_account;
-        public let subaccount = validate_subaccount;
-        public let transfer = validate_transfer;
-    };
-
+    // Stable Buffer Module with some additional functions
     public let SB = {
         StableBuffer with toIter = func<A>(buffer : T.StableBuffer<A>) : Iter.Iter<A> {
             SB.toIterFromSlice(buffer, 0, SB.size(buffer));
@@ -414,6 +332,15 @@ module {
 
         capacity = func<A>(buffer : T.StableBuffer<A>) : Nat {
             buffer.elems.size();
+        };
+
+        _clearedElemsToIter = func<A>(buffer : T.StableBuffer<A>) : Iter.Iter<A> {
+            Iter.map(
+                Itertools.range(buffer.count, buffer.elems.size()),
+                func(i : Nat) : A {
+                    buffer.elems[i];
+                },
+            );
         };
     };
 };

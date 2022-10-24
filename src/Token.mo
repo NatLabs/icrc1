@@ -14,6 +14,7 @@ shared ({ caller = _owner }) actor class Token(
     _fee : ICRC1.Balance,
     _max_supply : ICRC1.Balance,
     _minting_account : ?ICRC1.Account,
+    _tx_deduplication : Bool,
     _initial_balances : [(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
 ) : async ICRC1.TokenInterface {
 
@@ -30,6 +31,7 @@ shared ({ caller = _owner }) actor class Token(
                 subaccount = null;
             },
         );
+        tx_deduplication = _tx_deduplication;
         initial_balances = _initial_balances;
     });
 

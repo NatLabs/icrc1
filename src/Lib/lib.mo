@@ -14,11 +14,12 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import Archive "Archive";
+import Validate "Validate";
 import T "Types";
 import U "Utils";
 
 module ICRC1 {
-    public let { SB; Validate } = U;
+    public let { SB } = U;
     public type StableTrieMap<K, V> = STMap.StableTrieMap<K, V>;
     public type StableBuffer<T> = StableBuffer.StableBuffer<T>;
 
@@ -113,6 +114,7 @@ module ICRC1 {
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
+            var tx_deduplication = true;
             transaction_window = U.DAY_IN_NANO_SECONDS;
             archives = SB.init();
         };
@@ -132,6 +134,10 @@ module ICRC1 {
 
     public func fee(token : TokenData) : Balance {
         token.fee;
+    };
+
+    public func set_fee(token : TokenData, fee : Nat) {
+        token.fee := fee;
     };
 
     public func metadata(token : TokenData) : [MetaDatum] {
@@ -158,6 +164,14 @@ module ICRC1 {
 
     public func supported_standards(token : TokenData) : [SupportedStandard] {
         SB.toArray(token.supported_standards);
+    };
+
+    public func add_supported_standard(token : TokenData, standard : T.SupportedStandard) {
+        SB.add(token.supported_standards, standard);
+    };
+
+    public func set_tx_deduplication(token : TokenData, val : Bool) {
+        token.tx_deduplication := val;
     };
 
     public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
@@ -236,13 +250,6 @@ module ICRC1 {
             };
         };
 
-        var tx_req = U.args_to_req(
-            #transfer(transfer_op),
-            token.minting_account,
-        );
-
-        let { from; to } = tx_req;
-
         switch (args.fee) {
             case (?fee) {
                 if (not (token.fee == fee)) {
@@ -264,6 +271,13 @@ module ICRC1 {
                 };
             };
         };
+
+        var tx_req = U.args_to_req(
+            #transfer(transfer_op),
+            token.minting_account,
+        );
+
+        let { from; to } = tx_req;
 
         switch (Validate.transfer(token, tx_req)) {
             case (#err(errorType)) {
