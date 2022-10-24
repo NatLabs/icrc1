@@ -10,18 +10,17 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 
 import Itertools "mo:Itertools/Iter";
-import StableBuffer "mo:StableBuffer/StableBuffer";
-import STMap "mo:StableTrieMap";
+import StableTrieMap "mo:StableTrieMap";
 
 import Archive "Archive";
 import Validate "Validate";
 import T "Types";
 import U "Utils";
 
+/// The ICRC1 Module with all the functions for creating an
+/// ICRC1 token on the Internet Computer
 module ICRC1 {
     public let { SB } = U;
-    public type StableTrieMap<K, V> = STMap.StableTrieMap<K, V>;
-    public type StableBuffer<T> = StableBuffer.StableBuffer<T>;
 
     public type Account = T.Account;
     public type Subaccount = T.Subaccount;
@@ -76,8 +75,8 @@ module ICRC1 {
             Debug.trap("max_supply must be >= 1");
         };
 
-        let accounts : AccountStore = STMap.new();
-        STMap.put(
+        let accounts : AccountStore = StableTrieMap.new();
+        StableTrieMap.put(
             accounts,
             Principal.equal,
             Principal.hash,
@@ -89,7 +88,7 @@ module ICRC1 {
         );
 
         for ((owner, sub_balances) in initial_balances.vals()) {
-            let sub_map : T.SubaccountStore = STMap.new();
+            let sub_map : T.SubaccountStore = StableTrieMap.new();
 
             for ((subaccount, balance) in sub_balances.vals()) {
                 if (not Validate.subaccount(?subaccount)) {
@@ -98,10 +97,10 @@ module ICRC1 {
                     );
                 };
 
-                STMap.put(sub_map, Blob.equal, Blob.hash, subaccount, balance);
+                StableTrieMap.put(sub_map, Blob.equal, Blob.hash, subaccount, balance);
             };
 
-            STMap.put(
+            StableTrieMap.put(
                 accounts,
                 Principal.equal,
                 Principal.hash,
@@ -128,30 +127,37 @@ module ICRC1 {
         };
     };
 
+    /// Retrieve the name of the token
     public func name(token : TokenData) : Text {
         token.name;
     };
 
+    /// Retrieve the symbol of the token
     public func symbol(token : TokenData) : Text {
         token.symbol;
     };
 
+    /// Retrieve the number of decimals specified for the token
     public func decimals({ decimals } : TokenData) : Nat8 {
         decimals;
     };
 
+    /// Retrieve the fee for each transfer
     public func fee(token : TokenData) : Balance {
         token.fee;
     };
 
+    /// Set the fee for each transfer
     public func set_fee(token : TokenData, fee : Nat) {
         token.fee := fee;
     };
 
+    /// Retrieve all the metadata of the token
     public func metadata(token : TokenData) : [MetaDatum] {
         SB.toArray(token.metadata);
     };
 
+    /// Returns the total supply of circulating tokens
     public func total_supply(token : TokenData) : Balance {
         let {
             max_supply;
@@ -162,26 +168,47 @@ module ICRC1 {
         max_supply - U.get_balance(accounts, minting_account);
     };
 
+    /// Returns the account with the permission to mint tokens
+    ///
+    /// Note: **The minting account can only participate in minting
+    /// and burning transactions, so any tokens sent to it will be
+    /// considered burned.**
+
     public func minting_account(token : TokenData) : Account {
         token.minting_account;
     };
 
+    /// Retrieve the balance of a given account
     public func balance_of({ accounts } : TokenData, req : Account) : Balance {
         U.get_balance(accounts, req);
     };
 
+    /// Returns an array of standards supported by this token
     public func supported_standards(token : TokenData) : [SupportedStandard] {
         SB.toArray(token.supported_standards);
     };
 
+    /// Add a standard to the standards supported of the given token
     public func add_supported_standard(token : TokenData, standard : T.SupportedStandard) {
         SB.add(token.supported_standards, standard);
     };
+
+    /// **Opt-in** or **opt-out** of **transaction deduplication.**
+    ///
+    /// Tokens with transaction deduplication check all the
+    /// the transactions in the main ICRC1 canister for duplicate
+    /// transactions.
+    ///
+    /// If a duplicate transaction is found the transaction fails,
+    /// otherwise the transaction is approved.
+    ///
+    /// Tokens have transaction deduplication on by default
 
     public func set_tx_deduplication(token : TokenData, val : Bool) {
         token.tx_deduplication := val;
     };
 
+    /// Custom function to mint tokens with minimal function parameters
     public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
 
         if (not (caller == token.minting_account.owner)) {
@@ -212,6 +239,7 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
+    /// Custom function to burn tokens with minimal function parameters
     public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
 
         let burn_op : T.Burn = {
@@ -240,6 +268,7 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
+    /// Transfers tokens from one account to another
     public func transfer(
         token : TokenData,
         args : TransferArgs,
@@ -307,10 +336,12 @@ module ICRC1 {
         #ok(tx_req.amount);
     };
 
+    /// Returns the total number of transactions that have been processed by the given token.
     public func total_transactions(token : TokenData) : Nat {
         SB.size(token.transactions) + U.total_archived_txs(token.archives);
     };
 
+    /// Retrieves the transaction specified by the given `tx_index`
     public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
         let archived_txs = U.total_archived_txs(token.archives);
         if (tx_index < archived_txs) {
@@ -379,6 +410,7 @@ module ICRC1 {
         Iter.toArray(txs_iter);
     };
 
+    /// Retrieves the transactions specified by the given range
     public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
         let { archives } = token;
 
@@ -463,7 +495,7 @@ module ICRC1 {
         };
     };
 
-    // Moves the transactions in the ICRC1 canister to the archive canister
+    // Moves the transactions from the ICRC1 canister to the archive canister
     // and returns a boolean that indicates the success of the data transfer
     func append_to_archive(token : TokenData) : async Bool {
         var success = false;
