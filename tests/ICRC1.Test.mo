@@ -125,7 +125,6 @@ let success = run([
                     let args = default_token_args;
 
                     let token = ICRC1.init(args);
-                    Debug.print(debug_show (await ICRC1.get_transaction(token, 0)));
 
                     // returns without trapping
                     assertAllTrue([
@@ -443,7 +442,6 @@ let success = run([
                                 ),
                             ).transactions;
 
-                            Debug.print(debug_show (txs, txs.size()));
                             assertAllTrue([
                                 SB.size(token.transactions) == 123,
                                 SB.capacity(token.transactions) == ICRC1.MAX_TRANSACTIONS_IN_LEDGER,
@@ -494,6 +492,30 @@ let success = run([
                                         ),
                                     ).transactions,
                                     txs_range(token, 3000, 4123),
+                                ),
+                                are_txs_equal(
+                                    (
+                                        await ICRC1.get_transactions(
+                                            token,
+                                            {
+                                                start = 4000;
+                                                length = 123;
+                                            },
+                                        ),
+                                    ).transactions,
+                                    txs_range(token, 4000, 4123),
+                                ),
+                                are_txs_equal(
+                                    (
+                                        await ICRC1.get_transactions(
+                                            token,
+                                            {
+                                                start = 0;
+                                                length = 5000;
+                                            },
+                                        ),
+                                    ).transactions,
+                                    txs_range(token, 0, 4123),
                                 ),
                             ]);
                         },

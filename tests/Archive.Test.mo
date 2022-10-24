@@ -101,6 +101,11 @@ let success = run([
 
                     let res = await archive.append_transactions(txs);
 
+                    let tx_range = await archive.get_transactions({
+                        start = 3251;
+                        length = 2000;
+                    });
+
                     assertAllTrue([
                         res == #ok(),
                         (await archive.total_transactions()) == 5000,

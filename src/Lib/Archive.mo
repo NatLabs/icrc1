@@ -4,6 +4,7 @@ import Array "mo:base/Array";
 import Deque "mo:base/Deque";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
+import Hash "mo:base/Hash";
 import Result "mo:base/Result";
 
 import Itertools "mo:Itertools/Iter";
@@ -21,13 +22,13 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
 
     type Transaction = Types.Transaction;
 
-    type TransactionStore = Deque.Deque<[Transaction]>;
+    type TransactionStore = StableTrieMap.StableTrieMap<Nat, [Transaction]>;
 
     stable let BUCKET_SIZE = 1000;
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
-    stable var txStore : TransactionStore = Deque.empty();
+    stable let txStore : TransactionStore = StableTrieMap.new();
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
 
@@ -41,34 +42,39 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
 
         var txs_iter = txs.vals();
 
-        switch (Deque.popBack(txStore)) {
-            case (?(store, last_bucket)) {
-                if (last_bucket.size() < BUCKET_SIZE) {
+        if (trailing_txs > 0) {
+            let last_bucket = StableTrieMap.get(
+                txStore,
+                Nat.equal,
+                Hash.hash,
+                filled_buckets,
+            );
 
-                    txStore := store;
-
-                    let new_last_bucket = Array.tabulate(
-                        Nat.min(
+            switch (last_bucket) {
+                case (?last_bucket) {
+                    let new_bucket = Iter.toArray(
+                        Itertools.take(
+                            Itertools.chain(
+                                last_bucket.vals(),
+                                txs.vals(),
+                            ),
                             BUCKET_SIZE,
-                            last_bucket.size() + txs.size(),
                         ),
-                        func(i : Nat) : Transaction {
-                            if (i < last_bucket.size()) {
-                                last_bucket[i];
-                            } else {
-                                txs[i - last_bucket.size()];
-                            };
-                        },
                     );
 
-                    store_bucket(new_last_bucket);
+                    if (new_bucket.size() == BUCKET_SIZE) {
+                        let offset = (BUCKET_SIZE - last_bucket.size()) : Nat;
 
-                    let offset : Nat = BUCKET_SIZE - last_bucket.size();
+                        txs_iter := Itertools.fromArraySlice(txs, offset, txs.size());
+                    } else {
+                        txs_iter := Itertools.empty();
+                    };
 
-                    txs_iter := Itertools.fromArraySlice(txs, offset, txs.size());
+                    store_bucket(new_bucket);
+
                 };
+                case (_) {};
             };
-            case (_) {};
         };
 
         for (chunk in Itertools.chunks(txs_iter, BUCKET_SIZE)) {
@@ -78,49 +84,72 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
         #ok();
     };
 
+    func total_txs() : Nat {
+        (filled_buckets * BUCKET_SIZE) + trailing_txs;
+    };
+
     public shared query func total_transactions() : async Nat {
         total_txs();
     };
 
     public shared query func get_transaction(tx_index : Types.TxIndex) : async ?Transaction {
-        var i = 0;
+        let bucket_key = tx_index / BUCKET_SIZE;
 
-        func scan(txStore : TransactionStore) : ?Transaction {
-            switch (Deque.popFront(txStore)) {
-                case (?(txs, store)) {
-                    if (tx_index / BUCKET_SIZE == i) {
-                        let bucket_index = tx_index % BUCKET_SIZE;
+        let opt_bucket = StableTrieMap.get(
+            txStore,
+            Nat.equal,
+            Hash.hash,
+            bucket_key,
+        );
 
-                        if (bucket_index < txs.size()) {
-                            return ?txs[tx_index % BUCKET_SIZE];
-                        } else {
-                            return null;
-                        };
-                    };
-                    i += 1;
-                    scan(store);
-                };
-                case (_) {
+        switch (opt_bucket) {
+            case (?bucket) {
+                let i = tx_index % BUCKET_SIZE;
+                if (i < bucket.size()) {
+                    ?bucket[tx_index % BUCKET_SIZE];
+                } else {
                     null;
                 };
             };
-        };
-
-        if (tx_index >= total_txs()) {
-            null;
-        } else {
-            scan(txStore);
+            case (_) {
+                null;
+            };
         };
     };
 
     public shared query func get_transactions(req : Types.GetTransactionsRequest) : async [Transaction] {
         let { start; length } = req;
+        var iter = Itertools.empty<Transaction>();
+
+        let end = start + length;
+        let start_bucket = start / BUCKET_SIZE;
+        let end_bucket = (Nat.min(end, total_txs()) / BUCKET_SIZE) + 1;
+
+        label _loop for (i in Itertools.range(start_bucket, end_bucket)) {
+            let opt_bucket = StableTrieMap.get(
+                txStore,
+                Nat.equal,
+                Hash.hash,
+                i,
+            );
+
+            switch (opt_bucket) {
+                case (?bucket) {
+                    if (i == start_bucket) {
+                        iter := Itertools.fromArraySlice(bucket, start % BUCKET_SIZE, Nat.min(bucket.size(), end));
+                    } else if (i + 1 == end_bucket) {
+                        let bucket_iter = Itertools.fromArraySlice(bucket, 0, end % BUCKET_SIZE);
+                        iter := Itertools.chain(iter, bucket_iter);
+                    } else {
+                        iter := Itertools.chain(iter, bucket.vals());
+                    };
+                };
+                case (_) { break _loop };
+            };
+        };
 
         Iter.toArray(
-            Itertools.take(
-                txs_slice(start, length),
-                MAX_TRANSACTIONS_PER_REQUEST,
-            ),
+            Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
         );
     };
 
@@ -129,7 +158,13 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
     };
 
     func store_bucket(bucket : [Transaction]) {
-        txStore := Deque.pushBack(txStore, bucket);
+        StableTrieMap.put(
+            txStore,
+            Nat.equal,
+            Hash.hash,
+            filled_buckets,
+            bucket,
+        );
 
         if (bucket.size() == BUCKET_SIZE) {
             filled_buckets += 1;
@@ -138,66 +173,4 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
             trailing_txs := bucket.size();
         };
     };
-
-    func total_txs() : Nat {
-        (filled_buckets * BUCKET_SIZE) + trailing_txs;
-    };
-
-    func txs_slice(start : Nat, length : Nat) : Iter.Iter<Transaction> {
-        var iter = Itertools.empty<Transaction>();
-
-        let end = start + length;
-        let start_bucket = start / BUCKET_SIZE;
-        let end_bucket = end / BUCKET_SIZE;
-
-        var bucket_index = 0;
-
-        var store = txStore;
-
-        while (bucket_index <= start_bucket) {
-            switch (Deque.popFront(store)) {
-                case (?(txs, _store)) {
-                    if (bucket_index == start_bucket) {
-                        iter := Itertools.fromArraySlice(txs, start % BUCKET_SIZE, Nat.min(txs.size(), end));
-                    };
-                    store := _store;
-                };
-                case (_) {
-                    return iter;
-                };
-            };
-
-            bucket_index += 1;
-        };
-
-        while (bucket_index < end_bucket) {
-            switch (Deque.popFront(store)) {
-                case (?(txs, _store)) {
-                    iter := Itertools.chain(iter, txs.vals());
-                    store := _store;
-                };
-                case (_) {
-                    return iter;
-                };
-            };
-
-            bucket_index += 1;
-        };
-
-        if (bucket_index == end_bucket) {
-            switch (Deque.popFront(store)) {
-                case (?(txs, _store)) {
-                    let txs_iter = Itertools.fromArraySlice(txs, 0, end % BUCKET_SIZE);
-                    iter := Itertools.chain(iter, txs_iter);
-                    store := _store;
-                };
-                case (_) {
-                    return iter;
-                };
-            };
-        };
-
-        iter;
-    };
-
 };

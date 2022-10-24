@@ -57,10 +57,12 @@ module {
         subaccount : ?T.Subaccount,
         balance : T.Balance,
     ) : T.SubaccountStore {
-        let map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
+        let map : T.SubaccountStore = STMap.new();
 
         STMap.put(
             map,
+            Blob.equal,
+            Blob.hash,
             Option.get(subaccount, default_subaccount()),
             balance,
         );
@@ -70,11 +72,11 @@ module {
 
     // Retrieves the balance of an account
     public func get_balance(accounts : T.AccountStore, req : T.Account) : T.Balance {
-        switch (STMap.get(accounts, req.owner)) {
+        switch (STMap.get(accounts, Principal.equal, Principal.hash, req.owner)) {
             case (?subaccounts) {
                 switch (req.subaccount) {
                     case (?sub) {
-                        switch (STMap.get(subaccounts, sub)) {
+                        switch (STMap.get(subaccounts, Blob.equal, Blob.hash, sub)) {
                             case (?balance) {
                                 balance;
                             };
@@ -82,7 +84,7 @@ module {
                         };
                     };
                     case (_) {
-                        switch (STMap.get(subaccounts, default_subaccount())) {
+                        switch (STMap.get(subaccounts, Blob.equal, Blob.hash, default_subaccount())) {
                             case (?balance) {
                                 balance;
                             };
@@ -107,20 +109,22 @@ module {
             case (_) default_subaccount();
         };
 
-        switch (STMap.get(accounts, req.owner)) {
+        switch (STMap.get(accounts, Principal.equal, Principal.hash, req.owner)) {
             case (?subaccounts) {
-                switch (STMap.get(subaccounts, subaccount)) {
+                switch (STMap.get(subaccounts, Blob.equal, Blob.hash, subaccount)) {
                     case (?balance) {
-                        STMap.put(subaccounts, subaccount, update(balance));
+                        STMap.put(subaccounts, Blob.equal, Blob.hash, subaccount, update(balance));
                     };
                     case (_) {
-                        STMap.put(subaccounts, subaccount, update(0));
+                        STMap.put(subaccounts, Blob.equal, Blob.hash, subaccount, update(0));
                     };
                 };
             };
             case (_) {
                 STMap.put(
                     accounts,
+                    Principal.equal,
+                    Principal.hash,
                     req.owner,
                     new_subaccount_map(?subaccount, update(0)),
                 );

@@ -76,9 +76,11 @@ module ICRC1 {
             Debug.trap("max_supply must be >= 1");
         };
 
-        let accounts : AccountStore = STMap.new(Principal.equal, Principal.hash);
+        let accounts : AccountStore = STMap.new();
         STMap.put(
             accounts,
+            Principal.equal,
+            Principal.hash,
             minting_account.owner,
             U.new_subaccount_map(
                 minting_account.subaccount,
@@ -87,7 +89,7 @@ module ICRC1 {
         );
 
         for ((owner, sub_balances) in initial_balances.vals()) {
-            let sub_map : T.SubaccountStore = STMap.new(Blob.equal, Blob.hash);
+            let sub_map : T.SubaccountStore = STMap.new();
 
             for ((subaccount, balance) in sub_balances.vals()) {
                 if (not Validate.subaccount(?subaccount)) {
@@ -96,10 +98,16 @@ module ICRC1 {
                     );
                 };
 
-                STMap.put(sub_map, subaccount, balance);
+                STMap.put(sub_map, Blob.equal, Blob.hash, subaccount, balance);
             };
 
-            STMap.put(accounts, owner, sub_map);
+            STMap.put(
+                accounts,
+                Principal.equal,
+                Principal.hash,
+                owner,
+                sub_map,
+            );
 
         };
 
