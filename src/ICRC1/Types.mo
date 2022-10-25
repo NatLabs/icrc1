@@ -20,6 +20,8 @@ module {
         subaccount : ?Subaccount;
     };
 
+    public type EncodedAccount = Blob;
+
     public type SupportedStandard = {
         name : Text;
         url : Text;

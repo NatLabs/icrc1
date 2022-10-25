@@ -11,6 +11,7 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 
+import ArrayModule "mo:array/Array";
 import Itertools "mo:Itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
