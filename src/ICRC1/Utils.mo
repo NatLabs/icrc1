@@ -13,9 +13,10 @@ import Time "mo:base/Time";
 
 import ArrayModule "mo:array/Array";
 import Itertools "mo:Itertools/Iter";
-import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
+import StableBuffer "mo:StableBuffer/StableBuffer";
 
+import Account "Account";
 import T "Types";
 
 module {
@@ -72,27 +73,17 @@ module {
     };
 
     // Retrieves the balance of an account
-    public func get_balance(accounts : T.AccountStore, req : T.Account) : T.Balance {
-        switch (STMap.get(accounts, Principal.equal, Principal.hash, req.owner)) {
-            case (?subaccounts) {
-                switch (req.subaccount) {
-                    case (?sub) {
-                        switch (STMap.get(subaccounts, Blob.equal, Blob.hash, sub)) {
-                            case (?balance) {
-                                balance;
-                            };
-                            case (_) 0;
-                        };
-                    };
-                    case (_) {
-                        switch (STMap.get(subaccounts, Blob.equal, Blob.hash, default_subaccount())) {
-                            case (?balance) {
-                                balance;
-                            };
-                            case (_) 0;
-                        };
-                    };
-                };
+    public func get_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount) : T.Balance {
+        let res = STMap.get(
+            accounts,
+            Blob.equal,
+            Blob.hash,
+            encoded_account,
+        );
+
+        switch (res) {
+            case (?balance) {
+                balance;
             };
             case (_) 0;
         };
@@ -101,35 +92,20 @@ module {
     // Updates the balance of an account
     public func update_balance(
         accounts : T.AccountStore,
-        req : T.Account,
+        encoded_account : T.EncodedAccount,
         update : (T.Balance) -> T.Balance,
     ) {
+        let prev_balance = get_balance(accounts, encoded_account);
+        let updated_balance = update(prev_balance);
 
-        let subaccount = switch (req.subaccount) {
-            case (?sub) sub;
-            case (_) default_subaccount();
-        };
-
-        switch (STMap.get(accounts, Principal.equal, Principal.hash, req.owner)) {
-            case (?subaccounts) {
-                switch (STMap.get(subaccounts, Blob.equal, Blob.hash, subaccount)) {
-                    case (?balance) {
-                        STMap.put(subaccounts, Blob.equal, Blob.hash, subaccount, update(balance));
-                    };
-                    case (_) {
-                        STMap.put(subaccounts, Blob.equal, Blob.hash, subaccount, update(0));
-                    };
-                };
-            };
-            case (_) {
-                STMap.put(
-                    accounts,
-                    Principal.equal,
-                    Principal.hash,
-                    req.owner,
-                    new_subaccount_map(?subaccount, update(0)),
-                );
-            };
+        if (updated_balance != prev_balance) {
+            STMap.put(
+                accounts,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                updated_balance,
+            );
         };
     };
 
@@ -203,6 +179,10 @@ module {
                     args with kind = #mint;
                     from = minting_account;
                     fee = null;
+                    encoded = {
+                        from = Account.encode(minting_account);
+                        to = Account.encode(args.to);
+                    };
                 };
             };
             case (#burn(args)) {
@@ -210,11 +190,19 @@ module {
                     args with kind = #burn;
                     to = minting_account;
                     fee = null;
+                    encoded = {
+                        from = Account.encode(args.from);
+                        to = Account.encode(minting_account);
+                    };
                 };
             };
             case (#transfer(args)) {
                 {
                     args with kind = #transfer;
+                    encoded = {
+                        from = Account.encode(args.from);
+                        to = Account.encode(args.to);
+                    };
                 };
             };
         };
@@ -259,11 +247,11 @@ module {
         accounts : T.AccountStore,
         tx_req : T.TransactionRequest,
     ) {
-        let { from; to; amount } = tx_req;
+        let { encoded; amount } = tx_req;
 
         update_balance(
             accounts,
-            from,
+            encoded.from,
             func(balance) {
                 balance - amount;
             },
@@ -271,7 +259,7 @@ module {
 
         update_balance(
             accounts,
-            to,
+            encoded.to,
             func(balance) {
                 balance + amount;
             },

@@ -1,8 +1,8 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
-import Iter "mo:base/Iter";
 import Int "mo:base/Int";
+import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
@@ -12,10 +12,11 @@ import Result "mo:base/Result";
 import Itertools "mo:Itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 
+import Account "Account";
 import Archive "Archive";
-import Validate "Validate";
 import T "Types";
 import U "Utils";
+import Validate "Validate";
 
 /// The ICRC1 Module with all the functions for creating an
 /// ICRC1 token on the Internet Computer
@@ -64,6 +65,7 @@ module ICRC1 {
             fee;
             minting_account;
             max_supply;
+            tx_deduplication;
             initial_balances;
         } = args;
 
@@ -78,36 +80,29 @@ module ICRC1 {
         let accounts : AccountStore = StableTrieMap.new();
         StableTrieMap.put(
             accounts,
-            Principal.equal,
-            Principal.hash,
-            minting_account.owner,
-            U.new_subaccount_map(
-                minting_account.subaccount,
-                max_supply,
-            ),
+            Blob.equal,
+            Blob.hash,
+            Account.encode(minting_account),
+            max_supply,
         );
 
-        for ((owner, sub_balances) in initial_balances.vals()) {
-            let sub_map : T.SubaccountStore = StableTrieMap.new();
+        for ((i, (account, balance)) in Itertools.enumerate(initial_balances.vals())) {
 
-            for ((subaccount, balance) in sub_balances.vals()) {
-                if (not Validate.subaccount(?subaccount)) {
-                    Debug.trap(
-                        "Invalid subaccount " # Principal.toText(Principal.fromBlob(subaccount)) # " for " # Principal.toText(owner) # " is invalid in initial_balances",
-                    );
-                };
-
-                StableTrieMap.put(sub_map, Blob.equal, Blob.hash, subaccount, balance);
+            if (not Validate.account(account)) {
+                Debug.trap(
+                    "Invalid Account: Account at index " # debug_show i # " is invalid in 'initial_balances'",
+                );
             };
+
+            let encoded_account = Account.encode(account);
 
             StableTrieMap.put(
                 accounts,
-                Principal.equal,
-                Principal.hash,
-                owner,
-                sub_map,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                balance,
             );
-
         };
 
         {
@@ -121,7 +116,7 @@ module ICRC1 {
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
-            var tx_deduplication = true;
+            var tx_deduplication = tx_deduplication;
             transaction_window = U.DAY_IN_NANO_SECONDS;
             archives = SB.init();
         };
@@ -165,7 +160,8 @@ module ICRC1 {
             minting_account;
         } = token;
 
-        max_supply - U.get_balance(accounts, minting_account);
+        let encoded_account = Account.encode(minting_account);
+        max_supply - U.get_balance(accounts, encoded_account);
     };
 
     /// Returns the account with the permission to mint tokens
@@ -179,8 +175,9 @@ module ICRC1 {
     };
 
     /// Retrieve the balance of a given account
-    public func balance_of({ accounts } : TokenData, req : Account) : Balance {
-        U.get_balance(accounts, req);
+    public func balance_of({ accounts } : TokenData, account : Account) : Balance {
+        let encoded_account = Account.encode(account);
+        U.get_balance(accounts, encoded_account);
     };
 
     /// Returns an array of standards supported by this token
@@ -203,7 +200,6 @@ module ICRC1 {
     /// otherwise the transaction is approved.
     ///
     /// Tokens have transaction deduplication on by default
-
     public func set_tx_deduplication(token : TokenData, val : Bool) {
         token.tx_deduplication := val;
     };
@@ -211,7 +207,7 @@ module ICRC1 {
     /// Custom function to mint tokens with minimal function parameters
     public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
 
-        if (not (caller == token.minting_account.owner)) {
+        if (caller != token.minting_account.owner) {
             return #err(
                 #GenericError {
                     error_code = 401;
@@ -289,7 +285,7 @@ module ICRC1 {
 
         switch (args.fee) {
             case (?fee) {
-                if (not (token.fee == fee)) {
+                if (token.fee != fee) {
                     return #err(
                         #BadFee {
                             expected_fee = token.fee;
@@ -299,7 +295,7 @@ module ICRC1 {
             };
 
             case (_) {
-                if (not (token.fee == 0)) {
+                if (token.fee != 0) {
                     return #err(
                         #BadFee {
                             expected_fee = token.fee;
@@ -483,7 +479,7 @@ module ICRC1 {
             case (?old_data) {
                 let new_data = await update(old_data);
 
-                if (not (new_data == old_data)) {
+                if (new_data != old_data) {
                     SB.put(
                         token.archives,
                         SB.size(token.archives) - 1,

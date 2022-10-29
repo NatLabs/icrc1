@@ -126,7 +126,7 @@ module {
 
         let sender_balance : T.Balance = U.get_balance(
             token.accounts,
-            tx_req.from,
+            tx_req.encoded.from,
         );
 
         if (tx_req.amount > sender_balance) {

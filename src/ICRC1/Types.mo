@@ -1,5 +1,5 @@
-import List "mo:base/List";
 import Deque "mo:base/Deque";
+import List "mo:base/List";
 import Result "mo:base/Result";
 
 import STMap "mo:StableTrieMap";
@@ -95,6 +95,10 @@ module {
         fee : ?Balance;
         memo : ?Blob;
         created_at_time : ?Nat64;
+        encoded : {
+            from : EncodedAccount;
+            to : EncodedAccount;
+        };
     };
 
     /// Max size
@@ -173,7 +177,8 @@ module {
         fee : Balance;
         minting_account : Account;
         max_supply : Balance;
-        initial_balances : [(Principal, [(Subaccount, Balance)])];
+        tx_deduplication : Bool;
+        initial_balances : [(Account, Balance)];
         // archive_options : {
         //     num_blocks_to_archive : Nat;
         //     trigger_threshold : Nat;
@@ -202,7 +207,7 @@ module {
     };
 
     public type SubaccountStore = StableTrieMap<Subaccount, Balance>;
-    public type AccountStore = StableTrieMap<Principal, SubaccountStore>;
+    public type AccountStore = StableTrieMap<EncodedAccount, Balance>;
 
     public type TransactionRange = {
         start : TxIndex;

@@ -112,6 +112,7 @@ let default_token_args : ICRC1.InitArgs = {
     fee = 5 * (10 ** 8);
     max_supply = 1_000_000_000 * (10 ** 8);
     minting_account = canister;
+    tx_deduplication = false;
     initial_balances = [];
 };
 
@@ -411,7 +412,7 @@ let success = run([
 
                             assertAllTrue([
                                 res == #ok(transfer_args.amount),
-                                // ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
+                                ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
                                 ICRC1.balance_of(token, user2) == prev.balance2 + transfer_args.amount,
                                 ICRC1.total_supply(token) == prev.total_supply,
                             ]);

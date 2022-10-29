@@ -25,7 +25,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive({
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
 
-        if (not (caller == ledger_canister_id)) {
+        if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the owner can access this canister");
         };
 
