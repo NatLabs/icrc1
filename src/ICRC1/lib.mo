@@ -206,7 +206,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (validate_request(token, tx_req)) {
+        switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -235,7 +235,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (validate_request(token, tx_req)) {
+        switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -297,7 +297,7 @@ module ICRC1 {
 
         let { from; to } = tx_req;
 
-        switch (validate_request(token, tx_req)) {
+        switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
