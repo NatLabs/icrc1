@@ -12,8 +12,8 @@ import Result "mo:base/Result";
 import Itertools "mo:Itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 
+import ArchiveApi "ArchiveApi";
 import Account "Account";
-import Archive "Archive";
 import T "Types";
 import U "Utils";
 import Transfer "Transfer";
@@ -160,7 +160,7 @@ module ICRC1 {
         } = token;
 
         let encoded_account = Account.encode(minting_account);
-        max_supply - U.get_balance(accounts, encoded_account);
+        max_supply - Account.get_balance(accounts, encoded_account);
     };
 
     /// Returns the account with the permission to mint tokens
@@ -176,77 +176,12 @@ module ICRC1 {
     /// Retrieve the balance of a given account
     public func balance_of({ accounts } : TokenData, account : Account) : Balance {
         let encoded_account = Account.encode(account);
-        U.get_balance(accounts, encoded_account);
+        Account.get_balance(accounts, encoded_account);
     };
 
     /// Returns an array of standards supported by this token
     public func supported_standards(token : TokenData) : [SupportedStandard] {
         SB.toArray(token.supported_standards);
-    };
-
-    /// Add a standard to the standards supported of the given token
-    public func add_supported_standard(token : TokenData, standard : T.SupportedStandard) {
-        SB.add(token.supported_standards, standard);
-    };
-
-    /// Custom function to mint tokens with minimal function parameters
-    public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
-
-        if (caller != token.minting_account.owner) {
-            return #err(
-                #GenericError {
-                    error_code = 401;
-                    message = "Unauthorized: Only the minting_account can mint tokens.";
-                },
-            );
-        };
-
-        let tx_req = U.args_to_req(
-            #mint(args),
-            token.minting_account,
-        );
-
-        switch (Transfer.validate_request(token, tx_req)) {
-            case (#err(errorType)) {
-                return #err(errorType);
-            };
-            case (_) {};
-        };
-
-        ignore U.process_tx(token, tx_req);
-
-        await update_canister(token);
-
-        #ok(tx_req.amount);
-    };
-
-    /// Custom function to burn tokens with minimal function parameters
-    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
-
-        let burn_op : T.Burn = {
-            args with from = {
-                owner = caller;
-                subaccount = args.from_subaccount;
-            };
-        };
-
-        let tx_req = U.args_to_req(
-            #burn(burn_op),
-            token.minting_account,
-        );
-
-        switch (Transfer.validate_request(token, tx_req)) {
-            case (#err(errorType)) {
-                return #err(errorType);
-            };
-            case (_) {};
-        };
-
-        ignore U.process_tx(token, tx_req);
-
-        await update_canister(token);
-
-        #ok(tx_req.amount);
     };
 
     /// Transfers tokens from one account to another
@@ -261,41 +196,37 @@ module ICRC1 {
             transaction_window;
         } = token;
 
-        let transfer_op : T.Transfer = {
+        let transfer_args : T.Transfer = {
             args with from = {
                 owner = caller;
                 subaccount = args.from_subaccount;
             };
         };
 
-        switch (args.fee) {
-            case (?fee) {
-                if (token.fee != fee) {
-                    return #err(
-                        #BadFee {
-                            expected_fee = token.fee;
-                        },
-                    );
-                };
-            };
+        let { from; to } = transfer_args;
 
-            case (_) {
-                if (token.fee != 0) {
-                    return #err(
-                        #BadFee {
-                            expected_fee = token.fee;
-                        },
-                    );
-                };
-            };
+        let op = if (from == minting_account) {
+            #mint(transfer_args);
+        } else if (to == minting_account) {
+            #burn(transfer_args);
+        } else {
+            #transfer(transfer_args);
         };
 
-        var tx_req = U.args_to_req(
-            #transfer(transfer_op),
+        let tx_req = U.args_to_req(
+            op,
             token.minting_account,
         );
 
-        let { from; to } = tx_req;
+        if (tx_req.kind == #transfer) {
+            if (tx_req.fee != ?token.fee) {
+                return #err(
+                    #BadFee {
+                        expected_fee = token.fee;
+                    },
+                );
+            };
+        };
 
         switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
@@ -304,27 +235,59 @@ module ICRC1 {
             case (#ok(_)) {};
         };
 
-        if (from == minting_account) {
-            tx_req := { tx_req with kind = #mint };
-        } else if (to == minting_account) {
-            tx_req := { tx_req with kind = #burn };
-        };
+        // All checks passed.
+        // now the transaction can be processed
 
-        ignore U.process_tx(token, tx_req);
+        Account.transfer_balance(token.accounts, tx_req);
+
+        // store transaction
+        let tx = U.req_to_tx(tx_req);
+        SB.add(token.transactions, tx);
 
         await update_canister(token);
 
         #ok(tx_req.amount);
     };
 
+    /// Helper function to mint tokens with minimum args
+    public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
+
+        if (caller != token.minting_account.owner) {
+            return #err(
+                #GenericError {
+                    error_code = 401;
+                    message = "Unauthorized: Only the minting_account can mint tokens.";
+                },
+            );
+        };
+
+        let transfer_args : T.TransferArgs = {
+            args with from_subaccount = token.minting_account.subaccount;
+            fee = null;
+        };
+
+        await transfer(token, transfer_args, caller);
+    };
+
+    /// Helper function to burn tokens with minimum args
+    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
+
+        let transfer_args : T.TransferArgs = {
+            args with to = token.minting_account;
+            fee = null;
+        };
+
+        await transfer(token, transfer_args, caller);
+    };
+
     /// Returns the total number of transactions that have been processed by the given token.
     public func total_transactions(token : TokenData) : Nat {
-        SB.size(token.transactions) + U.total_archived_txs(token.archives);
+        SB.size(token.transactions) + ArchiveApi.total_txs(token.archives);
     };
 
     /// Retrieves the transaction specified by the given `tx_index`
     public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
-        let archived_txs = U.total_archived_txs(token.archives);
+        let archived_txs = ArchiveApi.total_txs(token.archives);
         if (tx_index < archived_txs) {
 
             let archive = Itertools.find(
@@ -349,13 +312,8 @@ module ICRC1 {
         };
     };
 
-    func get_local_txs(
-        token : TokenData,
-        { start; length } : GetTransactionsRequest,
-    ) : Iter.Iter<Transaction> {
-        SB.toIterFromSlice(token.transactions, start, start + length);
-    };
-
+    // Retrieves the transactions in the request range that are in the archived
+    // canister and in the main token's canister
     func get_txs(token : TokenData, req : T.GetTransactionsRequest) : async [Transaction] {
         var txs_size = 0;
         var txs_iter = Itertools.empty<Transaction>();
@@ -381,9 +339,10 @@ module ICRC1 {
         };
 
         if (txs_size < expected_size) {
-            let archived_txs = U.total_archived_txs(token.archives);
+            let archived_txs = ArchiveApi.total_txs(token.archives);
 
-            let local_txs = get_local_txs(token, { start = 0; length = expected_size - txs_size });
+            // get local transactions
+            let local_txs = SB.toIterFromSlice(token.transactions, 0, expected_size - txs_size);
 
             txs_iter := Itertools.chain(txs_iter, local_txs);
         };
@@ -398,8 +357,8 @@ module ICRC1 {
         let txs = await get_txs(token, req);
 
         let valid_range = {
-            var start = req.start + txs.size();
-            var end = Nat.min(req.start + txs.size() + req.length, total_transactions(token));
+            start = req.start + txs.size();
+            end = Nat.min(req.start + txs.size() + req.length, total_transactions(token));
         };
 
         let size = (valid_range.end - valid_range.start) : Nat / MAX_TRANSACTIONS_PER_REQUEST;
@@ -422,109 +381,16 @@ module ICRC1 {
             transactions = txs;
             archived_transactions = paginated_requests;
         };
-
-    };
-
-    // Retrieves the last archive in the archives buffer
-    func get_last_archive(token : TokenData) : ?T.ArchiveData {
-        SB.getLast(token.archives);
-    };
-
-    // creates a new archive canister
-    func new_archive_canister() : async ArchiveInterface {
-        await Archive.Archive({
-            max_memory_size_bytes = MAX_TRANSACTION_BYTES;
-        });
-    };
-
-    // Adds a new archive canister to the archives array
-    func spawn_archive_canister(token : TokenData) : async () {
-
-        let start = switch (get_last_archive(token)) {
-            case (?archive) {
-                archive.start + archive.length;
-            };
-            case (_) {
-                0;
-            };
-        };
-
-        let new_archive : T.ArchiveData = {
-            start;
-            length = 0;
-            canister = await new_archive_canister();
-        };
-
-        SB.add(token.archives, new_archive);
-    };
-
-    // Updates the last archive in the archives buffer
-    func update_last_archive(token : TokenData, update : (T.ArchiveData) -> async T.ArchiveData) : async () {
-        switch (get_last_archive(token)) {
-            case (?old_data) {
-                let new_data = await update(old_data);
-
-                if (new_data != old_data) {
-                    SB.put(
-                        token.archives,
-                        SB.size(token.archives) - 1,
-                        new_data,
-                    );
-                };
-            };
-            case (_) {};
-        };
-    };
-
-    // Moves the transactions from the ICRC1 canister to the archive canister
-    // and returns a boolean that indicates the success of the data transfer
-    func append_to_archive(token : TokenData) : async Bool {
-        var success = false;
-
-        await update_last_archive(
-            token,
-            func(archive : T.ArchiveData) : async T.ArchiveData {
-                let { canister; length } = archive;
-                let res = await canister.append_transactions(
-                    SB.toArray(token.transactions),
-                );
-
-                var txs_size = SB.size(token.transactions);
-
-                switch (res) {
-                    case (#ok()) {
-                        SB.clear(token.transactions);
-                        success := true;
-                    };
-                    case (#err(_)) {
-                        txs_size := 0;
-                    };
-                };
-
-                { archive with length = length + txs_size };
-            },
-        );
-
-        success;
     };
 
     // Updates the token's data and manages the transactions
     //
-    // **should be added at the end of every update call**
+    // **should be added at the end of every update function**
     func update_canister(token : TokenData) : async () {
-        let { archives } = token;
-
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
-            if (SB.size(archives) == 0) {
-                await spawn_archive_canister(token);
-            };
-
-            if (not (await append_to_archive(token))) {
-                await spawn_archive_canister(token);
-                ignore (await append_to_archive(token));
-            };
+            await ArchiveApi.append_transactions(token);
         };
     };
 };

@@ -16,6 +16,8 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import Account "Account";
+import ArchiveApi "ArchiveApi";
+
 import T "Types";
 import U "Utils";
 
@@ -61,7 +63,7 @@ module {
         let phantom_txs = SB._clearedElemsToIter(txs);
         let current_txs = SB.vals(txs);
 
-        let archived_txs = U.total_archived_txs(token.archives);
+        let archived_txs = ArchiveApi.total_txs(token.archives);
 
         let last_2000_txs = if (archived_txs > 0) {
             phantom_txs_size := SB.capacity(txs) - SB.size(txs);
@@ -173,7 +175,7 @@ module {
             );
         };
 
-        let sender_balance : T.Balance = U.get_balance(
+        let sender_balance : T.Balance = Account.get_balance(
             token.accounts,
             tx_req.encoded.from,
         );

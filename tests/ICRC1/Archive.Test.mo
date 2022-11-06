@@ -4,10 +4,10 @@ import Iter "mo:base/Iter";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
 
-import Archive "../src/ICRC1/Archive";
-import ICRC1 "../src/ICRC1/";
+import Archive "../../src/ICRC1/Canisters/Archive";
+import ICRC1 "../../src/ICRC1/";
 
-import ActorSpec "./utils/ActorSpec";
+import ActorSpec "../utils/ActorSpec";
 
 let {
     assertTrue;
@@ -52,9 +52,7 @@ let success = run([
                 "append_transactions()",
                 do {
 
-                    let archive = await Archive.Archive({
-                        max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
-                    });
+                    let archive = await Archive.Archive();
 
                     let txs = new_txs(3555);
 
@@ -68,9 +66,7 @@ let success = run([
             it(
                 "get_transaction()",
                 do {
-                    let archive = await Archive.Archive({
-                        max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
-                    });
+                    let archive = await Archive.Archive();
 
                     let txs = new_txs(3555);
 
@@ -93,9 +89,7 @@ let success = run([
             it(
                 "get_transactions()",
                 do {
-                    let archive = await Archive.Archive({
-                        max_memory_size_bytes = ICRC1.MAX_TRANSACTION_BYTES;
-                    });
+                    let archive = await Archive.Archive();
 
                     let txs = new_txs(5000);
 

@@ -141,4 +141,67 @@ module {
             };
         };
     };
+
+    /// Retrieves the balance of an account
+    public func get_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount) : T.Balance {
+        let res = STMap.get(
+            accounts,
+            Blob.equal,
+            Blob.hash,
+            encoded_account,
+        );
+
+        switch (res) {
+            case (?balance) {
+                balance;
+            };
+            case (_) 0;
+        };
+    };
+
+    /// Updates the balance of an account
+    public func update_balance(
+        accounts : T.AccountStore,
+        encoded_account : T.EncodedAccount,
+        update : (T.Balance) -> T.Balance,
+    ) {
+        let prev_balance = get_balance(accounts, encoded_account);
+        let updated_balance = update(prev_balance);
+
+        if (updated_balance != prev_balance) {
+            STMap.put(
+                accounts,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                updated_balance,
+            );
+        };
+    };
+
+    /// Transfers tokens from the sender to the
+    /// recipient in the tx request
+    public func transfer_balance(
+        accounts : T.AccountStore,
+        tx_req : T.TransactionRequest,
+    ) {
+        let { encoded; amount } = tx_req;
+
+        update_balance(
+            accounts,
+            encoded.from,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        update_balance(
+            accounts,
+            encoded.to,
+            func(balance) {
+                balance + amount;
+            },
+        );
+    };
+
 };

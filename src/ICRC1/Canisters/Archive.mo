@@ -7,16 +7,14 @@ import Result "mo:base/Result";
 
 import Itertools "mo:Itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
-import Types "Types";
+import Types "../Types";
 
-shared ({ caller = ledger_canister_id }) actor class Archive({
-    max_memory_size_bytes : Nat64;
-}) : async Types.ArchiveInterface {
+shared ({ caller = ledger_canister_id }) actor class Archive() : async Types.ArchiveInterface {
 
     type Transaction = Types.Transaction;
 
     stable let GB = 1024 ** 3;
-    stable let MAX_MEMORY = 7 * GB;
+    stable let MAX_MEMORY = 6 * GB;
     stable let BUCKET_SIZE = 1000;
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
     stable var filled_buckets = 0;

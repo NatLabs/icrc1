@@ -5,9 +5,9 @@ import Principal "mo:base/Principal";
 
 import Itertools "mo:Itertools/Iter";
 
-import Account "../src/ICRC1/Account";
-import ActorSpec "./utils/ActorSpec";
-import Archive "../src/ICRC1/Archive";
+import Account "../../src/ICRC1/Account";
+import ActorSpec "../utils/ActorSpec";
+import Archive "../../src/ICRC1/Canisters/Archive";
 
 let {
     assertTrue;
@@ -51,12 +51,7 @@ let success = run([
                         do {
                             let account = {
                                 owner = principal;
-                                subaccount = ?Blob.fromArray([
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                ]);
+                                subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
                             };
 
                             let encoded = Account.encode(account);
@@ -64,7 +59,7 @@ let success = run([
 
                             assertAllTrue([
                                 encoded == Principal.toBlob(account.owner),
-                                decoded == ?{account with subaccount = null},
+                                decoded == ?{ account with subaccount = null },
                             ]);
                         },
                     ),
@@ -74,12 +69,7 @@ let success = run([
                         do {
                             let account = {
                                 owner = principal;
-                                subaccount = ?Blob.fromArray([
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                    0, 0, 0, 0, 0, 0, 0, 0, 
-                                    0, 0, 0, 0, 0, 0, 0, 0, // 24 empty prefix bytes
-                                    1, 2, 3, 4, 5, 6, 7, 8 // 8 valid bytes
-                                ]);
+                                subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]);
                             };
 
                             let encoded = Account.encode(account);
@@ -87,18 +77,18 @@ let success = run([
 
                             let pricipal_iter = Principal.toBlob(account.owner).vals();
 
-                            let valid_bytes: [Nat8] = [1, 2, 3, 4, 5, 6, 7, 8];
-                            let suffix_bytes: [Nat8] = [
+                            let valid_bytes : [Nat8] = [1, 2, 3, 4, 5, 6, 7, 8];
+                            let suffix_bytes : [Nat8] = [
                                 8, // size of valid_bytes
                                 0x7f // ending tag
                             ];
-                            
+
                             let iter = Itertools.chain(
                                 pricipal_iter,
                                 Itertools.chain(
                                     valid_bytes.vals(),
-                                    suffix_bytes.vals()
-                                )
+                                    suffix_bytes.vals(),
+                                ),
                             );
 
                             let expected_blob = Blob.fromArray(Iter.toArray(iter));

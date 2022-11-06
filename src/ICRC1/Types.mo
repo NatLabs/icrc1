@@ -207,7 +207,6 @@ module {
         transactions : ?[Transaction];
     };
 
-    public type SubaccountStore = StableTrieMap<Subaccount, Balance>;
     public type AccountStore = StableTrieMap<EncodedAccount, Balance>;
 
     public type TransactionRange = {

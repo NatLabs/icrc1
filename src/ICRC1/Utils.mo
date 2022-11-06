@@ -54,61 +54,6 @@ module {
         );
     };
 
-    // Creates a new triemap for storing users subaccounts and balances
-    public func new_subaccount_map(
-        subaccount : ?T.Subaccount,
-        balance : T.Balance,
-    ) : T.SubaccountStore {
-        let map : T.SubaccountStore = STMap.new();
-
-        STMap.put(
-            map,
-            Blob.equal,
-            Blob.hash,
-            Option.get(subaccount, default_subaccount()),
-            balance,
-        );
-
-        map;
-    };
-
-    // Retrieves the balance of an account
-    public func get_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount) : T.Balance {
-        let res = STMap.get(
-            accounts,
-            Blob.equal,
-            Blob.hash,
-            encoded_account,
-        );
-
-        switch (res) {
-            case (?balance) {
-                balance;
-            };
-            case (_) 0;
-        };
-    };
-
-    // Updates the balance of an account
-    public func update_balance(
-        accounts : T.AccountStore,
-        encoded_account : T.EncodedAccount,
-        update : (T.Balance) -> T.Balance,
-    ) {
-        let prev_balance = get_balance(accounts, encoded_account);
-        let updated_balance = update(prev_balance);
-
-        if (updated_balance != prev_balance) {
-            STMap.put(
-                accounts,
-                Blob.equal,
-                Blob.hash,
-                encoded_account,
-                updated_balance,
-            );
-        };
-    };
-
     // Formats the different operation arguements into
     // a `TransactionRequest`, an internal type to access fields easier.
     public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {
@@ -178,53 +123,6 @@ module {
 
             timestamp = Nat64.fromNat(Int.abs(Time.now()));
         };
-    };
-
-    // Transfers tokens from the sender to the
-    // recipient based on the given tx request
-    public func transfer(
-        accounts : T.AccountStore,
-        tx_req : T.TransactionRequest,
-    ) {
-        let { encoded; amount } = tx_req;
-
-        update_balance(
-            accounts,
-            encoded.from,
-            func(balance) {
-                balance - amount;
-            },
-        );
-
-        update_balance(
-            accounts,
-            encoded.to,
-            func(balance) {
-                balance + amount;
-            },
-        );
-    };
-
-    // Transfers tokens based on the tx request
-    // and stores the transaction
-    public func process_tx(token : T.TokenData, tx_req : T.TransactionRequest) : T.Transaction {
-        transfer(token.accounts, tx_req);
-
-        let tx = req_to_tx(tx_req);
-        SB.add(token.transactions, tx);
-
-        tx;
-    };
-
-    // Get the number of all archived transactions
-    public func total_archived_txs(archives : T.StableBuffer<T.ArchiveData>) : Nat {
-        var total = 0;
-
-        for ({ length } in SB.vals(archives)) {
-            total += length;
-        };
-
-        total;
     };
 
     // Stable Buffer Module with some additional functions

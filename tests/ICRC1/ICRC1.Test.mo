@@ -8,10 +8,11 @@ import Principal "mo:base/Principal";
 import Itertools "mo:Itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 
-import ActorSpec "./utils/ActorSpec";
+import ActorSpec "../utils/ActorSpec";
 
-import ICRC1 "../src/ICRC1/";
-import U "../src/ICRC1/Utils";
+import ICRC1 "../../src/ICRC1/";
+import ArchiveApi "../../src/ICRC1/ArchiveApi";
+import U "../../src/ICRC1/Utils";
 
 let {
     assertTrue;
@@ -330,6 +331,7 @@ let success = run([
                             let prev_total_supply = ICRC1.total_supply(token);
 
                             let res = await ICRC1.burn(token, burn_args, user1.owner);
+                            Debug.print(debug_show res);
 
                             assertAllTrue([
                                 res == #ok(burn_args.amount),
@@ -447,7 +449,7 @@ let success = run([
                                 SB.capacity(token.transactions) == ICRC1.MAX_TRANSACTIONS_IN_LEDGER,
 
                                 SB.size(token.archives) == 1,
-                                U.total_archived_txs(token.archives) == 4000,
+                                ArchiveApi.total_txs(token.archives) == 4000,
 
                                 is_opt_tx_equal(
                                     (await ICRC1.get_transaction(token, 0)),
