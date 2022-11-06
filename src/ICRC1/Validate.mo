@@ -49,33 +49,6 @@ module {
         };
     };
 
-    public func transaction_time(
-        transaction_window : T.Timestamp,
-        _created_at_time : ?T.Timestamp,
-    ) : Result.Result<(), T.TimeError> {
-        let now = Time.now();
-        let created_at_time = switch (_created_at_time) {
-            case (?time_in_nat64) {
-                Nat64.toNat(time_in_nat64) : Int;
-            };
-            case (_) now;
-        };
-
-        let diff = now - created_at_time;
-
-        if (created_at_time > now) {
-            return #err(
-                #CreatedInFuture {
-                    ledger_time = Nat64.fromNat(Int.abs(now));
-                },
-            );
-        } else if (diff > (Nat64.toNat(transaction_window) : Int)) {
-            return #err(#TooOld);
-        };
-
-        #ok();
-    };
-
     public func transfer(
         token : T.TokenData,
         tx_req : T.TransactionRequest,
@@ -117,13 +90,6 @@ module {
             );
         };
 
-        switch (transaction_time(token.transaction_window, tx_req.created_at_time)) {
-            case (#err(errorMsg)) {
-                return #err(errorMsg);
-            };
-            case (_) {};
-        };
-
         let sender_balance : T.Balance = U.get_balance(
             token.accounts,
             tx_req.encoded.from,
@@ -133,17 +99,41 @@ module {
             return #err(#InsufficientFunds { balance = sender_balance });
         };
 
-        if (token.tx_deduplication) {
-            switch (U.tx_has_duplicates(token, tx_req)) {
-                case (#err(tx_index)) {
+        switch (tx_req.created_at_time) {
+            case (null) {};
+            case (?created_at_time_nat64) {
+                let created_at_time = Nat64.toNat(created_at_time_nat64);
 
+                let { transaction_window; permitted_drift } = token;
+
+                let accepted_range = {
+                    start = Time.now() - transaction_window - permitted_drift;
+                    end = Time.now() + permitted_drift;
+                };
+
+                if (created_at_time < accepted_range.start) {
+                    return #err(#TooOld);
+                };
+
+                if (created_at_time > accepted_range.end) {
                     return #err(
-                        #Duplicate {
-                            duplicate_of = tx_index;
+                        #CreatedInFuture {
+                            ledger_time = Nat64.fromNat(Int.abs(Time.now()));
                         },
                     );
                 };
-                case (_) {};
+
+                switch (U.tx_has_duplicates(token, tx_req)) {
+                    case (#err(tx_index)) {
+
+                        return #err(
+                            #Duplicate {
+                                duplicate_of = tx_index;
+                            },
+                        );
+                    };
+                    case (_) {};
+                };
             };
         };
 

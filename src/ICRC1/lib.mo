@@ -65,7 +65,6 @@ module ICRC1 {
             fee;
             minting_account;
             max_supply;
-            tx_deduplication;
             initial_balances;
         } = args;
 
@@ -116,8 +115,8 @@ module ICRC1 {
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
-            var tx_deduplication = tx_deduplication;
-            transaction_window = U.DAY_IN_NANO_SECONDS;
+            permitted_drift = 2 * 60 * 1000;
+            transaction_window = Nat64.toNat(U.DAY_IN_NANO_SECONDS);
             archives = SB.init();
         };
     };
@@ -188,20 +187,6 @@ module ICRC1 {
     /// Add a standard to the standards supported of the given token
     public func add_supported_standard(token : TokenData, standard : T.SupportedStandard) {
         SB.add(token.supported_standards, standard);
-    };
-
-    /// **Opt-in** or **opt-out** of **transaction deduplication.**
-    ///
-    /// Tokens with transaction deduplication check all the
-    /// the transactions in the main ICRC1 canister for duplicate
-    /// transactions.
-    ///
-    /// If a duplicate transaction is found the transaction fails,
-    /// otherwise the transaction is approved.
-    ///
-    /// Tokens have transaction deduplication on by default
-    public func set_tx_deduplication(token : TokenData, val : Bool) {
-        token.tx_deduplication := val;
     };
 
     /// Custom function to mint tokens with minimal function parameters
@@ -343,7 +328,7 @@ module ICRC1 {
         if (tx_index < archived_txs) {
 
             let archive = Itertools.find(
-                SB.toIter(token.archives),
+                SB.vals(token.archives),
                 func({ start; length } : T.ArchiveData) : Bool {
                     let end = start + length;
 
@@ -377,7 +362,7 @@ module ICRC1 {
         let expected_size = Nat.min(req.length, MAX_TRANSACTIONS_PER_REQUEST);
 
         // Gets transactions in the request range from archive canisters
-        label _loop for (archive in SB.toIter(token.archives)) {
+        label _loop for (archive in SB.vals(token.archives)) {
             let archive_end = archive.start + archive.length;
 
             if (req.start < archive_end) {

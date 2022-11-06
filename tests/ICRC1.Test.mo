@@ -112,7 +112,7 @@ let default_token_args : ICRC1.InitArgs = {
     fee = 5 * (10 ** 8);
     max_supply = 1_000_000_000 * (10 ** 8);
     minting_account = canister;
-    tx_deduplication = false;
+    transaction_window = null;
     initial_balances = [];
 };
 
@@ -429,7 +429,6 @@ let success = run([
                         do {
                             let args = default_token_args;
                             let token = ICRC1.init(args);
-                            ICRC1.set_tx_deduplication(token, false);
 
                             await create_mints(token, canister.owner, 4123);
 

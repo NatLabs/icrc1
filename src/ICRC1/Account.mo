@@ -53,6 +53,7 @@ module {
         );
     };
 
+    /// Implementation of ICRC1's Textual representation of accounts [Encoding Standard](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1#encoding)
     public func encode({ owner; subaccount } : T.Account) : T.EncodedAccount {
         let owner_blob = Principal.toBlob(owner);
 
@@ -73,6 +74,7 @@ module {
         };
     };
 
+    /// Implementation of ICRC1's Textual representation of accounts [Decoding Standard](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1#decoding)
     public func decode(encoded : T.EncodedAccount) : ?T.Account {
         let bytes = Blob.toArray(encoded);
         var size = bytes.size();

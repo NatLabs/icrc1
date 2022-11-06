@@ -116,7 +116,7 @@ module {
 
         var phantom_txs_size = 0;
         let phantom_txs = SB._clearedElemsToIter(txs);
-        let current_txs = SB.toIter(txs);
+        let current_txs = SB.vals(txs);
 
         let archived_txs = total_archived_txs(token.archives);
 
@@ -281,7 +281,7 @@ module {
     public func total_archived_txs(archives : T.StableBuffer<T.ArchiveData>) : Nat {
         var total = 0;
 
-        for ({ length } in SB.toIter(archives)) {
+        for ({ length } in SB.vals(archives)) {
             total += length;
         };
 
@@ -290,11 +290,7 @@ module {
 
     // Stable Buffer Module with some additional functions
     public let SB = {
-        StableBuffer with toIter = func<A>(buffer : T.StableBuffer<A>) : Iter.Iter<A> {
-            SB.toIterFromSlice(buffer, 0, SB.size(buffer));
-        };
-
-        toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
+        StableBuffer with toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
             if (start >= SB.size(buffer)) {
                 return Itertools.empty();
             };

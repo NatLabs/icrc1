@@ -1,5 +1,6 @@
 import Deque "mo:base/Deque";
 import List "mo:base/List";
+import Time "mo:base/Time";
 import Result "mo:base/Result";
 
 import STMap "mo:StableTrieMap";
@@ -177,7 +178,7 @@ module {
         fee : Balance;
         minting_account : Account;
         max_supply : Balance;
-        tx_deduplication : Bool;
+        transaction_window : ?Time.Time;
         initial_balances : [(Account, Balance)];
         // archive_options : {
         //     num_blocks_to_archive : Nat;
@@ -228,8 +229,8 @@ module {
         accounts : AccountStore;
         metadata : StableBuffer<MetaDatum>;
         supported_standards : StableBuffer<SupportedStandard>;
-        transaction_window : Timestamp;
-        var tx_deduplication : Bool;
+        transaction_window : Nat;
+        permitted_drift : Nat;
         transactions : StableBuffer<Transaction>;
         archives : StableBuffer<ArchiveData>;
     };
