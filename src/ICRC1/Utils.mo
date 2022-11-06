@@ -109,67 +109,6 @@ module {
         };
     };
 
-    // Checks if there is a duplicate of the given transaction
-    // stored in the main canister
-    public func tx_has_duplicates(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), Nat> {
-        let { transactions = txs } = token;
-
-        var phantom_txs_size = 0;
-        let phantom_txs = SB._clearedElemsToIter(txs);
-        let current_txs = SB.vals(txs);
-
-        let archived_txs = total_archived_txs(token.archives);
-
-        let last_2000_txs = if (archived_txs > 0) {
-            phantom_txs_size := SB.capacity(txs) - SB.size(txs);
-            Itertools.chain(phantom_txs, current_txs);
-        } else {
-            current_txs;
-        };
-
-        for ((i, tx) in Itertools.enumerate(last_2000_txs)) {
-            let res = switch (tx_req.kind) {
-                case (#mint) {
-                    switch (tx.mint) {
-                        case (?mint) {
-                            let mint_req : T.Mint = tx_req;
-
-                            mint_req == mint;
-                        };
-                        case (_) false;
-                    };
-                };
-                case (#burn) {
-                    switch (tx.burn) {
-                        case (?burn) {
-                            let burn_req : T.Burn = tx_req;
-
-                            burn_req == burn;
-                        };
-                        case (_) false;
-                    };
-                };
-                case (#transfer) {
-                    switch (tx.transfer) {
-                        case (?transfer) {
-                            let transfer_req : T.Transfer = tx_req;
-
-                            transfer_req == transfer;
-                        };
-                        case (_) false;
-                    };
-                };
-
-            };
-
-            if (res) {
-                let index = return #err(archived_txs + i - phantom_txs_size);
-            };
-        };
-
-        #ok();
-    };
-
     // Formats the different operation arguements into
     // a `TransactionRequest`, an internal type to access fields easier.
     public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {

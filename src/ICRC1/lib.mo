@@ -16,7 +16,7 @@ import Account "Account";
 import Archive "Archive";
 import T "Types";
 import U "Utils";
-import Validate "Validate";
+import Transfer "Transfer";
 
 /// The ICRC1 Module with all the functions for creating an
 /// ICRC1 token on the Internet Computer
@@ -68,7 +68,7 @@ module ICRC1 {
             initial_balances;
         } = args;
 
-        if (not Validate.account(minting_account)) {
+        if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");
         };
 
@@ -87,7 +87,7 @@ module ICRC1 {
 
         for ((i, (account, balance)) in Itertools.enumerate(initial_balances.vals())) {
 
-            if (not Validate.account(account)) {
+            if (not Account.validate(account)) {
                 Debug.trap(
                     "Invalid Account: Account at index " # debug_show i # " is invalid in 'initial_balances'",
                 );
@@ -206,7 +206,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (Validate.transfer(token, tx_req)) {
+        switch (validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -235,7 +235,7 @@ module ICRC1 {
             token.minting_account,
         );
 
-        switch (Validate.transfer(token, tx_req)) {
+        switch (validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };
@@ -297,7 +297,7 @@ module ICRC1 {
 
         let { from; to } = tx_req;
 
-        switch (Validate.transfer(token, tx_req)) {
+        switch (validate_request(token, tx_req)) {
             case (#err(errorType)) {
                 return #err(errorType);
             };

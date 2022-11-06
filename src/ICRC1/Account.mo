@@ -19,6 +19,25 @@ import STMap "mo:StableTrieMap";
 import T "Types";
 
 module {
+    /// Checks if a subaccount is valid
+    public func validate_subaccount(subaccount : ?T.Subaccount) : Bool {
+        switch (subaccount) {
+            case (?bytes) {
+                bytes.size() == 32;
+            };
+            case (_) true;
+        };
+    };
+
+    /// Checks if an account is valid
+    public func validate(account : T.Account) : Bool {
+        if (Principal.isAnonymous(account.owner)) {
+            false;
+        } else {
+            validate_subaccount(account.subaccount);
+        };
+    };
+
     func shrink_subaccount(sub : Blob) : (Iter.Iter<Nat8>, Nat8) {
         let bytes = Blob.toArray(sub);
         var size = Nat8.fromNat(bytes.size());
