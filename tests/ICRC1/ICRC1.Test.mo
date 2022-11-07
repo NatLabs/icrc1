@@ -331,7 +331,6 @@ let success = run([
                             let prev_total_supply = ICRC1.total_supply(token);
 
                             let res = await ICRC1.burn(token, burn_args, user1.owner);
-                            Debug.print(debug_show res);
 
                             assertAllTrue([
                                 res == #ok(burn_args.amount),

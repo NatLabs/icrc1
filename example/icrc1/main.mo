@@ -10,7 +10,7 @@ shared ({ caller = _owner }) actor class (
     _fee : ICRC1.Balance,
     _max_supply : ICRC1.Balance,
     _minting_account : ?ICRC1.Account,
-    _initial_balances : [(Principal, [(ICRC1.Subaccount, ICRC1.Balance)])],
+    _initial_balances : [(ICRC1.Account, ICRC1.Balance)],
 ) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
@@ -26,6 +26,7 @@ shared ({ caller = _owner }) actor class (
                 subaccount = null;
             },
         );
+        transaction_window = null;
         initial_balances = _initial_balances;
     });
 

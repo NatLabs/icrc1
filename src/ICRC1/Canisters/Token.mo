@@ -7,31 +7,29 @@ import SB "mo:StableBuffer/StableBuffer";
 import ICRC1 "../";
 import Archive "Archive";
 
+type TokenInitArgs = {
+    name : Text;
+    symbol : Text;
+    decimals : Nat8;
+    fee : ICRC1.Balance;
+    max_supply : ICRC1.Balance;
+    minting_account : ?ICRC1.Account;
+    initial_balances : [(ICRC1.Account, ICRC1.Balance)];
+};
+
 shared ({ caller = _owner }) actor class Token(
-    _name : Text,
-    _symbol : Text,
-    _decimals : Nat8,
-    _fee : ICRC1.Balance,
-    _max_supply : ICRC1.Balance,
-    _minting_account : ?ICRC1.Account,
-    _initial_balances : [(ICRC1.Account, ICRC1.Balance)],
+    token_args : TokenInitArgs,
 ) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
-        fee = _fee;
-        max_supply = _max_supply;
-        minting_account = Option.get(
-            _minting_account,
+        token_args with minting_account = Option.get(
+            token_args.minting_account,
             {
                 owner = _owner;
                 subaccount = null;
             },
         );
         transaction_window = null;
-        initial_balances = _initial_balances;
     });
 
     /// Functions for the ICRC1 token standard

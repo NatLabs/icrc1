@@ -2,9 +2,9 @@
     "version": 1,
     "dfx": "0.11.2",
     "canisters": {
-        "example": {
+        "icrc1_example": {
             "type": "motoko",
-            "main": "src/main.mo"
+            "main": "src/icrc1/main.mo"
         }
     },
     "defaults": {
