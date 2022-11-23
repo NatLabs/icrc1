@@ -1,11 +1,13 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Hash "mo:base/Hash";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
+import Nat32 "mo:base/Nat32";
+import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
@@ -52,6 +54,31 @@ module {
         Blob.fromArray(
             Array.tabulate(32, func(_ : Nat) : Nat8 { 0 }),
         );
+    };
+
+    // this is a local copy of deprecated Hash.hashNat8 (redefined to suppress the warning)
+    func hashNat8(key : [Nat32]) : Hash.Hash {
+        var hash : Nat32 = 0;
+        for (natOfKey in key.vals()) {
+            hash := hash +% natOfKey;
+            hash := hash +% hash << 10;
+            hash := hash ^ (hash >> 6);
+        };
+        hash := hash +% hash << 3;
+        hash := hash ^ (hash >> 11);
+        hash := hash +% hash << 15;
+        return hash;
+    };
+
+    // Computes a hash from the least significant 32-bits of `n`, ignoring other bits.
+    public func hash(n : Nat) : Hash.Hash {
+        let j = Nat32.fromNat(n);
+        hashNat8([
+            j & (255 << 0),
+            j & (255 << 8),
+            j & (255 << 16),
+            j & (255 << 24),
+        ]);
     };
 
     // Formats the different operation arguements into

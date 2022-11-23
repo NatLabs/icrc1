@@ -10,6 +10,7 @@
 # dfx temporary files
 .dfx/
 .vessel/
+.mops/
 
 # frontend code
 node_modules/

@@ -7,18 +7,15 @@ This repo contains the implementation of the
 - [Ledger ref in Motoko](https://github.com/dfinity/ledger-ref/blob/main/src/Ledger.mo)
 - [ICRC1 Rosetta API](https://github.com/dfinity/ic/blob/master/rs/rosetta-api/icrc1/ledger)
 
-## Tests
-- Download and Install [vessel](https://github.com/dfinity/vessel)
-- Run `make test`
-
 ## Documentation 
 - [markdown](./docs/index.md)
-- [web](natlabs.github.io/icrc1/)
+- [web](https://natlabs.github.io/icrc1/)
  
 ## Getting Started 
 - Expose the ICRC-1 token functions from your canister 
-  - Import the `icrc1` lib and expose them in an `actor` class 
-    Take a look at the [examples](./example/icrc1-stable/main.mo)
+  - Import the `icrc1` lib and expose them in an `actor` class.
+  
+    Take a look at the [examples](./example/icrc1/main.mo)
     
 - Launch the basic token with all the standard functions for ICRC-1
   ```motoko
@@ -68,3 +65,6 @@ This repo contains the implementation of the
         }
     ```
 
+## Tests
+- Download and Install [vessel](https://github.com/dfinity/vessel)
+- Run `make test`
