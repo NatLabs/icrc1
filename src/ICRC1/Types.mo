@@ -179,11 +179,16 @@ module {
         symbol : Text;
         decimals : Nat8;
         fee : Balance;
-        minting_account : ?Account; // optional 
         max_supply : Balance;
+
+        /// optional value that defaults to the caller if not provided
+        minting_account : ?Account;
+
         initial_balances : [(Account, Balance)];
-        transaction_window : ?Timestamp;
+        /// defaults to 1 hour
         permitted_drift : ?Timestamp;
+        /// defaults to 1 day
+        transaction_window : ?Timestamp;
     };
 
     public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;

@@ -5,18 +5,6 @@ import Time "mo:base/Time";
 
 import ICRC1 "../../src/ICRC1/";
 
-type TokenInitArgs = {
-    name : Text;
-    symbol : Text;
-    decimals : Nat8;
-    fee : ICRC1.Balance;
-    max_supply : ICRC1.Balance;
-    initial_balances : [(ICRC1.Account, ICRC1.Balance)];
-    minting_account : ?ICRC1.Account;
-    permitted_drift : ?Time.Time;
-    transaction_window : ?Time.Time;
-};
-
 shared ({ caller = _owner }) actor class Token(
     token_args : ICRC1.TokenInitArgs,
 ) : async ICRC1.TokenInterface {
