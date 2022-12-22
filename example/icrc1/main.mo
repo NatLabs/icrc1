@@ -1,33 +1,34 @@
+import Iter "mo:base/Iter";
 import Option "mo:base/Option";
 import Result "mo:base/Result";
+import Time "mo:base/Time";
 
 import ICRC1 "../../src/ICRC1/";
 
-shared ({ caller = _owner }) actor class (
-    _name : Text,
-    _symbol : Text,
-    _decimals : Nat8,
-    _fee : ICRC1.Balance,
-    _max_supply : ICRC1.Balance,
-    _minting_account : ?ICRC1.Account,
-    _initial_balances : [(ICRC1.Account, ICRC1.Balance)],
+type TokenInitArgs = {
+    name : Text;
+    symbol : Text;
+    decimals : Nat8;
+    fee : ICRC1.Balance;
+    max_supply : ICRC1.Balance;
+    initial_balances : [(ICRC1.Account, ICRC1.Balance)];
+    minting_account : ?ICRC1.Account;
+    permitted_drift : ?Time.Time;
+    transaction_window : ?Time.Time;
+};
+
+shared ({ caller = _owner }) actor class Token(
+    token_args : ICRC1.TokenInitArgs,
 ) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
-        fee = _fee;
-        max_supply = _max_supply;
-        minting_account = Option.get(
-            _minting_account,
+        token_args with minting_account = Option.get(
+            token_args.minting_account,
             {
                 owner = _owner;
                 subaccount = null;
             },
         );
-        transaction_window = null;
-        initial_balances = _initial_balances;
     });
 
     /// Functions for the ICRC1 token standard
@@ -77,5 +78,17 @@ shared ({ caller = _owner }) actor class (
 
     public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
         await ICRC1.burn(token, args, caller);
+    };
+
+    // Functions from the rosetta icrc1 ledger
+    
+    // This would be better as a query fn but inter-canister query calls are not supported yet
+    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+        await ICRC1.get_transactions(token, req);
+    };
+
+    // Useful functions not included in ICRC1 or Rosetta
+    public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
+        await ICRC1.get_transaction(token, token_id);
     };
 };

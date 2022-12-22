@@ -30,21 +30,21 @@ Implementation of ICRC1's Textual representation of accounts [Decoding Standard]
 
 ## Function `get_balance`
 ``` motoko no-repl
-func get_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount) : T.Balance
+func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance
 ```
 
 Retrieves the balance of an account
 
 ## Function `update_balance`
 ``` motoko no-repl
-func update_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount, update : (T.Balance) -> T.Balance)
+func update_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount, update : (T.Balance) -> T.Balance)
 ```
 
 Updates the balance of an account
 
 ## Function `transfer_balance`
 ``` motoko no-repl
-func transfer_balance(accounts : T.AccountStore, tx_req : T.TransactionRequest)
+func transfer_balance(accounts : T.AccountBalances, tx_req : T.TransactionRequest)
 ```
 
 Transfers tokens from the sender to the

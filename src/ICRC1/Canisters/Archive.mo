@@ -11,7 +11,7 @@ import Result "mo:base/Result";
 
 import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
 
-import Itertools "mo:Itertools/Iter";
+import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 import U "../Utils";
 import T "../Types";
@@ -24,18 +24,19 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         size : Nat;
     };
 
-    stable let GB = 1024 ** 3;
-    stable let MAX_MEMORY = 32 * GB;
+    stable let KiB = 1024;
+    stable let GiB = KiB ** 3;
+    stable let MEMORY_PER_PAGE : Nat64 = Nat64.fromNat(64 * KiB);
+    stable let MIN_PAGES : Nat64 = 32; // 2MiB == 32 * 64KiB
+    stable var PAGES_TO_GROW : Nat64 = 2048; // 64MiB
+    stable let MAX_MEMORY = 32 * GiB;
+
     stable let BUCKET_SIZE = 1000;
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
-    stable let MIN_PAGES : Nat64 = 32; // 2MiB == 32 * 64KiB
-    stable let PAGES_TO_GROW : Nat64 = 4096; // 128MiB
-
-    stable var filled_pages : Nat64 = 0;
     stable var memory_pages : Nat64 = ExperimentalStableMemory.size();
+    stable var total_memory_used : Nat64 = 0;
 
-    stable var offset : Nat64 = 0;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
 
@@ -45,10 +46,6 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the owner can access this canister");
-        };
-
-        if (Prim.rts_memory_size() >= MAX_MEMORY) {
-            return #err("Memory Limit: The archive canister cannot store any more transactions");
         };
 
         var txs_iter = txs.vals();
@@ -82,7 +79,6 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
                     };
 
                     store_bucket(new_bucket);
-
                 };
                 case (_) {};
             };
@@ -168,7 +164,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     };
 
     public shared query func remaining_capacity() : async Nat {
-        MAX_MEMORY - Prim.rts_memory_size();
+        Prim.rts_memory_size() - Nat64.toNat(total_memory_used);
     };
 
     func to_blob(tx : Transaction) : Blob {
@@ -185,10 +181,12 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     func store_tx(tx : Transaction) : MemoryBlock {
         let blob = to_blob(tx);
 
-        if (memory_pages - filled_pages < MIN_PAGES) {
+        if ((memory_pages * MEMORY_PER_PAGE) - total_memory_used < (MIN_PAGES * MEMORY_PER_PAGE)) {
             ignore ExperimentalStableMemory.grow(PAGES_TO_GROW);
             memory_pages += PAGES_TO_GROW;
         };
+
+        let offset = total_memory_used;
 
         ExperimentalStableMemory.storeBlob(
             offset,
@@ -200,8 +198,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             size = blob.size();
         };
 
-        offset += Nat64.fromNat(blob.size());
-
+        total_memory_used += Nat64.fromNat(blob.size());
         mem_block;
     };
 

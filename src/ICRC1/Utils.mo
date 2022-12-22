@@ -14,7 +14,7 @@ import Result "mo:base/Result";
 import Time "mo:base/Time";
 
 import ArrayModule "mo:array/Array";
-import Itertools "mo:Itertools/Iter";
+import Itertools "mo:itertools/Iter";
 import STMap "mo:StableTrieMap";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 
@@ -152,9 +152,29 @@ module {
         };
     };
 
+    public func div_ceil(n : Nat, d : Nat) : Nat {
+        (n + d - 1) / d;
+    };
+
     // Stable Buffer Module with some additional functions
     public let SB = {
-        StableBuffer with toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
+        StableBuffer with slice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : [A] {
+            let size = SB.size(buffer);
+            if (start >= size) {
+                return [];
+            };
+
+            let slice_len = (Nat.min(end, size) - start) : Nat;
+
+            Array.tabulate(
+                slice_len,
+                func(i : Nat) : A {
+                    SB.get(buffer, i + start);
+                },
+            );
+        };
+
+        toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
             if (start >= SB.size(buffer)) {
                 return Itertools.empty();
             };

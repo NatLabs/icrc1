@@ -1,5 +1,6 @@
 import Iter "mo:base/Iter";
 import Option "mo:base/Option";
+import Time "mo:base/Time";
 import Result "mo:base/Result";
 
 import SB "mo:StableBuffer/StableBuffer";
@@ -7,18 +8,8 @@ import SB "mo:StableBuffer/StableBuffer";
 import ICRC1 "../";
 import Archive "Archive";
 
-type TokenInitArgs = {
-    name : Text;
-    symbol : Text;
-    decimals : Nat8;
-    fee : ICRC1.Balance;
-    max_supply : ICRC1.Balance;
-    minting_account : ?ICRC1.Account;
-    initial_balances : [(ICRC1.Account, ICRC1.Balance)];
-};
-
 shared ({ caller = _owner }) actor class Token(
-    token_args : TokenInitArgs,
+    token_args : ICRC1.TokenInitArgs,
 ) : async ICRC1.TokenInterface {
 
     let token = ICRC1.init({
@@ -29,7 +20,6 @@ shared ({ caller = _owner }) actor class Token(
                 subaccount = null;
             },
         );
-        transaction_window = null;
     });
 
     /// Functions for the ICRC1 token standard
@@ -82,11 +72,14 @@ shared ({ caller = _owner }) actor class Token(
     };
 
     // Functions from the rosetta icrc1 ledger
-    public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
-        await ICRC1.get_transaction(token, token_id);
+    
+    // This would be better as a query fn but inter-canister query calls are not supported yet
+    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+        await ICRC1.get_transactions(token, req);
     };
 
-    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async () {
-        ignore await ICRC1.get_transactions(token, req);
+    // Useful functions not included in ICRC1 or Rosetta
+    public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
+        await ICRC1.get_transaction(token, token_id);
     };
 };

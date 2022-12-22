@@ -24,9 +24,15 @@ let overrides = [
        dependencies = ["base"] : List Text
     },
     {
-       name = "Itertools",
+       name = "itertools",
        version = "main",
        repo = "https://github.com/NatLabs/Itertools.mo",
+       dependencies = ["base"] : List Text
+    },
+    {
+       name = "base",
+       version = "moc-0.7.4",
+       repo = "https://github.com/dfinity/motoko-base",
        dependencies = ["base"] : List Text
     },
 ] : List Package

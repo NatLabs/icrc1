@@ -6,17 +6,19 @@ import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
+import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
+import EC "mo:base/ExperimentalCycles";
 
-import Itertools "mo:Itertools/Iter";
+import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 
-import ArchiveApi "ArchiveApi";
 import Account "Account";
 import T "Types";
 import U "Utils";
 import Transfer "Transfer";
+import Archive "Canisters/Archive";
 
 /// The ICRC1 Module with all the functions for creating an
 /// ICRC1 token on the Internet Computer
@@ -25,7 +27,7 @@ module ICRC1 {
 
     public type Account = T.Account;
     public type Subaccount = T.Subaccount;
-    public type AccountStore = T.AccountStore;
+    public type AccountBalances = T.AccountBalances;
 
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
@@ -38,12 +40,15 @@ module ICRC1 {
     public type SupportedStandard = T.SupportedStandard;
 
     public type InitArgs = T.InitArgs;
+    public type TokenInitArgs = T.TokenInitArgs;
     public type TokenData = T.TokenData;
     public type MetaDatum = T.MetaDatum;
     public type TxLog = T.TxLog;
     public type TxIndex = T.TxIndex;
 
     public type TokenInterface = T.TokenInterface;
+    public type RosettaInterface = T.RosettaInterface;
+    public type FullInterface = T.FullInterface;
 
     public type ArchiveInterface = T.ArchiveInterface;
 
@@ -66,6 +71,8 @@ module ICRC1 {
             minting_account;
             max_supply;
             initial_balances;
+            permitted_drift;
+            transaction_window;
         } = args;
 
         if (not Account.validate(minting_account)) {
@@ -76,7 +83,7 @@ module ICRC1 {
             Debug.trap("max_supply must be >= 1");
         };
 
-        let accounts : AccountStore = StableTrieMap.new();
+        let accounts : AccountBalances = StableTrieMap.new();
         StableTrieMap.put(
             accounts,
             Blob.equal,
@@ -115,9 +122,16 @@ module ICRC1 {
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
-            permitted_drift = 2 * 60 * 1000;
-            transaction_window = Nat64.toNat(U.DAY_IN_NANO_SECONDS);
-            archives = SB.init();
+            permitted_drift = Nat64.toNat(
+                Option.get(permitted_drift, (60 * 60 * 1000) : Nat64),
+            );
+            transaction_window = Nat64.toNat(
+                Option.get(transaction_window, U.DAY_IN_NANO_SECONDS),
+            );
+            archive = {
+                var canister = actor ("aaaaa-aa");
+                var stored_txs = 0;
+            };
         };
     };
 
@@ -282,115 +296,110 @@ module ICRC1 {
 
     /// Returns the total number of transactions that have been processed by the given token.
     public func total_transactions(token : TokenData) : Nat {
-        SB.size(token.transactions) + ArchiveApi.total_txs(token.archives);
+        let { archive; transactions } = token;
+        archive.stored_txs + SB.size(transactions);
     };
 
     /// Retrieves the transaction specified by the given `tx_index`
-    public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction {
-        let archived_txs = ArchiveApi.total_txs(token.archives);
-        if (tx_index < archived_txs) {
+    public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?Transaction {
+        let { archive; transactions } = token;
 
-            let archive = Itertools.find(
-                SB.vals(token.archives),
-                func({ start; length } : T.ArchiveData) : Bool {
-                    let end = start + length;
+        let archived_txs = archive.stored_txs;
 
-                    tx_index < end;
-                },
-            );
-
-            switch (archive) {
-                case (?archive) {
-                    await archive.canister.get_transaction(tx_index);
-                };
-                case (_) { null };
-            };
-
+        if (tx_index < archive.stored_txs) {
+            await archive.canister.get_transaction(tx_index);
         } else {
-            let local_tx_index = (tx_index - archived_txs) : Nat;
+            let local_tx_index = (tx_index - archive.stored_txs) : Nat;
             SB.getOpt(token.transactions, local_tx_index);
         };
     };
 
-    // Retrieves the transactions in the request range that are in the archived
-    // canister and in the main token's canister
-    func get_txs(token : TokenData, req : T.GetTransactionsRequest) : async [Transaction] {
-        var txs_size = 0;
-        var txs_iter = Itertools.empty<Transaction>();
-        let expected_size = Nat.min(req.length, MAX_TRANSACTIONS_PER_REQUEST);
-
-        // Gets transactions in the request range from archive canisters
-        label _loop for (archive in SB.vals(token.archives)) {
-            let archive_end = archive.start + archive.length;
-
-            if (req.start < archive_end) {
-                let _txs = await archive.canister.get_transactions({
-                    start = Nat.max(req.start, archive.start);
-                    length = expected_size - txs_size;
-                });
-
-                txs_size += _txs.size();
-                txs_iter := Itertools.chain(txs_iter, _txs.vals());
-            };
-
-            if (txs_size == expected_size) {
-                break _loop;
-            };
-        };
-
-        if (txs_size < expected_size) {
-            let archived_txs = ArchiveApi.total_txs(token.archives);
-
-            // get local transactions
-            let local_txs = SB.toIterFromSlice(token.transactions, 0, expected_size - txs_size);
-
-            txs_iter := Itertools.chain(txs_iter, local_txs);
-        };
-
-        Iter.toArray(txs_iter);
-    };
-
     /// Retrieves the transactions specified by the given range
     public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
-        let { archives } = token;
+        let { archive; transactions } = token;
 
-        let txs = await get_txs(token, req);
+        var first_index = 0;
 
-        let valid_range = {
-            start = req.start + txs.size();
-            end = Nat.min(req.start + txs.size() + req.length, total_transactions(token));
+        let txs_in_canister = if (req.start + req.length >= archive.stored_txs) {
+            first_index := Nat.max(req.start, archive.stored_txs) - archive.stored_txs;
+
+            SB.slice(transactions, first_index, req.length);
+        } else {
+            [];
         };
 
-        let size = (valid_range.end - valid_range.start) : Nat / MAX_TRANSACTIONS_PER_REQUEST;
-        let paginated_requests = Array.tabulate(
+        let archived_range = if (req.start < archive.stored_txs) {
+            {
+                start = req.start;
+                end = Nat.min(
+                    archive.stored_txs,
+                    (req.start + req.length) : Nat,
+                );
+            }
+
+        } else {
+            { start = 0; end = 0 };
+        };
+
+        let txs_in_archive = (archived_range.end - archived_range.start) : Nat;
+
+        let size = U.div_ceil(txs_in_archive, MAX_TRANSACTIONS_PER_REQUEST);
+
+        let archived_transactions = Array.tabulate(
             size,
             func(i : Nat) : GetTransactionsRequest {
                 let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
-                let start = offset + valid_range.start;
+                let start = offset + archived_range.start;
 
                 {
                     start;
-                    length = Nat.min(MAX_TRANSACTIONS_PER_REQUEST, valid_range.end - start);
+                    length = Nat.min(
+                        MAX_TRANSACTIONS_PER_REQUEST,
+                        archived_range.end - start,
+                    );
                 };
             },
         );
 
         {
-            log_length = txs.size();
-            first_index = req.start;
-            transactions = txs;
-            archived_transactions = paginated_requests;
+            log_length = txs_in_archive + txs_in_canister.size();
+            first_index = first_index;
+            transactions = txs_in_canister;
+            archived_transactions;
         };
     };
 
     // Updates the token's data and manages the transactions
     //
-    // **should be added at the end of every update function**
+    // **added at the end of any function that creates a new transaction**
     func update_canister(token : TokenData) : async () {
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
-            await ArchiveApi.append_transactions(token);
+            await append_transactions(token);
+        };
+    };
+
+    // Moves the transactions from the ICRC1 canister to the archive canister
+    // and returns a boolean that indicates the success of the data transfer
+    func append_transactions(token : T.TokenData) : async () {
+        let { archive; transactions } = token;
+
+        if (archive.stored_txs == 0) {
+            EC.add(200_000_000_000);
+            archive.canister := await Archive.Archive();
+        };
+
+        let res = await archive.canister.append_transactions(
+            SB.toArray(transactions),
+        );
+
+        switch (res) {
+            case (#ok(_)) {
+                archive.stored_txs += SB.size(transactions);
+                SB.clear(transactions);
+            };
+            case (#err(_)) {};
         };
     };
 };

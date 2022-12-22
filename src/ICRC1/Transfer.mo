@@ -11,12 +11,11 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 
-import Itertools "mo:Itertools/Iter";
+import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import Account "Account";
-import ArchiveApi "ArchiveApi";
 
 import T "Types";
 import U "Utils";
@@ -57,15 +56,13 @@ module {
             return #ok();
         };
 
-        let { transactions = txs } = token;
+        let { transactions = txs; archive } = token;
 
         var phantom_txs_size = 0;
         let phantom_txs = SB._clearedElemsToIter(txs);
         let current_txs = SB.vals(txs);
 
-        let archived_txs = ArchiveApi.total_txs(token.archives);
-
-        let last_2000_txs = if (archived_txs > 0) {
+        let last_2000_txs = if (archive.stored_txs > 0) {
             phantom_txs_size := SB.capacity(txs) - SB.size(txs);
             Itertools.chain(phantom_txs, current_txs);
         } else {
@@ -125,7 +122,7 @@ module {
             };
 
             if (is_duplicate) {
-                let index = archived_txs + i - phantom_txs_size;
+                let index = (archive.stored_txs + i - phantom_txs_size) : Nat;
                 return #err(index);
             };
         };

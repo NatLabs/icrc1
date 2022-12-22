@@ -1,9 +1,9 @@
 [dependencies]
-base = "https://github.com/dfinity/motoko-base#a6301031d21449d38eb64a72e3e9dd0ad8447a86"
+base = "https://github.com/dfinity/motoko-base#moc-0.7.4"
 array = "https://github.com/aviate-labs/array.mo#v0.2.0"
 StableTrieMap = "https://github.com/NatLabs/StableTrieMap#main"
 StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
-Itertools = "https://github.com/NatLabs/Itertools.mo#main"
+itertools = "0.1.1"
 
 [package]
 name = "icrc1"

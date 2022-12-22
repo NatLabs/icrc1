@@ -30,6 +30,12 @@ func default_subaccount() : T.Subaccount
 ```
 
 
+## Function `hash`
+``` motoko no-repl
+func hash(n : Nat) : Hash.Hash
+```
+
+
 ## Function `args_to_req`
 ``` motoko no-repl
 func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest
@@ -45,6 +51,12 @@ func kind_to_text(kind : T.OperationKind) : Text
 ## Function `req_to_tx`
 ``` motoko no-repl
 func req_to_tx(tx_req : T.TransactionRequest) : T.Transaction
+```
+
+
+## Function `div_ceil`
+``` motoko no-repl
+func div_ceil(n : Nat, d : Nat) : Nat
 ```
 
 

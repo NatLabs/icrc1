@@ -12,9 +12,9 @@ type Subaccount = T.Subaccount
 ```
 
 
-## Type `AccountStore`
+## Type `AccountBalances`
 ``` motoko no-repl
-type AccountStore = T.AccountStore
+type AccountBalances = T.AccountBalances
 ```
 
 
@@ -72,6 +72,12 @@ type InitArgs = T.InitArgs
 ```
 
 
+## Type `TokenInitArgs`
+``` motoko no-repl
+type TokenInitArgs = T.TokenInitArgs
+```
+
+
 ## Type `TokenData`
 ``` motoko no-repl
 type TokenData = T.TokenData
@@ -99,6 +105,18 @@ type TxIndex = T.TxIndex
 ## Type `TokenInterface`
 ``` motoko no-repl
 type TokenInterface = T.TokenInterface
+```
+
+
+## Type `RosettaInterface`
+``` motoko no-repl
+type RosettaInterface = T.RosettaInterface
+```
+
+
+## Type `FullInterface`
+``` motoko no-repl
+type FullInterface = T.FullInterface
 ```
 
 
@@ -261,7 +279,7 @@ Returns the total number of transactions that have been processed by the given t
 
 ## Function `get_transaction`
 ``` motoko no-repl
-func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?ICRC1.Transaction
+func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?Transaction
 ```
 
 Retrieves the transaction specified by the given `tx_index`

@@ -12,7 +12,7 @@ import Result "mo:base/Result";
 import Time "mo:base/Time";
 
 import ArrayModule "mo:array/Array";
-import Itertools "mo:Itertools/Iter";
+import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
@@ -108,7 +108,7 @@ module {
             };
 
             size -= 1;
-            let split_index = size - subaccount_size;
+            let split_index = (size - subaccount_size) : Nat;
 
             if (bytes[split_index] == 0) {
                 return null;
@@ -122,7 +122,7 @@ module {
 
             let prefix_zeroes = Itertools.take(
                 Iter.make(0 : Nat8),
-                32 - subaccount_size,
+                (32 - subaccount_size) : Nat,
             );
 
             let encoded_subaccount = Itertools.fromArraySlice(bytes, split_index, size);
@@ -143,7 +143,7 @@ module {
     };
 
     /// Retrieves the balance of an account
-    public func get_balance(accounts : T.AccountStore, encoded_account : T.EncodedAccount) : T.Balance {
+    public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
         let res = STMap.get(
             accounts,
             Blob.equal,
@@ -161,7 +161,7 @@ module {
 
     /// Updates the balance of an account
     public func update_balance(
-        accounts : T.AccountStore,
+        accounts : T.AccountBalances,
         encoded_account : T.EncodedAccount,
         update : (T.Balance) -> T.Balance,
     ) {
@@ -182,7 +182,7 @@ module {
     /// Transfers tokens from the sender to the
     /// recipient in the tx request
     public func transfer_balance(
-        accounts : T.AccountStore,
+        accounts : T.AccountBalances,
         tx_req : T.TransactionRequest,
     ) {
         let { encoded; amount } = tx_req;

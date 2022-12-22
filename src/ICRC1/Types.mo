@@ -102,16 +102,6 @@ module {
         };
     };
 
-    /// Max size
-    /// kind : 8 chars (8 * 32 /8) -> 32
-    /// from : (32 + 32) -> 68 B
-    /// to : 68  B
-    /// fee : Nat64 -> 8 B
-    /// amount : Nat128 -> 16 B
-    /// memo: 32 -> 4 B
-    /// time : Nat64 -> 8 B
-    /// ---------------------------
-    /// total : 196 Bytes
     public type Transaction = {
         kind : Text;
         mint : ?Mint;
@@ -138,26 +128,26 @@ module {
     public type TokenInterface = actor {
 
         /// Returns the name of the token
-        icrc1_name : query () -> async Text;
+        icrc1_name : shared query () -> async Text;
 
         /// Returns the symbol of the token
-        icrc1_symbol : query () -> async Text;
+        icrc1_symbol : shared query () -> async Text;
 
-        icrc1_decimals : query () -> async Nat8;
+        icrc1_decimals : shared query () -> async Nat8;
 
-        icrc1_fee : query () -> async Balance;
+        icrc1_fee : shared query () -> async Balance;
 
-        icrc1_metadata : query () -> async MetaData;
+        icrc1_metadata : shared query () -> async MetaData;
 
-        icrc1_total_supply : query () -> async Balance;
+        icrc1_total_supply : shared query () -> async Balance;
 
-        icrc1_minting_account : query () -> async ?Account;
+        icrc1_minting_account : shared query () -> async ?Account;
 
-        icrc1_balance_of : query (Account) -> async Balance;
+        icrc1_balance_of : shared query (Account) -> async Balance;
 
-        icrc1_transfer : (TransferArgs) -> async Result.Result<Balance, TransferError>;
+        icrc1_transfer : shared (TransferArgs) -> async Result.Result<Balance, TransferError>;
 
-        icrc1_supported_standards : query () -> async [SupportedStandard];
+        icrc1_supported_standards : shared query () -> async [SupportedStandard];
 
     };
 
@@ -178,36 +168,25 @@ module {
         fee : Balance;
         minting_account : Account;
         max_supply : Balance;
-        transaction_window : ?Time.Time;
         initial_balances : [(Account, Balance)];
-        // archive_options : {
-        //     num_blocks_to_archive : Nat;
-        //     trigger_threshold : Nat;
-        //     controller_id : Principal;
-        // };
-    };
-
-    public type ExportedArgs = InitArgs and {
-        /// Time between when a transaction is created on the frontend
-        /// and sent to the canister for execution.
-        /// **This value should be in seconds**
         transaction_window : ?Timestamp;
-
-        // The minting_account defaults to account of the
-        // canister if its null
-        minting_account : ?Account;
-        metadata : ?MetaData;
-        supported_standards : ?[SupportedStandard];
-
-        // optional parameters to initialize with previous token data
-        accounts : ?[(Principal, [(Subaccount, Balance)])];
-
-        // you can only add transactions if you
-        // have opted-in to store them.
-        transactions : ?[Transaction];
+        permitted_drift : ?Timestamp;
     };
 
-    public type AccountStore = StableTrieMap<EncodedAccount, Balance>;
+    /// Init Args with optional fields for the token actor canister
+    public type TokenInitArgs = {
+        name : Text;
+        symbol : Text;
+        decimals : Nat8;
+        fee : Balance;
+        minting_account : ?Account; // optional 
+        max_supply : Balance;
+        initial_balances : [(Account, Balance)];
+        transaction_window : ?Timestamp;
+        permitted_drift : ?Timestamp;
+    };
+
+    public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;
 
     public type TransactionRange = {
         start : TxIndex;
@@ -215,8 +194,9 @@ module {
     };
 
     public type ArchiveData = {
-        canister : ArchiveInterface;
-    } and TransactionRange;
+        var canister : ArchiveInterface;
+        var stored_txs : Nat;
+    };
 
     public type TokenData = {
         name : Text;
@@ -225,18 +205,16 @@ module {
         var fee : Balance;
         max_supply : Balance;
         minting_account : Account;
-        accounts : AccountStore;
+        accounts : AccountBalances;
         metadata : StableBuffer<MetaDatum>;
         supported_standards : StableBuffer<SupportedStandard>;
         transaction_window : Nat;
         permitted_drift : Nat;
         transactions : StableBuffer<Transaction>;
-        archives : StableBuffer<ArchiveData>;
+        archive : ArchiveData;
     };
 
-    // TxLog
-    /// A prefix array of the transaction range specified in the [GetTransactionsRequest](./#GetTransactionsRequest) request.
-
+    // Rosetta API
     public type GetTransactionsRequest = TransactionRange;
 
     public type QueryArchiveFn = (GetTransactionsRequest) -> async ([Transaction]);
@@ -252,11 +230,18 @@ module {
         // the index of the first tx in `.transactions`
         first_index : TxIndex;
 
-        // The first prefix of transactions in the given range
+        // The transactions in the ledger canister that are in the given range
         transactions : [Transaction];
 
-        // the remaining sub array of transactions in the given range
         archived_transactions : [ArchivedTransaction];
     };
+
+    /// Functions supported by the rosetta 
+    public type RosettaInterface = actor {
+        get_transactions : shared query (GetTransactionsRequest) -> async GetTransactionsResponse;
+    };
+
+    /// Interface of the ICRC token and Rosetta canister
+    public type FullInterface = TokenInterface and RosettaInterface;
 
 };

@@ -149,16 +149,6 @@ type TransactionRequest = { kind : OperationKind; from : Account; to : Account; 
 type Transaction = { kind : Text; mint : ?Mint; burn : ?Burn; transfer : ?Transfer; timestamp : Timestamp }
 ```
 
-Max size
-kind : 8 chars (8 * 32 /8) -> 32
-from : (32 + 32) -> 68 B
-to : 68  B
-fee : Nat64 -> 8 B
-amount : Nat128 -> 16 B
-memo: 32 -> 4 B
-time : Nat64 -> 8 B
----------------------------
-total : 196 Bytes
 
 ## Type `TimeError`
 ``` motoko no-repl
@@ -193,19 +183,20 @@ type ArchiveInterface = actor { append_transactions : shared ([Transaction]) -> 
 
 ## Type `InitArgs`
 ``` motoko no-repl
-type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; transaction_window : ?Time.Time; initial_balances : [(Account, Balance)] }
+type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; initial_balances : [(Account, Balance)]; transaction_window : ?Timestamp; permitted_drift : ?Timestamp }
 ```
 
 
-## Type `ExportedArgs`
+## Type `TokenInitArgs`
 ``` motoko no-repl
-type ExportedArgs = InitArgs and { transaction_window : ?Timestamp; minting_account : ?Account; metadata : ?MetaData; supported_standards : ?[SupportedStandard]; accounts : ?[(Principal, [(Subaccount, Balance)])]; transactions : ?[Transaction] }
+type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : ?Account; max_supply : Balance; initial_balances : [(Account, Balance)]; transaction_window : ?Timestamp; permitted_drift : ?Timestamp }
 ```
 
+Init Args with optional fields for the token actor canister
 
-## Type `AccountStore`
+## Type `AccountBalances`
 ``` motoko no-repl
-type AccountStore = StableTrieMap<EncodedAccount, Balance>
+type AccountBalances = StableTrieMap<EncodedAccount, Balance>
 ```
 
 
@@ -217,13 +208,13 @@ type TransactionRange = { start : TxIndex; length : Nat }
 
 ## Type `ArchiveData`
 ``` motoko no-repl
-type ArchiveData = { canister : ArchiveInterface } and TransactionRange
+type ArchiveData = { var canister : ArchiveInterface; var stored_txs : Nat }
 ```
 
 
 ## Type `TokenData`
 ``` motoko no-repl
-type TokenData = { name : Text; symbol : Text; decimals : Nat8; var fee : Balance; max_supply : Balance; minting_account : Account; accounts : AccountStore; metadata : StableBuffer<MetaDatum>; supported_standards : StableBuffer<SupportedStandard>; transaction_window : Nat; permitted_drift : Nat; transactions : StableBuffer<Transaction>; archives : StableBuffer<ArchiveData> }
+type TokenData = { name : Text; symbol : Text; decimals : Nat8; var fee : Balance; max_supply : Balance; minting_account : Account; accounts : AccountBalances; metadata : StableBuffer<MetaDatum>; supported_standards : StableBuffer<SupportedStandard>; transaction_window : Nat; permitted_drift : Nat; transactions : StableBuffer<Transaction>; archive : ArchiveData }
 ```
 
 
@@ -232,7 +223,6 @@ type TokenData = { name : Text; symbol : Text; decimals : Nat8; var fee : Balanc
 type GetTransactionsRequest = TransactionRange
 ```
 
-A prefix array of the transaction range specified in the [GetTransactionsRequest](./#GetTransactionsRequest) request.
 
 ## Type `QueryArchiveFn`
 ``` motoko no-repl
@@ -251,3 +241,17 @@ type ArchivedTransaction = { start : TxIndex; length : Nat }
 type GetTransactionsResponse = { log_length : Nat; first_index : TxIndex; transactions : [Transaction]; archived_transactions : [ArchivedTransaction] }
 ```
 
+
+## Type `RosettaInterface`
+``` motoko no-repl
+type RosettaInterface = actor { get_transactions : shared query (GetTransactionsRequest) -> async GetTransactionsResponse }
+```
+
+Functions supported by the rosetta 
+
+## Type `FullInterface`
+``` motoko no-repl
+type FullInterface = TokenInterface and RosettaInterface
+```
+
+Interface of the ICRC token and Rosetta canister
