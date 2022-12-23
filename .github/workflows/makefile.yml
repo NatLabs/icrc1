@@ -10,17 +10,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    name: Build and test
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
       - name: "install vessel"
         run: |
-          mkdir /home/runner/bin
-          echo "/home/runner/bin" >> $GITHUB_PATH
-          wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
-          chmod +x /home/runner/bin/vessel
+            mkdir /home/runner/bin
+            echo "/home/runner/bin" >> $GITHUB_PATH
+            wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
+            chmod +x /home/runner/bin/vessel
+
+      # - name: Install mops
+      #   run: npm -g i mops
+
+      # - name: Install motoko dependencies
+      #   run: npx mops i
+
+      - name: Detect warnings
+        run: make no-warn
 
       - name: Run Tests
         run: make test
-
-      - name: Generate Docs
-        run: make docs
