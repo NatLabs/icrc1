@@ -3,7 +3,10 @@ import Option "mo:base/Option";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 
+import ExperimentalCycles "mo:base/ExperimentalCycles";
+
 import ICRC1 "../../src/ICRC1/";
+import Array "mo:base/Array";
 
 shared ({ caller = _owner }) actor class Token(
     token_args : ICRC1.TokenInitArgs,
@@ -69,14 +72,21 @@ shared ({ caller = _owner }) actor class Token(
     };
 
     // Functions from the rosetta icrc1 ledger
-    
-    // This would be better as a query fn but inter-canister query calls are not supported yet
-    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+
+    // This should be a query fn but inter-canister query calls are not supported yet
+    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.TxResponseWithoutCallback {
         await ICRC1.get_transactions(token, req);
     };
 
     // Useful functions not included in ICRC1 or Rosetta
     public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
         await ICRC1.get_transaction(token, token_id);
+    };
+
+    // Deposit cycles into this archive canister.
+    public shared func deposit_cycles() : async () {
+        let amount = ExperimentalCycles.available();
+        let accepted = ExperimentalCycles.accept(amount);
+        assert (accepted == amount);
     };
 };

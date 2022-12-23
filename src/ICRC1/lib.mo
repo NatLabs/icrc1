@@ -55,7 +55,10 @@ module ICRC1 {
     public type GetTransactionsRequest = T.GetTransactionsRequest;
     public type GetTransactionsResponse = T.GetTransactionsResponse;
     public type QueryArchiveFn = T.QueryArchiveFn;
+    public type TransactionRange = T.TransactionRange;
     public type ArchivedTransaction = T.ArchivedTransaction;
+    public type ArchiveTxWithoutCallback = T.ArchiveTxWithoutCallback;
+    public type TxResponseWithoutCallback = T.TxResponseWithoutCallback;
 
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
@@ -315,10 +318,10 @@ module ICRC1 {
     };
 
     /// Retrieves the transactions specified by the given range
-    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.TxResponseWithoutCallback {
         let { archive; transactions } = token;
 
-        var first_index = 0;
+        var first_index = 0xFFFF_FFFF_FFFF_FFFF; // returned if no transactions are found
 
         let txs_in_canister = if (req.start + req.length >= archive.stored_txs) {
             first_index := Nat.max(req.start, archive.stored_txs) - archive.stored_txs;
@@ -335,8 +338,7 @@ module ICRC1 {
                     archive.stored_txs,
                     (req.start + req.length) : Nat,
                 );
-            }
-
+            };
         } else {
             { start = 0; end = 0 };
         };
@@ -347,17 +349,15 @@ module ICRC1 {
 
         let archived_transactions = Array.tabulate(
             size,
-            func(i : Nat) : GetTransactionsRequest {
+            func(i : Nat) : ICRC1.ArchiveTxWithoutCallback {
                 let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
                 let start = offset + archived_range.start;
+                let length = Nat.min(
+                    MAX_TRANSACTIONS_PER_REQUEST,
+                    archived_range.end - start,
+                );
 
-                {
-                    start;
-                    length = Nat.min(
-                        MAX_TRANSACTIONS_PER_REQUEST,
-                        archived_range.end - start,
-                    );
-                };
+                { start; length };
             },
         );
 

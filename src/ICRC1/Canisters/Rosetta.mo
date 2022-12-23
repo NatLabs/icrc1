@@ -4,8 +4,6 @@ import Option "mo:base/Option";
 import Time "mo:base/Time";
 import Result "mo:base/Result";
 
-import ExperimentalCycles "mo:base/ExperimentalCycles";
-
 import SB "mo:StableBuffer/StableBuffer";
 
 import ICRC1 "../";
@@ -77,19 +75,29 @@ shared ({ caller = _owner }) actor class Token(
     // Functions from the rosetta icrc1 ledger
 
     // This should be a query fn but inter-canister query calls are not supported yet
-    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.TxResponseWithoutCallback {
-        await ICRC1.get_transactions(token, req);
+    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+        let res = await ICRC1.get_transactions(token, req);
+        let archived_txs_with_shared_callback = Array.map(
+            res.archived_transactions,
+            func(archived_tx : ICRC1.GetTransactionsRequest) : ICRC1.ArchivedTransaction {
+
+                let callback = shared func(req : ICRC1.GetTransactionsRequest) : async ICRC1.TransactionRange {
+                    let archived_txs = await token.archive.canister.get_transactions(req);
+
+                    { transactions = archived_txs };
+                };
+
+                { archived_tx with callback };
+            },
+        );
+
+        {
+            res with archived_transactions = archived_txs_with_shared_callback;
+        };
     };
 
     // Useful functions not included in ICRC1 or Rosetta
     public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
         await ICRC1.get_transaction(token, token_id);
-    };
-
-    // Deposit cycles into this archive canister.
-    public shared func deposit_cycles() : async () {
-        let amount = ExperimentalCycles.available();
-        let accepted = ExperimentalCycles.accept(amount);
-        assert (accepted == amount);
     };
 };

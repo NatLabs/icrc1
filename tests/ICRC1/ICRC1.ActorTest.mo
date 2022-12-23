@@ -87,7 +87,7 @@ module {
             };
         };
 
-        func validate_get_transactions(token : ICRC1.TokenData, tx_req : ICRC1.GetTransactionsRequest, tx_res : ICRC1.GetTransactionsResponse) : Bool {
+        func validate_get_transactions(token : ICRC1.TokenData, tx_req : ICRC1.GetTransactionsRequest, tx_res : ICRC1.TxResponseWithoutCallback) : Bool {
             let { archive } = token;
 
             let token_start = 0;
@@ -516,81 +516,120 @@ module {
                                             ]);
                                         },
                                     ),
-                                    it("get_transactions from 0 to 2000", do {
-                                        let req = {
-                                            start = 0;
-                                            length = 2000;
-                                        };
+                                    it(
+                                        "get_transactions from 0 to 2000",
+                                        do {
+                                            let req = {
+                                                start = 0;
+                                                length = 2000;
+                                            };
 
-                                        let res = (
-                                            await ICRC1.get_transactions(
-                                                token,
-                                                req,
-                                            ),
-                                        );
+                                            let res = (
+                                                await ICRC1.get_transactions(
+                                                    token,
+                                                    req,
+                                                ),
+                                            );
 
-                                        validate_get_transactions(token, req, res);
-                                    }),
-                                    it("get_transactions from 3000 to 4123", do {
-                                        let req = {
-                                            start = 3000;
-                                            length = 1123;
-                                        };
+                                            assertAllTrue([
+                                                validate_get_transactions(token, req, res),
+                                                res.archived_transactions == [{
+                                                    start = 0;
+                                                    length = 2000;
+                                                }],
+                                            ]);
+                                        },
+                                    ),
+                                    it(
+                                        "get_transactions from 3000 to 4123",
+                                        do {
+                                            let req = {
+                                                start = 3000;
+                                                length = 1123;
+                                            };
 
-                                        let res = (
-                                            await ICRC1.get_transactions(
-                                                token,
-                                                req,
-                                            ),
-                                        );
+                                            let res = (
+                                                await ICRC1.get_transactions(
+                                                    token,
+                                                    req,
+                                                ),
+                                            );
 
-                                        validate_get_transactions(token, req, res);
-                                    }),
-                                    it("get_transactions from 4000 to 4123", do{
-                                        let req = {
-                                            start = 4000;
-                                            length = 123;
-                                        };
+                                            assertAllTrue([
+                                                validate_get_transactions(token, req, res),
+                                                res.archived_transactions == [{
+                                                    start = 3000;
+                                                    length = 1000;
+                                                }],
+                                            ]);
+                                        },
+                                    ),
+                                    it(
+                                        "get_transactions from 4000 to 4123",
+                                        do {
+                                            let req = {
+                                                start = 4000;
+                                                length = 123;
+                                            };
 
-                                        let res = (
-                                            await ICRC1.get_transactions(
-                                                token,
-                                                req,
-                                            ),
-                                        );
+                                            let res = (
+                                                await ICRC1.get_transactions(
+                                                    token,
+                                                    req,
+                                                ),
+                                            );
 
-                                        validate_get_transactions(token, req, res);
-                                    }),
-                                    it("get_transactions exceeding the txs in the ledger (0 to 5000)", do {
-                                        let req = {
-                                            start = 0;
-                                            length = 5000;
-                                        };
+                                            assertAllTrue([
+                                                validate_get_transactions(token, req, res),
+                                                res.archived_transactions == [],
+                                            ]);
+                                        },
+                                    ),
+                                    it(
+                                        "get_transactions exceeding the txs in the ledger (0 to 5000)",
+                                        do {
+                                            let req = {
+                                                start = 0;
+                                                length = 5000;
+                                            };
 
-                                        let res = (
-                                            await ICRC1.get_transactions(
-                                                token,
-                                                req,
-                                            ),
-                                        );
+                                            let res = (
+                                                await ICRC1.get_transactions(
+                                                    token,
+                                                    req,
+                                                ),
+                                            );
 
-                                        validate_get_transactions(token, req, res);
-                                    }),
-                                    it("get_transactions outside the txs range (5000 to 6000)", do {
-                                        let req = {
-                                            start = 5000;
-                                            length = 1000;
-                                        };
+                                            assertAllTrue([
+                                                validate_get_transactions(token, req, res),
+                                                res.archived_transactions == [{
+                                                    start = 0;
+                                                    length = 4000;
+                                                }],
+                                            ]);
+                                        },
+                                    ),
+                                    it(
+                                        "get_transactions outside the txs range (5000 to 6000)",
+                                        do {
+                                            let req = {
+                                                start = 5000;
+                                                length = 1000;
+                                            };
 
-                                        let res = (
-                                            await ICRC1.get_transactions(
-                                                token,
-                                                req,
-                                            ),
-                                        );
+                                            let res = (
+                                                await ICRC1.get_transactions(
+                                                    token,
+                                                    req,
+                                                ),
+                                            );
 
-                                        validate_get_transactions(token, req, res);
-                                    }),
+                                            assertAllTrue([
+                                                validate_get_transactions(token, req, res),
+                                                res.archived_transactions == [],
+                                            ]);
+                                        },
+                                    ),
                                 ];
                             },
                         ),

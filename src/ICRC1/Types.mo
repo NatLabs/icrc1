@@ -193,11 +193,6 @@ module {
 
     public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;
 
-    public type TransactionRange = {
-        start : TxIndex;
-        length : Nat;
-    };
-
     public type ArchiveData = {
         var canister : ArchiveInterface;
         var stored_txs : Nat;
@@ -220,14 +215,23 @@ module {
     };
 
     // Rosetta API
-    public type GetTransactionsRequest = TransactionRange;
+    public type GetTransactionsRequest = {
+        start : TxIndex;
+        length : Nat;
+    };
 
-    public type QueryArchiveFn = (GetTransactionsRequest) -> async ([Transaction]);
+    public type TransactionRange = {
+        transactions: [Transaction];
+    };
+
+    public type QueryArchiveFn = shared (GetTransactionsRequest) -> async TransactionRange;
 
     public type ArchivedTransaction = {
         start : TxIndex;
         length : Nat;
+        callback: QueryArchiveFn;
     };
+
 
     public type GetTransactionsResponse = {
         log_length : Nat;
@@ -239,6 +243,21 @@ module {
         transactions : [Transaction];
 
         archived_transactions : [ArchivedTransaction];
+    };
+
+    public type ArchiveTxWithoutCallback = GetTransactionsRequest;
+
+    /// This type is used in the library because shared types are only allowed as a public field of an actor
+    public type TxResponseWithoutCallback = {
+        log_length : Nat;
+
+        // the index of the first tx in `.transactions`
+        first_index : TxIndex;
+
+        // The transactions in the ledger canister that are in the given range
+        transactions : [Transaction];
+
+        archived_transactions : [ArchiveTxWithoutCallback];
     };
 
     /// Functions supported by the rosetta 

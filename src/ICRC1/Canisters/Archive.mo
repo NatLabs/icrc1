@@ -9,6 +9,7 @@ import Nat64 "mo:base/Nat64";
 import Hash "mo:base/Hash";
 import Result "mo:base/Result";
 
+import ExperimentalCycles "mo:base/ExperimentalCycles";
 import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
 
 import Itertools "mo:itertools/Iter";
@@ -164,7 +165,14 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     };
 
     public shared query func remaining_capacity() : async Nat {
-        Prim.rts_memory_size() - Nat64.toNat(total_memory_used);
+        MAX_MEMORY - Nat64.toNat(total_memory_used);
+    };
+
+    /// Deposit cycles into this archive canister.
+    public shared func deposit_cycles() : async () {
+        let amount = ExperimentalCycles.available();
+        let accepted = ExperimentalCycles.accept(amount);
+        assert (accepted == amount);
     };
 
     func to_blob(tx : Transaction) : Blob {
