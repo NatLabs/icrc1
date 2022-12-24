@@ -17,12 +17,12 @@ jobs:
         with:
           node-version: 14
 
-      # - name: "install vessel"
-      #   run: |
-      #       mkdir /home/runner/bin
-      #       echo "/home/runner/bin" >> $GITHUB_PATH
-      #       wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
-      #       chmod +x /home/runner/bin/vessel
+      - name: "install vessel"
+        run: |
+            mkdir /home/runner/bin
+            echo "/home/runner/bin" >> $GITHUB_PATH
+            wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
+            chmod +x /home/runner/bin/vessel
 
       # - name: Install dfx
       #   run: sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
