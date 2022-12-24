@@ -7,7 +7,8 @@ docs:
 	$(shell vessel bin)/mo-doc
 	$(shell vessel bin)/mo-doc --format plain
 
-actor_test:
+actor-test:
+	-dfx start --background
 	dfx deploy test
 	dfx canister call test run_tests
 

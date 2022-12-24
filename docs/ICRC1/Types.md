@@ -125,6 +125,7 @@ type Burn = { from : Account; amount : Balance; memo : ?Blob; created_at_time : 
 type TransferArgs = { from_subaccount : ?Subaccount; to : Account; amount : Balance; fee : ?Balance; memo : ?Blob; created_at_time : ?Nat64 }
 ```
 
+Arguments for a transfer operation
 
 ## Type `Transfer`
 ``` motoko no-repl
@@ -143,6 +144,7 @@ type Operation = {#mint : Mint; #burn : Burn; #transfer : Transfer}
 type TransactionRequest = { kind : OperationKind; from : Account; to : Account; amount : Balance; fee : ?Balance; memo : ?Blob; created_at_time : ?Nat64; encoded : { from : EncodedAccount; to : EncodedAccount } }
 ```
 
+Internal representation of a transaction request
 
 ## Type `Transaction`
 ``` motoko no-repl
@@ -177,9 +179,10 @@ type TxCandidBlob = Blob
 
 ## Type `ArchiveInterface`
 ``` motoko no-repl
-type ArchiveInterface = actor { append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>; total_transactions : shared query () -> async Nat; get_transaction : shared query (TxIndex) -> async ?Transaction; get_transactions : shared query (GetTransactionsRequest) -> async [Transaction]; remaining_capacity : shared query () -> async Nat }
+type ArchiveInterface = actor { append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>; total_transactions : shared query () -> async Nat; get_transaction : shared query (TxIndex) -> async ?Transaction; get_transactions : shared query (GetTransactionsRequest) -> async TransactionRange; remaining_capacity : shared query () -> async Nat }
 ```
 
+The Interface for the Archive canister
 
 ## Type `InitArgs`
 ``` motoko no-repl
@@ -189,7 +192,7 @@ type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; mi
 
 ## Type `TokenInitArgs`
 ``` motoko no-repl
-type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : ?Account; max_supply : Balance; initial_balances : [(Account, Balance)]; transaction_window : ?Timestamp; permitted_drift : ?Timestamp }
+type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; max_supply : Balance; minting_account : ?Account; initial_balances : [(Account, Balance)]; permitted_drift : ?Timestamp; transaction_window : ?Timestamp }
 ```
 
 Init Args with optional fields for the token actor canister
@@ -200,39 +203,42 @@ type AccountBalances = StableTrieMap<EncodedAccount, Balance>
 ```
 
 
-## Type `TransactionRange`
-``` motoko no-repl
-type TransactionRange = { start : TxIndex; length : Nat }
-```
-
-
 ## Type `ArchiveData`
 ``` motoko no-repl
 type ArchiveData = { var canister : ArchiveInterface; var stored_txs : Nat }
 ```
 
+The details of the archive canister
 
 ## Type `TokenData`
 ``` motoko no-repl
 type TokenData = { name : Text; symbol : Text; decimals : Nat8; var fee : Balance; max_supply : Balance; minting_account : Account; accounts : AccountBalances; metadata : StableBuffer<MetaDatum>; supported_standards : StableBuffer<SupportedStandard>; transaction_window : Nat; permitted_drift : Nat; transactions : StableBuffer<Transaction>; archive : ArchiveData }
 ```
 
+The state of the token canister
 
 ## Type `GetTransactionsRequest`
 ``` motoko no-repl
-type GetTransactionsRequest = TransactionRange
+type GetTransactionsRequest = { start : TxIndex; length : Nat }
+```
+
+The type to request a range of transactions from the ledger canister
+
+## Type `TransactionRange`
+``` motoko no-repl
+type TransactionRange = { transactions : [Transaction] }
 ```
 
 
 ## Type `QueryArchiveFn`
 ``` motoko no-repl
-type QueryArchiveFn = (GetTransactionsRequest) -> async ([Transaction])
+type QueryArchiveFn = shared query (GetTransactionsRequest) -> async TransactionRange
 ```
 
 
 ## Type `ArchivedTransaction`
 ``` motoko no-repl
-type ArchivedTransaction = { start : TxIndex; length : Nat }
+type ArchivedTransaction = { start : TxIndex; length : Nat; callback : QueryArchiveFn }
 ```
 
 
@@ -241,6 +247,19 @@ type ArchivedTransaction = { start : TxIndex; length : Nat }
 type GetTransactionsResponse = { log_length : Nat; first_index : TxIndex; transactions : [Transaction]; archived_transactions : [ArchivedTransaction] }
 ```
 
+
+## Type `ArchiveTxWithoutCallback`
+``` motoko no-repl
+type ArchiveTxWithoutCallback = GetTransactionsRequest
+```
+
+
+## Type `TxResponseWithoutCallback`
+``` motoko no-repl
+type TxResponseWithoutCallback = { log_length : Nat; first_index : TxIndex; transactions : [Transaction]; archived_transactions : [ArchiveTxWithoutCallback] }
+```
+
+This type is used in the library because shared types are only allowed as a public field of an actor
 
 ## Type `RosettaInterface`
 ``` motoko no-repl

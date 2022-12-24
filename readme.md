@@ -67,4 +67,5 @@ This repo contains the implementation of the
 
 ## Tests
 - Download and Install [vessel](https://github.com/dfinity/vessel)
-- Run `make test`
+- Run `make test` 
+- Run `make actor-test`

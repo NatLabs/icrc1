@@ -144,9 +144,27 @@ type QueryArchiveFn = T.QueryArchiveFn
 ```
 
 
+## Type `TransactionRange`
+``` motoko no-repl
+type TransactionRange = T.TransactionRange
+```
+
+
 ## Type `ArchivedTransaction`
 ``` motoko no-repl
 type ArchivedTransaction = T.ArchivedTransaction
+```
+
+
+## Type `ArchiveTxWithoutCallback`
+``` motoko no-repl
+type ArchiveTxWithoutCallback = T.ArchiveTxWithoutCallback
+```
+
+
+## Type `TxResponseWithoutCallback`
+``` motoko no-repl
+type TxResponseWithoutCallback = T.TxResponseWithoutCallback
 ```
 
 
@@ -286,7 +304,7 @@ Retrieves the transaction specified by the given `tx_index`
 
 ## Function `get_transactions`
 ``` motoko no-repl
-func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse
+func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : ICRC1.GetTransactionsResponse
 ```
 
 Retrieves the transactions specified by the given range

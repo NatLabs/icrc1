@@ -118,15 +118,60 @@ module {
             };
 
             if (txs_size > 0) {
+                let index = switch (tx_res.transactions[0].mint) {
+                    case (?tx) tx.amount;
+                    case (_) Debug.trap("");
+                };
+
+                assert tx_res.first_index == index;
+
                 for (i in Iter.range(0, txs_size - 1)) {
                     let tx = tx_res.transactions[i];
                     let mocked_tx = mock_tx(user1, archive.stored_txs + i);
 
                     if (not is_tx_equal(tx, mocked_tx)) {
+
                         Debug.print("Failed at tx: " # debug_show (tx) # " != " # debug_show (mocked_tx));
                         return false;
                     };
                 };
+            } else {
+                assert tx_res.first_index == 0xFFFF_FFFF_FFFF_FFFF;
+            };
+
+            true;
+        };
+
+        func validate_archived_range(request : [ICRC1.GetTransactionsRequest], response : [ICRC1.ArchivedTransaction]) : async Bool {
+
+            if (request.size() != response.size()){
+                return false;
+            };
+
+            for ((req, res) in Itertools.zip(request.vals(), response.vals())) {
+                if (res.start != req.start) {
+                    Debug.print("Failed at start: " # Nat.toText(res.start) # " != " # Nat.toText(req.start));
+                    return false;
+                };
+                if (res.length != req.length) {
+                    Debug.print("Failed at length: " # Nat.toText(res.length) # " != " # Nat.toText(req.length));
+                    return false;
+                };
+
+                let archived_txs = (await res.callback(req)).transactions;
+                let expected_txs = txs_range(res.start, res.start + res.length);
+
+                if (archived_txs.size() != expected_txs.size()){
+                    return false;
+                };
+
+                for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())){
+                    if (not is_tx_equal(tx1, tx2)) {
+                        Debug.print("Failed at archived_txs: " # debug_show (tx1, tx2));
+                        return false;
+                    };
+                };
+
             };
 
             true;
@@ -336,7 +381,7 @@ module {
                         assertAllTrue([
                             res == #ok(mint_args.amount),
                             ICRC1.balance_of(token, user1) == mint_args.amount,
-                            ICRC1.balance_of(token, args.minting_account) == args.max_supply - mint_args.amount,
+                            ICRC1.balance_of(token, args.minting_account) == (args.max_supply - mint_args.amount : Nat),
                             ICRC1.total_supply(token) == mint_args.amount,
                         ]);
                     },
@@ -384,33 +429,33 @@ module {
                                 ]);
                             },
                         ),
-                        // it(
-                        //     "from an empty account",
-                        //     do {
-                        //         let args = default_token_args;
+                        it(
+                            "from an empty account",
+                            do {
+                                let args = default_token_args;
 
-                        //         let token = ICRC1.init(args);
+                                let token = ICRC1.init(args);
 
-                        //         let burn_args : ICRC1.BurnArgs = {
-                        //             from_subaccount = user1.subaccount;
-                        //             amount = 200 * (10 ** Nat8.toNat(args.decimals));
-                        //             memo = null;
-                        //             created_at_time = null;
-                        //         };
+                                let burn_args : ICRC1.BurnArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    amount = 200 * (10 ** Nat8.toNat(args.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
 
-                        //         let prev_balance = ICRC1.balance_of(token, user1);
-                        //         let prev_total_supply = ICRC1.total_supply(token);
-                        //         let res = await ICRC1.burn(token, burn_args, user1.owner);
+                                let prev_balance = ICRC1.balance_of(token, user1);
+                                let prev_total_supply = ICRC1.total_supply(token);
+                                let res = await ICRC1.burn(token, burn_args, user1.owner);
 
-                        //         assertAllTrue([
-                        //             res == #err(
-                        //                 #InsufficientFunds {
-                        //                     balance = 0;
-                        //                 },
-                        //             ),
-                        //         ]);
-                        //     },
-                        // ),
+                                assertAllTrue([
+                                    res == #err(
+                                        #InsufficientFunds {
+                                            balance = 0;
+                                        },
+                                    ),
+                                ]);
+                            },
+                        ),
                     ],
                 ),
                 describe(
@@ -524,19 +569,16 @@ module {
                                                 length = 2000;
                                             };
 
-                                            let res = (
-                                                await ICRC1.get_transactions(
-                                                    token,
-                                                    req,
-                                                ),
+                                            let res = ICRC1.get_transactions(
+                                                token,
+                                                req,
                                             );
+
+                                            let archived_txs = res.archived_transactions;
 
                                             assertAllTrue([
                                                 validate_get_transactions(token, req, res),
-                                                res.archived_transactions == [{
-                                                    start = 0;
-                                                    length = 2000;
-                                                }],
+                                                await validate_archived_range([{ start = 0; length = 2000 }], archived_txs),
                                             ]);
                                         },
                                     ),
@@ -548,19 +590,16 @@ module {
                                                 length = 1123;
                                             };
 
-                                            let res = (
-                                                await ICRC1.get_transactions(
-                                                    token,
-                                                    req,
-                                                ),
+                                            let res = ICRC1.get_transactions(
+                                                token,
+                                                req,
                                             );
+
+                                            let archived_txs = res.archived_transactions;
 
                                             assertAllTrue([
                                                 validate_get_transactions(token, req, res),
-                                                res.archived_transactions == [{
-                                                    start = 3000;
-                                                    length = 1000;
-                                                }],
+                                                await validate_archived_range([{ start = 3000; length = 1000 }], archived_txs),
                                             ]);
                                         },
                                     ),
@@ -572,16 +611,16 @@ module {
                                                 length = 123;
                                             };
 
-                                            let res = (
-                                                await ICRC1.get_transactions(
-                                                    token,
-                                                    req,
-                                                ),
+                                            let res = ICRC1.get_transactions(
+                                                token,
+                                                req,
                                             );
+
+                                            let archived_txs = res.archived_transactions;
 
                                             assertAllTrue([
                                                 validate_get_transactions(token, req, res),
-                                                res.archived_transactions == [],
+                                                await validate_archived_range([], archived_txs),
                                             ]);
                                         },
                                     ),
@@ -593,19 +632,17 @@ module {
                                                 length = 5000;
                                             };
 
-                                            let res = (
-                                                await ICRC1.get_transactions(
-                                                    token,
-                                                    req,
-                                                ),
+                                            let res = ICRC1.get_transactions(
+                                                token,
+                                                req,
                                             );
+
+                                            let archived_txs = res.archived_transactions;
 
                                             assertAllTrue([
                                                 validate_get_transactions(token, req, res),
-                                                res.archived_transactions == [{
-                                                    start = 0;
-                                                    length = 4000;
-                                                }],
+                                                await validate_archived_range([{ start = 0; length = 4000 }], archived_txs),
+
                                             ]);
                                         },
                                     ),
@@ -617,16 +654,17 @@ module {
                                                 length = 1000;
                                             };
 
-                                            let res = (
-                                                await ICRC1.get_transactions(
-                                                    token,
-                                                    req,
-                                                ),
+                                            let res = ICRC1.get_transactions(
+                                                token,
+                                                req,
                                             );
+
+                                            let archived_txs = res.archived_transactions;
 
                                             assertAllTrue([
                                                 validate_get_transactions(token, req, res),
-                                                res.archived_transactions == [],
+                                                await validate_archived_range([], archived_txs),
+
                                             ]);
                                         },
                                     ),

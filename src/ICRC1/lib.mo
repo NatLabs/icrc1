@@ -318,17 +318,21 @@ module ICRC1 {
     };
 
     /// Retrieves the transactions specified by the given range
-    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : async ICRC1.TxResponseWithoutCallback {
+    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : ICRC1.GetTransactionsResponse {
         let { archive; transactions } = token;
 
         var first_index = 0xFFFF_FFFF_FFFF_FFFF; // returned if no transactions are found
 
-        let txs_in_canister = if (req.start + req.length >= archive.stored_txs) {
-            first_index := Nat.max(req.start, archive.stored_txs) - archive.stored_txs;
+        let req_end = req.start + req.length;
+        let tx_end = archive.stored_txs + SB.size(transactions);
 
-            SB.slice(transactions, first_index, req.length);
-        } else {
-            [];
+        var txs_in_canister: [Transaction] = [];
+        
+        if (req.start < tx_end and req_end >= archive.stored_txs) {
+            first_index := Nat.max(req.start, archive.stored_txs);
+            let tx_start_index = (first_index - archive.stored_txs) : Nat;
+
+            txs_in_canister:= SB.slice(transactions, tx_start_index, req.length);
         };
 
         let archived_range = if (req.start < archive.stored_txs) {
@@ -349,7 +353,7 @@ module ICRC1 {
 
         let archived_transactions = Array.tabulate(
             size,
-            func(i : Nat) : ICRC1.ArchiveTxWithoutCallback {
+            func(i : Nat) : ICRC1.ArchivedTransaction {
                 let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
                 let start = offset + archived_range.start;
                 let length = Nat.min(
@@ -357,13 +361,15 @@ module ICRC1 {
                     archived_range.end - start,
                 );
 
-                { start; length };
+                let callback = token.archive.canister.get_transactions;
+
+                { start; length; callback };
             },
         );
 
         {
             log_length = txs_in_archive + txs_in_canister.size();
-            first_index = first_index;
+            first_index;
             transactions = txs_in_canister;
             archived_transactions;
         };

@@ -64,12 +64,16 @@ module {
         created_at_time : ?Nat64;
     };
 
+    /// Arguments for a transfer operation
     public type TransferArgs = {
         from_subaccount : ?Subaccount;
         to : Account;
         amount : Balance;
         fee : ?Balance;
         memo : ?Blob;
+
+        /// The time at which the transaction was created.
+        /// If this is set, the canister will check for duplicate transactions and reject them.
         created_at_time : ?Nat64;
     };
 
@@ -88,6 +92,7 @@ module {
         #transfer : Transfer;
     };
 
+    /// Internal representation of a transaction request
     public type TransactionRequest = {
         kind : OperationKind;
         from : Account;
@@ -133,31 +138,51 @@ module {
         /// Returns the symbol of the token
         icrc1_symbol : shared query () -> async Text;
 
+        /// Returns the number of decimals the token uses
         icrc1_decimals : shared query () -> async Nat8;
 
+        /// Returns the fee charged for each transfer
         icrc1_fee : shared query () -> async Balance;
 
+        /// Returns the tokens metadata
         icrc1_metadata : shared query () -> async MetaData;
 
+        /// Returns the total supply of the token
         icrc1_total_supply : shared query () -> async Balance;
 
+        /// Returns the account that is allowed to mint new tokens
         icrc1_minting_account : shared query () -> async ?Account;
 
+        /// Returns the balance of the given account
         icrc1_balance_of : shared query (Account) -> async Balance;
 
+        /// Transfers the given amount of tokens from the sender to the recipient
         icrc1_transfer : shared (TransferArgs) -> async Result.Result<Balance, TransferError>;
 
+        /// Returns the standards supported by this token's implementation
         icrc1_supported_standards : shared query () -> async [SupportedStandard];
 
     };
 
     public type TxCandidBlob = Blob;
 
+    /// The Interface for the Archive canister
     public type ArchiveInterface = actor {
+        /// Appends the given transactions to the archive.
+        /// > Only the Ledger canister is allowed to call this method
         append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
+
+        /// Returns the total number of transactions stored in the archive
         total_transactions : shared query () -> async Nat;
+
+        /// Returns the transaction at the given index
         get_transaction : shared query (TxIndex) -> async ?Transaction;
-        get_transactions : shared query (GetTransactionsRequest) -> async [Transaction];
+
+        /// Returns the transactions in the given range
+        get_transactions : shared query (GetTransactionsRequest) -> async TransactionRange;
+
+        /// Returns the number of bytes left in the archive before it is full
+        /// > The capacity of the archive canister is 32GB
         remaining_capacity : shared query () -> async Nat;
     };
 
@@ -193,28 +218,60 @@ module {
 
     public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;
 
+    /// The details of the archive canister
     public type ArchiveData = {
+        /// The reference to the archive canister
         var canister : ArchiveInterface;
+
+        /// The number of transactions stored in the archive
         var stored_txs : Nat;
     };
 
+    /// The state of the token canister
     public type TokenData = {
+        /// The name of the token
         name : Text;
+
+        /// The symbol of the token
         symbol : Text;
+
+        /// The number of decimals the token uses
         decimals : Nat8;
+
+        /// The fee charged for each transaction
         var fee : Balance;
+
+        /// The maximum supply of the token
         max_supply : Balance;
+
+        /// The account that is allowed to mint new tokens
+        /// On initialization, the maximum supply is minted to this account
         minting_account : Account;
+
+        /// The balances of all accounts
         accounts : AccountBalances;
+
+        /// The metadata for the token
         metadata : StableBuffer<MetaDatum>;
+
+        /// The standards supported by this token's implementation
         supported_standards : StableBuffer<SupportedStandard>;
+
+        /// The time window in which duplicate transactions are not allowed
         transaction_window : Nat;
+
         permitted_drift : Nat;
+
+        /// The recent transactions that have been processed by the ledger.
+        /// Only the last 2000 transactions are stored before being archived.
         transactions : StableBuffer<Transaction>;
+
+        /// The record that stores the details to the archive canister and number of transactions stored in it
         archive : ArchiveData;
     };
 
     // Rosetta API
+    /// The type to request a range of transactions from the ledger canister
     public type GetTransactionsRequest = {
         start : TxIndex;
         length : Nat;
@@ -224,24 +281,29 @@ module {
         transactions: [Transaction];
     };
 
-    public type QueryArchiveFn = shared (GetTransactionsRequest) -> async TransactionRange;
+    public type QueryArchiveFn = shared query (GetTransactionsRequest) -> async TransactionRange;
 
     public type ArchivedTransaction = {
+        /// The index of the first transaction to be queried in the archive canister
         start : TxIndex;
+        /// The number of transactions to be queried in the archive canister
         length : Nat;
+
+        /// The callback function to query the archive canister
         callback: QueryArchiveFn;
     };
 
-
     public type GetTransactionsResponse = {
+        /// The number of valid transactions in the ledger and archived canisters that are in the given range
         log_length : Nat;
 
-        // the index of the first tx in `.transactions`
+        /// the index of the first tx in the `transactions` field
         first_index : TxIndex;
 
-        // The transactions in the ledger canister that are in the given range
+        /// The transactions in the ledger canister that are in the given range
         transactions : [Transaction];
 
+        /// Pagination request for archived transactions in the given range
         archived_transactions : [ArchivedTransaction];
     };
 
@@ -251,10 +313,8 @@ module {
     public type TxResponseWithoutCallback = {
         log_length : Nat;
 
-        // the index of the first tx in `.transactions`
         first_index : TxIndex;
 
-        // The transactions in the ledger canister that are in the given range
         transactions : [Transaction];
 
         archived_transactions : [ArchiveTxWithoutCallback];

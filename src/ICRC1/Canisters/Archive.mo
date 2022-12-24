@@ -46,7 +46,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
 
         if (caller != ledger_canister_id) {
-            return #err("Unauthorized Access: Only the owner can access this canister");
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
 
         var txs_iter = txs.vals();
@@ -125,7 +125,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         };
     };
 
-    public shared query func get_transactions(req : T.GetTransactionsRequest) : async [Transaction] {
+    public shared query func get_transactions(req : T.GetTransactionsRequest) : async T.TransactionRange {
         let { start; length } = req;
         var iter = Itertools.empty<MemoryBlock>();
 
@@ -156,12 +156,14 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             };
         };
 
-        Iter.toArray(
+        let transactions = Iter.toArray(
             Iter.map(
                 Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
                 get_tx,
             ),
         );
+
+        { transactions };
     };
 
     public shared query func remaining_capacity() : async Nat {

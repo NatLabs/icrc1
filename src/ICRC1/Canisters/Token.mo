@@ -13,7 +13,7 @@ import Archive "Archive";
 
 shared ({ caller = _owner }) actor class Token(
     token_args : ICRC1.TokenInitArgs,
-) : async ICRC1.TokenInterface {
+) : async ICRC1.FullInterface {
 
     let token = ICRC1.init({
         token_args with minting_account = Option.get(
@@ -74,19 +74,12 @@ shared ({ caller = _owner }) actor class Token(
         await ICRC1.burn(token, args, caller);
     };
 
-    // Functions from the rosetta icrc1 ledger
-
-    // This should be a query fn but inter-canister query calls are not supported yet
-    public shared func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.TxResponseWithoutCallback {
-        await ICRC1.get_transactions(token, req);
+    // Functions for integration with the rosetta standard
+    public shared query func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+        ICRC1.get_transactions(token, req);
     };
 
-    // Useful functions not included in ICRC1 or Rosetta
-    public shared func get_transaction(token_id : Nat) : async ?ICRC1.Transaction {
-        await ICRC1.get_transaction(token, token_id);
-    };
-
-    // Deposit cycles into this archive canister.
+    // Deposit cycles into this canister.
     public shared func deposit_cycles() : async () {
         let amount = ExperimentalCycles.available();
         let accepted = ExperimentalCycles.accept(amount);
