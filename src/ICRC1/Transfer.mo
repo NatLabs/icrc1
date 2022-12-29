@@ -169,6 +169,15 @@ module {
             );
         };
 
+        if (tx_req.amount == 0) {
+            return #err(
+                #GenericError({
+                    error_code = 0;
+                    message = "Amount must be greater than 0";
+                }),
+            );
+        };
+
         let sender_balance : T.Balance = Account.get_balance(
             token.accounts,
             tx_req.encoded.from,
@@ -176,6 +185,12 @@ module {
 
         if (tx_req.amount > sender_balance) {
             return #err(#InsufficientFunds { balance = sender_balance });
+        };
+
+        if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
+            return #err(
+                #BadBurn { min_burn_amount = token.min_burn_amount },
+            );
         };
 
         switch (tx_req.created_at_time) {

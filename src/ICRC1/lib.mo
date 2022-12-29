@@ -74,6 +74,7 @@ module ICRC1 {
             minting_account;
             max_supply;
             initial_balances;
+            min_burn_amount;
             permitted_drift;
             transaction_window;
         } = args;
@@ -125,6 +126,10 @@ module ICRC1 {
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
+            min_burn_amount = switch (min_burn_amount) {
+                case (?min) min;
+                case (null) 0;
+            };
             permitted_drift = Nat64.toNat(
                 Option.get(permitted_drift, (60 * 60 * 1000) : Nat64),
             );

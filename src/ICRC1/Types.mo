@@ -195,6 +195,7 @@ module {
         minting_account : Account;
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
+        min_burn_amount : ?Balance;
         transaction_window : ?Timestamp;
         permitted_drift : ?Timestamp;
     };
@@ -206,11 +207,12 @@ module {
         decimals : Nat8;
         fee : Balance;
         max_supply : Balance;
+        initial_balances : [(Account, Balance)];
+        min_burn_amount : ?Balance;
 
         /// optional value that defaults to the caller if not provided
         minting_account : ?Account;
 
-        initial_balances : [(Account, Balance)];
         /// defaults to 1 hour
         permitted_drift : ?Timestamp;
         /// defaults to 1 day
@@ -261,6 +263,10 @@ module {
         /// The time window in which duplicate transactions are not allowed
         transaction_window : Nat;
 
+        /// The minimum amount of tokens that must be burned in a transaction
+        min_burn_amount : Balance;
+
+        /// The allowed difference between the ledger time and the time of the device the transaction was created on
         permitted_drift : Nat;
 
         /// The recent transactions that have been processed by the ledger.

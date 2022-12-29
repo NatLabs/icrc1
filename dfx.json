@@ -13,7 +13,7 @@
         "test": {
             "type": "motoko",
             "main": "tests/ActorTest.mo",
-            "args": "-v --compacting-gc -no-check-ir"
+            "args": "-v --compacting-gc"
         }
     },
     "defaults": {
