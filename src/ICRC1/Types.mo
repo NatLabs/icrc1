@@ -112,6 +112,7 @@ module {
         mint : ?Mint;
         burn : ?Burn;
         transfer : ?Transfer;
+        index : TxIndex;
         timestamp : Timestamp;
     };
 
@@ -157,7 +158,7 @@ module {
         icrc1_balance_of : shared query (Account) -> async Balance;
 
         /// Transfers the given amount of tokens from the sender to the recipient
-        icrc1_transfer : shared (TransferArgs) -> async Result.Result<Balance, TransferError>;
+        icrc1_transfer : shared (TransferArgs) -> async Result.Result<TxIndex, TransferError>;
 
         /// Returns the standards supported by this token's implementation
         icrc1_supported_standards : shared query () -> async [SupportedStandard];

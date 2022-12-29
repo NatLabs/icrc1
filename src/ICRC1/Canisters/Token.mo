@@ -79,6 +79,11 @@ shared ({ caller = _owner }) actor class Token(
         ICRC1.get_transactions(token, req);
     };
 
+    // Additional functions not included in the ICRC1 standard
+    public shared func get_transaction(i : ICRC1.TxIndex) : async ?ICRC1.Transaction {
+        await ICRC1.get_transaction(token, i);
+    };
+
     // Deposit cycles into this canister.
     public shared func deposit_cycles() : async () {
         let amount = ExperimentalCycles.available();

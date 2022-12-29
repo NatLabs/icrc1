@@ -129,7 +129,7 @@ module {
     };
 
     // Formats the tx request into a finalised transaction
-    public func req_to_tx(tx_req : T.TransactionRequest) : T.Transaction {
+    public func req_to_tx(token: T.TokenData,  tx_req : T.TransactionRequest) : T.Transaction {
 
         {
             kind = kind_to_text(tx_req.kind);
@@ -147,7 +147,8 @@ module {
                 case (#transfer) { ?tx_req };
                 case (_) null;
             };
-
+            
+            index = token.archive.stored_txs + SB.size(token.transactions);
             timestamp = Nat64.fromNat(Int.abs(Time.now()));
         };
     };

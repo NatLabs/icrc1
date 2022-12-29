@@ -258,12 +258,12 @@ module ICRC1 {
         Account.transfer_balance(token.accounts, tx_req);
 
         // store transaction
-        let tx = U.req_to_tx(tx_req);
+        let tx = U.req_to_tx(token, tx_req);
         SB.add(token.transactions, tx);
 
         await update_canister(token);
 
-        #ok(tx_req.amount);
+        #ok(tx.index);
     };
 
     /// Helper function to mint tokens with minimum args

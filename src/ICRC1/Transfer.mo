@@ -121,10 +121,7 @@ module {
                 };
             };
 
-            if (is_duplicate) {
-                let index = (archive.stored_txs + i - phantom_txs_size) : Nat;
-                return #err(index);
-            };
+            if (is_duplicate) { return #err(tx.index) };
         };
 
         #ok();

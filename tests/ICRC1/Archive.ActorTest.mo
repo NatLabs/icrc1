@@ -25,13 +25,14 @@ module {
         run;
     } = ActorSpec;
 
-    func new_tx(i : Nat64) : ICRC1.Transaction {
+    func new_tx(i : Nat) : ICRC1.Transaction {
         {
             kind = "";
             mint = null;
             burn = null;
             transfer = null;
-            timestamp = i;
+            index = i;
+            timestamp = Nat64.fromNat(i);
         };
     };
 
@@ -40,7 +41,7 @@ module {
         Array.tabulate(
             (end - start) : Nat,
             func(i : Nat) : ICRC1.Transaction {
-                new_tx(Nat64.fromNat(start + i));
+                new_tx(start + i);
             },
         );
     };

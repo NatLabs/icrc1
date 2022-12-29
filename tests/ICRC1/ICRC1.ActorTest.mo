@@ -33,15 +33,16 @@ module {
             n * (10 ** decimals);
         };
 
-        func mock_tx(to : ICRC1.Account, amount : Nat) : ICRC1.Transaction {
+        func mock_tx(to : ICRC1.Account, index : Nat) : ICRC1.Transaction {
             {
                 burn = null;
                 transfer = null;
                 kind = "MINT";
                 timestamp = 0;
+                index;
                 mint = ?{
                     to;
-                    amount;
+                    amount = index;
                     memo = null;
                     created_at_time = null;
                 };
@@ -144,7 +145,7 @@ module {
 
         func validate_archived_range(request : [ICRC1.GetTransactionsRequest], response : [ICRC1.ArchivedTransaction]) : async Bool {
 
-            if (request.size() != response.size()){
+            if (request.size() != response.size()) {
                 return false;
             };
 
@@ -161,11 +162,11 @@ module {
                 let archived_txs = (await res.callback(req)).transactions;
                 let expected_txs = txs_range(res.start, res.start + res.length);
 
-                if (archived_txs.size() != expected_txs.size()){
+                if (archived_txs.size() != expected_txs.size()) {
                     return false;
                 };
 
-                for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())){
+                for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())) {
                     if (not is_tx_equal(tx1, tx2)) {
                         Debug.print("Failed at archived_txs: " # debug_show (tx1, tx2));
                         return false;
@@ -379,7 +380,7 @@ module {
                         );
 
                         assertAllTrue([
-                            res == #ok(mint_args.amount),
+                            res == #ok(0),
                             ICRC1.balance_of(token, user1) == mint_args.amount,
                             ICRC1.balance_of(token, args.minting_account) == (args.max_supply - mint_args.amount : Nat),
                             ICRC1.total_supply(token) == mint_args.amount,
@@ -423,7 +424,7 @@ module {
                                 let res = await ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
-                                    res == #ok(burn_args.amount),
+                                    res == #ok(1),
                                     ICRC1.balance_of(token, user1) == prev_balance - burn_args.amount,
                                     ICRC1.total_supply(token) == prev_total_supply - burn_args.amount,
                                 ]);
@@ -500,9 +501,9 @@ module {
                                     transfer_args,
                                     user1.owner,
                                 );
-
+                                
                                 assertAllTrue([
-                                    res == #ok(transfer_args.amount),
+                                    res == #ok(1),
                                     ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
                                     ICRC1.balance_of(token, user2) == prev.balance2 + transfer_args.amount,
                                     ICRC1.total_supply(token) == prev.total_supply,

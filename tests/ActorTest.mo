@@ -9,7 +9,7 @@ actor {
     let { run } = ActorSpec;
 
     let test_modules = [
-        // Archive.test,
+        Archive.test,
         ICRC1.test,
     ];
 
