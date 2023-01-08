@@ -1,14 +1,17 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Char "mo:base/Char";
 import Debug "mo:base/Debug";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
+import Nat32 "mo:base/Nat32";
+import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
+import Text "mo:base/Text";
 import Time "mo:base/Time";
 
 import ArrayModule "mo:array/Array";
@@ -19,6 +22,8 @@ import STMap "mo:StableTrieMap";
 import T "Types";
 
 module {
+    type Iter<A> = Iter.Iter<A>;
+
     /// Checks if a subaccount is valid
     public func validate_subaccount(subaccount : ?T.Subaccount) : Bool {
         switch (subaccount) {
@@ -204,4 +209,84 @@ module {
         );
     };
 
+    /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
+    public func fromText(encoded : Text) : ?T.Account {
+        let chars = encoded.chars();
+        var invalid_format = false;
+
+        func to_hex(chars_iter : Iter<Char>) : Iter<Nat8> {
+            let first = switch (chars_iter.next()) {
+                case (?char) from_hex(char);
+                case (_) return Itertools.empty();
+            };
+
+            let second = switch (chars_iter.next()) {
+                case (?char) from_hex(char);
+                case (_) {
+                    invalid_format := true;
+                    return Itertools.empty();
+                };
+            };
+
+            Itertools.prepend(
+                (first << 4) | second,
+                to_hex(chars_iter),
+            );
+        };
+
+        if (invalid_format){
+            return null;
+        };
+
+        let blob = Blob.fromArray(
+            Iter.toArray(
+                to_hex(chars),
+            ),
+        );
+
+        decode(blob);
+    };
+
+    /// Converts an ICRC-1 `Account` to its Textual representation
+    public func toText(account : T.Account) : Text {
+        let blob = encode(account);
+        let text = debug_show (blob);
+
+        func matchAny(options : [Char]) : Text.Pattern {
+            let isMatch = func(char : Char) : Bool {
+                for (option in options.vals()) {
+                    if (char == option) {
+                        return true;
+                    };
+                };
+
+                return false;
+            };
+
+            #predicate isMatch;
+        };
+
+        Text.replace(text, matchAny(['\\', '\"']), "");
+    };
+
+    func from_hex(char : Char) : Nat8 {
+        let charCode = Char.toNat32(char);
+
+        if (Char.isDigit(char)) {
+            let digit = charCode - Char.toNat32('0');
+
+            return Nat8.fromNat(Nat32.toNat(digit));
+        };
+
+        if (Char.isUppercase(char)) {
+            let digit = charCode - Char.toNat32('A') + 10;
+
+            return Nat8.fromNat(Nat32.toNat(digit));
+        };
+
+        // lowercase
+        let digit = charCode - Char.toNat32('a') + 10;
+
+        return Nat8.fromNat(Nat32.toNat(digit));
+    };
 };

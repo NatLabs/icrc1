@@ -22,6 +22,21 @@ let {
 
 let principal = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
 
+let account_with_null_subaccount = {
+    owner = principal;
+    subaccount = null;
+};
+
+let account_with_only_zero_bytes_in_subaccount = {
+    owner = principal;
+    subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+};
+
+let account_with_some_zero_bytes_in_subaccount = {
+    owner = principal;
+    subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]);
+};
+
 let success = run([
     describe(
         "Account",
@@ -32,12 +47,9 @@ let success = run([
                     it(
                         "'null' subaccount",
                         do {
-                            let account = {
-                                owner = principal;
-                                subaccount = null;
-                            };
+                            let account = account_with_null_subaccount;
 
-                            let encoded = Account.encode(account);
+                            let encoded = Account.encode(account_with_null_subaccount);
                             let decoded = Account.decode(encoded);
                             assertAllTrue([
                                 encoded == Principal.toBlob(account.owner),
@@ -49,10 +61,7 @@ let success = run([
                     it(
                         "subaccount with only zero bytes",
                         do {
-                            let account = {
-                                owner = principal;
-                                subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-                            };
+                            let account = account_with_only_zero_bytes_in_subaccount;
 
                             let encoded = Account.encode(account);
                             let decoded = Account.decode(encoded);
@@ -67,10 +76,7 @@ let success = run([
                     it(
                         "subaccount with some zero bytes",
                         do {
-                            let account = {
-                                owner = principal;
-                                subaccount = ?Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]);
-                            };
+                            let account = account_with_some_zero_bytes_in_subaccount;
 
                             let encoded = Account.encode(account);
                             let decoded = Account.decode(encoded);
@@ -99,6 +105,37 @@ let success = run([
                             ]);
                         },
                     ),
+                    it(
+                        "toText()",
+                        do {
+                            let account1 = account_with_null_subaccount;
+
+                            let account2 = account_with_only_zero_bytes_in_subaccount;
+
+                            let account3 = account_with_some_zero_bytes_in_subaccount;
+
+                            assertAllTrue([
+                                Account.toText(account1) == "E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B95002",
+                                Account.toText(account2) == "E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B95002",
+                                Account.toText(account3) == "E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B950020102030405060708087F",
+                            ]);
+                        },
+                    ),
+
+                    it("fromText()", do {
+                        let account1 = account_with_null_subaccount;
+
+                        let account2 = account_with_only_zero_bytes_in_subaccount;
+
+                        let account3 = account_with_some_zero_bytes_in_subaccount;
+
+                        assertAllTrue([
+                            Account.fromText("E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B95002") == ?account1,
+                            Account.fromText("E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B95002") != ?account2,
+                            Account.fromText("E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B95002") == ?account1,
+                            Account.fromText("E2FD3232C102357EE28F102B7C02B2E7F1F35E055C53CDBC46A6B950020102030405060708087F") == ?account3,
+                        ]);
+                    }),
                 ],
             ),
         ],
