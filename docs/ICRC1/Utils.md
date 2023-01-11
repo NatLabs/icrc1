@@ -36,9 +36,9 @@ func hash(n : Nat) : Hash.Hash
 ```
 
 
-## Function `args_to_req`
+## Function `create_transfer_req`
 ``` motoko no-repl
-func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest
+func create_transfer_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest
 ```
 
 

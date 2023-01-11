@@ -9,8 +9,8 @@ docs:
 
 actor-test:
 	-dfx start --background
-	dfx ledger fabricate-cycles --canister test
 	dfx deploy test
+	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
 
 no-warn:

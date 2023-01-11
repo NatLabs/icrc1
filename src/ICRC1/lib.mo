@@ -1,6 +1,7 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Float "mo:base/Float";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
@@ -88,13 +89,7 @@ module ICRC1 {
         };
 
         let accounts : AccountBalances = StableTrieMap.new();
-        StableTrieMap.put(
-            accounts,
-            Blob.equal,
-            Blob.hash,
-            Account.encode(minting_account),
-            max_supply,
-        );
+        var _minted_tokens = 0;
 
         for ((i, (account, balance)) in Itertools.enumerate(initial_balances.vals())) {
 
@@ -113,14 +108,18 @@ module ICRC1 {
                 encoded_account,
                 balance,
             );
+
+            _minted_tokens += balance;
         };
 
         {
             name = name;
             symbol = symbol;
             decimals;
-            var fee = fee;
+            var _fee = fee;
             max_supply;
+            var _minted_tokens = _minted_tokens;
+            var _burned_tokens = 0;
             minting_account;
             accounts;
             metadata = U.init_metadata(args);
@@ -160,12 +159,12 @@ module ICRC1 {
 
     /// Retrieve the fee for each transfer
     public func fee(token : TokenData) : Balance {
-        token.fee;
+        token._fee;
     };
 
     /// Set the fee for each transfer
     public func set_fee(token : TokenData, fee : Nat) {
-        token.fee := fee;
+        token._fee := fee;
     };
 
     /// Retrieve all the metadata of the token
@@ -175,14 +174,7 @@ module ICRC1 {
 
     /// Returns the total supply of circulating tokens
     public func total_supply(token : TokenData) : Balance {
-        let {
-            max_supply;
-            accounts;
-            minting_account;
-        } = token;
-
-        let encoded_account = Account.encode(minting_account);
-        max_supply - Account.get_balance(accounts, encoded_account);
+        token._minted_tokens - token._burned_tokens;
     };
 
     /// Returns the account with the permission to mint tokens
@@ -206,49 +198,38 @@ module ICRC1 {
         SB.toArray(token.supported_standards);
     };
 
-    /// Transfers tokens from one account to another
+    /// Formats a float to a nat balance and applies the correct number of decimal places
+    public func balance_from_float(token : TokenData, float : Float) : Balance {
+        if (float <= 0) {
+            return 0;
+        };
+
+        let float_with_decimals = float * (10 ** Float.fromInt(Nat8.toNat(token.decimals)));
+
+        Int.abs(Float.toInt(float_with_decimals));
+    };
+
+    /// Transfers tokens from one account to another account (minting and burning included)
     public func transfer(
         token : TokenData,
         args : TransferArgs,
         caller : Principal,
     ) : async Result.Result<Balance, TransferError> {
-        let {
-            accounts;
-            minting_account;
-            transaction_window;
-        } = token;
 
-        let transfer_args : T.Transfer = {
-            args with from = {
-                owner = caller;
-                subaccount = args.from_subaccount;
-            };
+        let from = {
+            owner = caller;
+            subaccount = args.from_subaccount;
         };
 
-        let { from; to } = transfer_args;
-
-        let op = if (from == minting_account) {
-            #mint(transfer_args);
-        } else if (to == minting_account) {
-            #burn(transfer_args);
+        let tx_kind = if (from == token.minting_account) {
+            #mint
+        } else if (args.to == token.minting_account) {
+            #burn
         } else {
-            #transfer(transfer_args);
+            #transfer
         };
 
-        let tx_req = U.args_to_req(
-            op,
-            token.minting_account,
-        );
-
-        if (tx_req.kind == #transfer) {
-            if (tx_req.fee != ?token.fee) {
-                return #err(
-                    #BadFee {
-                        expected_fee = token.fee;
-                    },
-                );
-            };
-        };
+        let tx_req = U.create_transfer_req(args, caller, tx_kind);
 
         switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
@@ -257,15 +238,30 @@ module ICRC1 {
             case (#ok(_)) {};
         };
 
-        // All checks passed.
-        // now the transaction can be processed
+        let { encoded; amount } = tx_req; 
 
-        Account.transfer_balance(token.accounts, tx_req);
+        // process transaction
+        switch(tx_req.kind){
+            case(#mint){
+                Account.mint_balance(token, encoded.to, amount);
+            };
+            case(#burn){
+                Account.burn_balance(token, encoded.from, amount);
+            };
+            case(#transfer){
+                Account.transfer_balance(token, tx_req);
+
+                // burn fee
+                Account.burn_balance(token, encoded.from, token._fee);
+            };
+        };
 
         // store transaction
-        let tx = U.req_to_tx(token, tx_req);
+        let index = SB.size(token.transactions) + token.archive.stored_txs;
+        let tx = U.req_to_tx(tx_req, index);
         SB.add(token.transactions, tx);
 
+        // transfer transaction to archive if necessary
         await update_canister(token);
 
         #ok(tx.index);

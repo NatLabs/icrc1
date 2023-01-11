@@ -37,7 +37,7 @@ module {
     public type MetaDatum = (Text, Value);
     public type MetaData = [MetaDatum];
 
-    public type OperationKind = {
+    public type TxKind = {
         #mint;
         #burn;
         #transfer;
@@ -86,15 +86,9 @@ module {
         created_at_time : ?Nat64;
     };
 
-    public type Operation = {
-        #mint : Mint;
-        #burn : Burn;
-        #transfer : Transfer;
-    };
-
     /// Internal representation of a transaction request
     public type TransactionRequest = {
-        kind : OperationKind;
+        kind : TxKind;
         from : Account;
         to : Account;
         amount : Balance;
@@ -242,10 +236,16 @@ module {
         decimals : Nat8;
 
         /// The fee charged for each transaction
-        var fee : Balance;
+        var _fee : Balance;
 
         /// The maximum supply of the token
         max_supply : Balance;
+
+        /// The total amount of minted tokens
+        var _minted_tokens : Balance;
+
+        /// The total amount of burned tokens
+        var _burned_tokens : Balance;
 
         /// The account that is allowed to mint new tokens
         /// On initialization, the maximum supply is minted to this account

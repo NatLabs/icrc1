@@ -15,7 +15,7 @@ shared ({ caller = _owner }) actor class Token(
     token_args : ICRC1.TokenInitArgs,
 ) : async ICRC1.FullInterface {
 
-    let token = ICRC1.init({
+    stable let token = ICRC1.init({
         token_args with minting_account = Option.get(
             token_args.minting_account,
             {

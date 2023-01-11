@@ -83,44 +83,51 @@ module {
 
     // Formats the different operation arguements into
     // a `TransactionRequest`, an internal type to access fields easier.
-    public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {
-        switch (operation) {
-            case (#mint(args)) {
+    public func create_transfer_req(
+        args : T.TransferArgs,
+        owner : Principal,
+        tx_kind: T.TxKind,
+    ) : T.TransactionRequest {
+        
+        let from = {
+            owner;
+            subaccount = args.from_subaccount;
+        };
+
+        let encoded = {
+            from = Account.encode(from);
+            to = Account.encode(args.to);
+        };
+
+        switch (tx_kind) {
+            case (#mint) {
                 {
                     args with kind = #mint;
-                    from = minting_account;
                     fee = null;
-                    encoded = {
-                        from = Account.encode(minting_account);
-                        to = Account.encode(args.to);
-                    };
+                    from;
+                    encoded;
                 };
             };
-            case (#burn(args)) {
+            case (#burn) {
                 {
                     args with kind = #burn;
-                    to = minting_account;
                     fee = null;
-                    encoded = {
-                        from = Account.encode(args.from);
-                        to = Account.encode(minting_account);
-                    };
+                    from;
+                    encoded;
                 };
             };
-            case (#transfer(args)) {
+            case (#transfer) {
                 {
                     args with kind = #transfer;
-                    encoded = {
-                        from = Account.encode(args.from);
-                        to = Account.encode(args.to);
-                    };
+                    from;
+                    encoded;
                 };
             };
         };
     };
 
     // Transforms the transaction kind from `variant` to `Text`
-    public func kind_to_text(kind : T.OperationKind) : Text {
+    public func kind_to_text(kind : T.TxKind) : Text {
         switch (kind) {
             case (#mint) "MINT";
             case (#burn) "BURN";
@@ -129,7 +136,7 @@ module {
     };
 
     // Formats the tx request into a finalised transaction
-    public func req_to_tx(token: T.TokenData,  tx_req : T.TransactionRequest) : T.Transaction {
+    public func req_to_tx(tx_req : T.TransactionRequest, index: Nat) : T.Transaction {
 
         {
             kind = kind_to_text(tx_req.kind);
@@ -148,7 +155,7 @@ module {
                 case (_) null;
             };
             
-            index = token.archive.stored_txs + SB.size(token.transactions);
+            index;
             timestamp = Nat64.fromNat(Int.abs(Time.now()));
         };
     };

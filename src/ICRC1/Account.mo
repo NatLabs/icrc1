@@ -36,7 +36,10 @@ module {
 
     /// Checks if an account is valid
     public func validate(account : T.Account) : Bool {
-        if (Principal.isAnonymous(account.owner)) {
+        let is_anonymous = Principal.isAnonymous(account.owner);
+        let invalid_size = Principal.toBlob(account.owner).size() > 29;
+
+        if (is_anonymous or invalid_size) {
             false;
         } else {
             validate_subaccount(account.subaccount);
@@ -187,13 +190,13 @@ module {
     /// Transfers tokens from the sender to the
     /// recipient in the tx request
     public func transfer_balance(
-        accounts : T.AccountBalances,
+        token : T.TokenData,
         tx_req : T.TransactionRequest,
-    ) {
+    ) { 
         let { encoded; amount } = tx_req;
 
         update_balance(
-            accounts,
+            token.accounts,
             encoded.from,
             func(balance) {
                 balance - amount;
@@ -201,7 +204,7 @@ module {
         );
 
         update_balance(
-            accounts,
+            token.accounts,
             encoded.to,
             func(balance) {
                 balance + amount;
@@ -209,40 +212,75 @@ module {
         );
     };
 
+    public func mint_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance + amount;
+            },
+        );
+
+        token._minted_tokens += amount;
+    };
+
+    public func burn_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        token._burned_tokens += amount;
+    };
+
     /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
     public func fromText(encoded : Text) : ?T.Account {
-        let chars = encoded.chars();
-        var invalid_format = false;
+        // let chars = encoded.chars();
+        // var invalid_format = false;
 
-        func to_hex(chars_iter : Iter<Char>) : Iter<Nat8> {
-            let first = switch (chars_iter.next()) {
-                case (?char) from_hex(char);
-                case (_) return Itertools.empty();
-            };
+        // func to_hex(chars_iter : Iter<Char>) : Iter<Nat8> {
+        //     let first = switch (chars_iter.next()) {
+        //         case (?char) from_hex(char);
+        //         case (_) return Itertools.empty();
+        //     };
 
-            let second = switch (chars_iter.next()) {
-                case (?char) from_hex(char);
-                case (_) {
-                    invalid_format := true;
-                    return Itertools.empty();
-                };
-            };
+        //     let second = switch (chars_iter.next()) {
+        //         case (?char) from_hex(char);
+        //         case (_) {
+        //             invalid_format := true;
+        //             return Itertools.empty();
+        //         };
+        //     };
 
-            Itertools.prepend(
-                (first << 4) | second,
-                to_hex(chars_iter),
-            );
-        };
+        //     Itertools.prepend(
+        //         (first << 4) | second,
+        //         to_hex(chars_iter),
+        //     );
+        // };
 
-        if (invalid_format){
-            return null;
-        };
+        // if (invalid_format){
+        //     return null;
+        // };
 
-        let blob = Blob.fromArray(
-            Iter.toArray(
-                to_hex(chars),
-            ),
-        );
+        // let blob = Blob.fromArray(
+        //     Iter.toArray(
+        //         to_hex(chars),
+        //     ),
+        // );
+
+        let p = Principal.fromText(encoded);
+        let blob = Principal.toBlob(p);
 
         decode(blob);
     };
@@ -250,23 +288,26 @@ module {
     /// Converts an ICRC-1 `Account` to its Textual representation
     public func toText(account : T.Account) : Text {
         let blob = encode(account);
-        let text = debug_show (blob);
+        let principal = Principal.fromBlob(blob);
+        Principal.toText(principal);
 
-        func matchAny(options : [Char]) : Text.Pattern {
-            let isMatch = func(char : Char) : Bool {
-                for (option in options.vals()) {
-                    if (char == option) {
-                        return true;
-                    };
-                };
+        // let text = debug_show (blob);
 
-                return false;
-            };
+        // func matchAny(options : [Char]) : Text.Pattern {
+        //     let isMatch = func(char : Char) : Bool {
+        //         for (option in options.vals()) {
+        //             if (char == option) {
+        //                 return true;
+        //             };
+        //         };
 
-            #predicate isMatch;
-        };
+        //         return false;
+        //     };
 
-        Text.replace(text, matchAny(['\\', '\"']), "");
+        //     #predicate isMatch;
+        // };
+
+        // Text.replace(text, matchAny(['\\', '\"']), "");
     };
 
     func from_hex(char : Char) : Nat8 {
