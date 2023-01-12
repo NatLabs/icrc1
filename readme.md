@@ -20,6 +20,7 @@ This repo contains the implementation of the
 - Launch the basic token with all the standard functions for ICRC-1
   - Install the [mops](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/#/docs/install) package manager
   - Replace the values enclosed in `< >` with your desired values and run in the terminal 
+
   ```motoko
     git clone https://github.com/NatLabs/icrc1
     cd icrc1
@@ -73,7 +74,7 @@ This repo contains the implementation of the
 - Run `make test` 
 - Run `make actor-test`
 
-#### Run [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
+#### [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
 - Install Rust and Cargo via [rustup](https://rustup.rs/)
 
 ```
