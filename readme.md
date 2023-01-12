@@ -75,7 +75,15 @@ This repo contains the implementation of the
 
 #### Run [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
 - Install Rust and Cargo via [rustup](https://rustup.rs/)
-    ```curl https://sh.rustup.rs -sSf | sh```
+
+```
+    curl https://sh.rustup.rs -sSf | sh
+```
+
 - Follow these [instructions](./readme.md#L29-40) to start the dfx local replica and deploy the icrc1 token
+
 - Run this command and add the `id` of the deployed canister
-    `make ref-test id=<enter canister id>`
+
+```
+    make ref-test id=<enter canister id>
+```
