@@ -13,5 +13,11 @@ actor-test:
 	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
 
+ref-test:
+	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:8000 -c $(id) -s ~/.config/dfx/identity/$(shell dfx identity whoami)/identity.pem
+
+print:
+	@echo "Running reference test with ID: "
+
 no-warn:
 	find src -type f -name '*.mo' -print0 | xargs -0 $(shell vessel bin)/moc -r $(shell vessel sources) -Werror -wasi-system-api

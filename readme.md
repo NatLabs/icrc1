@@ -68,6 +68,14 @@ This repo contains the implementation of the
     ```
 
 ## Tests
+#### Internal Tests
 - Download and Install [vessel](https://github.com/dfinity/vessel)
 - Run `make test` 
 - Run `make actor-test`
+
+#### Run [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
+- Install Rust and Cargo via [rustup](https://rustup.rs/)
+    ```curl https://sh.rustup.rs -sSf | sh```
+- Follow these [instructions](./readme.md#L29-40) to start the dfx local replica and deploy the icrc1 token
+- Run this command and add the `id` of the deployed canister
+    `make ref-test id=<enter canister id>`
