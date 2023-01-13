@@ -30,6 +30,13 @@ Checks if there is a duplicate transaction that matches the transfer request in 
 
 If a duplicate is found, the function returns an error (`#err`) with the duplicate transaction's index.
 
+## Function `validate_fee`
+``` motoko no-repl
+func validate_fee(token : T.TokenData, opt_fee : ?T.Balance) : Bool
+```
+
+Checks if a transfer fee is valid
+
 ## Function `validate_request`
 ``` motoko no-repl
 func validate_request(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), T.TransferError>

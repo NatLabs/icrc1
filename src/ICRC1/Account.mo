@@ -1,14 +1,17 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Char "mo:base/Char";
 import Debug "mo:base/Debug";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
+import Nat32 "mo:base/Nat32";
+import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
+import Text "mo:base/Text";
 import Time "mo:base/Time";
 
 import ArrayModule "mo:array/Array";
@@ -19,6 +22,8 @@ import STMap "mo:StableTrieMap";
 import T "Types";
 
 module {
+    type Iter<A> = Iter.Iter<A>;
+
     /// Checks if a subaccount is valid
     public func validate_subaccount(subaccount : ?T.Subaccount) : Bool {
         switch (subaccount) {
@@ -31,7 +36,10 @@ module {
 
     /// Checks if an account is valid
     public func validate(account : T.Account) : Bool {
-        if (Principal.isAnonymous(account.owner)) {
+        let is_anonymous = Principal.isAnonymous(account.owner);
+        let invalid_size = Principal.toBlob(account.owner).size() > 29;
+
+        if (is_anonymous or invalid_size) {
             false;
         } else {
             validate_subaccount(account.subaccount);
@@ -142,66 +150,39 @@ module {
         };
     };
 
-    /// Retrieves the balance of an account
-    public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
-        let res = STMap.get(
-            accounts,
-            Blob.equal,
-            Blob.hash,
-            encoded_account,
-        );
+    /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
+    public func fromText(encoded : Text) : ?T.Account {
+        let p = Principal.fromText(encoded);
+        let blob = Principal.toBlob(p);
 
-        switch (res) {
-            case (?balance) {
-                balance;
-            };
-            case (_) 0;
+        decode(blob);
+    };
+
+    /// Converts an ICRC-1 `Account` to its Textual representation
+    public func toText(account : T.Account) : Text {
+        let blob = encode(account);
+        let principal = Principal.fromBlob(blob);
+        Principal.toText(principal);
+    };
+
+    func from_hex(char : Char) : Nat8 {
+        let charCode = Char.toNat32(char);
+
+        if (Char.isDigit(char)) {
+            let digit = charCode - Char.toNat32('0');
+
+            return Nat8.fromNat(Nat32.toNat(digit));
         };
-    };
 
-    /// Updates the balance of an account
-    public func update_balance(
-        accounts : T.AccountBalances,
-        encoded_account : T.EncodedAccount,
-        update : (T.Balance) -> T.Balance,
-    ) {
-        let prev_balance = get_balance(accounts, encoded_account);
-        let updated_balance = update(prev_balance);
+        if (Char.isUppercase(char)) {
+            let digit = charCode - Char.toNat32('A') + 10;
 
-        if (updated_balance != prev_balance) {
-            STMap.put(
-                accounts,
-                Blob.equal,
-                Blob.hash,
-                encoded_account,
-                updated_balance,
-            );
+            return Nat8.fromNat(Nat32.toNat(digit));
         };
+
+        // lowercase
+        let digit = charCode - Char.toNat32('a') + 10;
+
+        return Nat8.fromNat(Nat32.toNat(digit));
     };
-
-    /// Transfers tokens from the sender to the
-    /// recipient in the tx request
-    public func transfer_balance(
-        accounts : T.AccountBalances,
-        tx_req : T.TransactionRequest,
-    ) {
-        let { encoded; amount } = tx_req;
-
-        update_balance(
-            accounts,
-            encoded.from,
-            func(balance) {
-                balance - amount;
-            },
-        );
-
-        update_balance(
-            accounts,
-            encoded.to,
-            func(balance) {
-                balance + amount;
-            },
-        );
-    };
-
 };

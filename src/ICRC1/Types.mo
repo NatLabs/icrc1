@@ -37,7 +37,7 @@ module {
     public type MetaDatum = (Text, Value);
     public type MetaData = [MetaDatum];
 
-    public type OperationKind = {
+    public type TxKind = {
         #mint;
         #burn;
         #transfer;
@@ -86,15 +86,9 @@ module {
         created_at_time : ?Nat64;
     };
 
-    public type Operation = {
-        #mint : Mint;
-        #burn : Burn;
-        #transfer : Transfer;
-    };
-
     /// Internal representation of a transaction request
     public type TransactionRequest = {
-        kind : OperationKind;
+        kind : TxKind;
         from : Account;
         to : Account;
         amount : Balance;
@@ -187,6 +181,7 @@ module {
         remaining_capacity : shared query () -> async Nat;
     };
 
+    /// Initial arguments for the setting up the icrc1 token canister
     public type InitArgs = {
         name : Text;
         symbol : Text;
@@ -195,12 +190,13 @@ module {
         minting_account : Account;
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
-        min_burn_amount : ?Balance;
-        transaction_window : ?Timestamp;
-        permitted_drift : ?Timestamp;
+        min_burn_amount : Balance;
+
+        /// optional settings for the icrc1 canister
+        advanced_settings: ?AdvancedSettings
     };
 
-    /// Init Args with optional fields for the token actor canister
+    /// [InitArgs](#type.InitArgs) with optional fields for initializing a token canister
     public type TokenInitArgs = {
         name : Text;
         symbol : Text;
@@ -208,15 +204,20 @@ module {
         fee : Balance;
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
-        min_burn_amount : ?Balance;
+        min_burn_amount : Balance;
 
         /// optional value that defaults to the caller if not provided
         minting_account : ?Account;
 
-        /// defaults to 1 hour
-        permitted_drift : ?Timestamp;
-        /// defaults to 1 day
-        transaction_window : ?Timestamp;
+        advanced_settings: ?AdvancedSettings;
+    };
+
+    /// Additional settings for the [InitArgs](#type.InitArgs) type during initialization of an icrc1 token canister
+    public type AdvancedSettings = {
+        /// needed if a token ever needs to be migrated to a new canister
+        burned_tokens : Balance; 
+        transaction_window : Timestamp;
+        permitted_drift : Timestamp;
     };
 
     public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;
@@ -242,10 +243,16 @@ module {
         decimals : Nat8;
 
         /// The fee charged for each transaction
-        var fee : Balance;
+        var _fee : Balance;
 
         /// The maximum supply of the token
         max_supply : Balance;
+
+        /// The total amount of minted tokens
+        var _minted_tokens : Balance;
+
+        /// The total amount of burned tokens
+        var _burned_tokens : Balance;
 
         /// The account that is allowed to mint new tokens
         /// On initialization, the maximum supply is minted to this account
@@ -312,19 +319,6 @@ module {
 
         /// Pagination request for archived transactions in the given range
         archived_transactions : [ArchivedTransaction];
-    };
-
-    public type ArchiveTxWithoutCallback = GetTransactionsRequest;
-
-    /// This type is used in the library because shared types are only allowed as a public field of an actor
-    public type TxResponseWithoutCallback = {
-        log_length : Nat;
-
-        first_index : TxIndex;
-
-        transactions : [Transaction];
-
-        archived_transactions : [ArchiveTxWithoutCallback];
     };
 
     /// Functions supported by the rosetta 

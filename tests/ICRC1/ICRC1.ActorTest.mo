@@ -10,7 +10,9 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import ActorSpec "../utils/ActorSpec";
 
-import ICRC1 "../../src/ICRC1/";
+import ICRC1 "../../src/ICRC1";
+import T "../../src/ICRC1/Types";
+
 import U "../../src/ICRC1/Utils";
 
 module {
@@ -33,7 +35,7 @@ module {
             n * (10 ** decimals);
         };
 
-        func mock_tx(to : ICRC1.Account, index : Nat) : ICRC1.Transaction {
+        func mock_tx(to : T.Account, index : Nat) : T.Transaction {
             {
                 burn = null;
                 transfer = null;
@@ -49,35 +51,35 @@ module {
             };
         };
 
-        let canister : ICRC1.Account = {
+        let canister : T.Account = {
             owner = Principal.fromText("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
             subaccount = null;
         };
 
-        let user1 : ICRC1.Account = {
+        let user1 : T.Account = {
             owner = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
             subaccount = null;
         };
 
-        let user2 : ICRC1.Account = {
+        let user2 : T.Account = {
             owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
             subaccount = null;
         };
 
-        func txs_range(start : Nat, end : Nat) : [ICRC1.Transaction] {
+        func txs_range(start : Nat, end : Nat) : [T.Transaction] {
             Array.tabulate(
                 (end - start) : Nat,
-                func(i : Nat) : ICRC1.Transaction {
+                func(i : Nat) : T.Transaction {
                     mock_tx(user1, start + i);
                 },
             );
         };
 
-        func is_tx_equal(t1 : ICRC1.Transaction, t2 : ICRC1.Transaction) : Bool {
+        func is_tx_equal(t1 : T.Transaction, t2 : T.Transaction) : Bool {
             { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
         };
 
-        func is_opt_tx_equal(t1 : ?ICRC1.Transaction, t2 : ?ICRC1.Transaction) : Bool {
+        func is_opt_tx_equal(t1 : ?T.Transaction, t2 : ?T.Transaction) : Bool {
             switch (t1, t2) {
                 case (?t1, ?t2) {
                     is_tx_equal(t1, t2);
@@ -88,7 +90,11 @@ module {
             };
         };
 
-        func validate_get_transactions(token : ICRC1.TokenData, tx_req : ICRC1.GetTransactionsRequest, tx_res : ICRC1.TxResponseWithoutCallback) : Bool {
+        func validate_get_transactions(
+            token : T.TokenData, 
+            tx_req : T.GetTransactionsRequest, 
+            tx_res : T.GetTransactionsResponse
+        ) : Bool {
             let { archive } = token;
 
             let token_start = 0;
@@ -121,7 +127,7 @@ module {
             if (txs_size > 0) {
                 let index = tx_res.transactions[0].index;
 
-                if (tx_res.first_index != index){
+                if (tx_res.first_index != index) {
                     Debug.print("Failed at first_index: " # Nat.toText(tx_res.first_index) # " != " # Nat.toText(index));
                     return false;
                 };
@@ -146,7 +152,7 @@ module {
             true;
         };
 
-        func validate_archived_range(request : [ICRC1.GetTransactionsRequest], response : [ICRC1.ArchivedTransaction]) : async Bool {
+        func validate_archived_range(request : [T.GetTransactionsRequest], response : [T.ArchivedTransaction]) : async Bool {
 
             if (request.size() != response.size()) {
                 return false;
@@ -169,23 +175,23 @@ module {
                     return false;
                 };
 
-                // for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())) {
-                //     if (not is_tx_equal(tx1, tx2)) {
-                //         Debug.print("Failed at archived_txs: " # debug_show (tx1, tx2));
-                //         return false;
-                //     };
-                // };
+                for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())) {
+                    if (not is_tx_equal(tx1, tx2)) {
+                        Debug.print("Failed at archived_txs: " # debug_show (tx1, tx2));
+                        return false;
+                    };
+                };
 
             };
 
             true;
         };
 
-        func are_txs_equal(t1 : [ICRC1.Transaction], t2 : [ICRC1.Transaction]) : Bool {
-            Itertools.equal<ICRC1.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
+        func are_txs_equal(t1 : [T.Transaction], t2 : [T.Transaction]) : Bool {
+            Itertools.equal<T.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
         };
 
-        func create_mints(token : ICRC1.TokenData, minting_principal : Principal, n : Nat) : async () {
+        func create_mints(token : T.TokenData, minting_principal : Principal, n : Nat) : async () {
             for (i in Itertools.range(0, n)) {
                 ignore await ICRC1.mint(
                     token,
@@ -200,7 +206,7 @@ module {
             };
         };
 
-        let default_token_args : ICRC1.InitArgs = {
+        let default_token_args : T.InitArgs = {
             name = "Under-Collaterised Lending Tokens";
             symbol = "UCLTs";
             decimals = 8;
@@ -208,9 +214,8 @@ module {
             max_supply = 1_000_000_000 * (10 ** 8);
             minting_account = canister;
             initial_balances = [];
-            min_burn_amount = ?(10 * (10 ** 8));
-            permitted_drift = null;
-            transaction_window = null;
+            min_burn_amount = (10 * (10 ** 8));
+            advanced_settings = null;
         };
 
         return describe(
@@ -228,7 +233,7 @@ module {
                             token.name == args.name,
                             token.symbol == args.symbol,
                             token.decimals == args.decimals,
-                            token.fee == args.fee,
+                            token._fee == args.fee,
                             token.max_supply == args.max_supply,
 
                             token.minting_account == args.minting_account,
@@ -305,26 +310,33 @@ module {
                     do {
                         let args = default_token_args;
 
-                        let token = ICRC1.init(args);
+                        let token = ICRC1.init({ args 
+                            with initial_balances = [
+                                (user1, 100),
+                                (user2, 200),
+                            ];
+                        });
 
-                        assertTrue(
-                            ICRC1.balance_of(
-                                token,
-                                token.minting_account,
-                            ) == args.max_supply,
-                        );
+                        assertAllTrue([
+                            ICRC1.balance_of(token, user1) == 100,
+                            ICRC1.balance_of(token, user2) == 200,
+                        ]);
                     },
                 ),
-
                 it(
                     "total_supply()",
                     do {
                         let args = default_token_args;
 
-                        let token = ICRC1.init(args);
+                        let token = ICRC1.init({ args 
+                            with initial_balances = [
+                                (user1, 100),
+                                (user2, 200),
+                            ];
+                        });
 
                         assertTrue(
-                            ICRC1.total_supply(token) == 0,
+                            ICRC1.total_supply(token) == 300,
                         );
                     },
                 ),
@@ -370,7 +382,7 @@ module {
 
                         let token = ICRC1.init(args);
 
-                        let mint_args : ICRC1.Mint = {
+                        let mint_args : T.Mint = {
                             to = user1;
                             amount = 200 * (10 ** Nat8.toNat(args.decimals));
                             memo = null;
@@ -386,7 +398,7 @@ module {
                         assertAllTrue([
                             res == #ok(0),
                             ICRC1.balance_of(token, user1) == mint_args.amount,
-                            ICRC1.balance_of(token, args.minting_account) == (args.max_supply - mint_args.amount : Nat),
+                            ICRC1.balance_of(token, args.minting_account) == 0,
                             ICRC1.total_supply(token) == mint_args.amount,
                         ]);
                     },
@@ -402,7 +414,7 @@ module {
 
                                 let token = ICRC1.init(args);
 
-                                let mint_args : ICRC1.Mint = {
+                                let mint_args : T.Mint = {
                                     to = user1;
                                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -415,7 +427,7 @@ module {
                                     args.minting_account.owner,
                                 );
 
-                                let burn_args : ICRC1.BurnArgs = {
+                                let burn_args : T.BurnArgs = {
                                     from_subaccount = user1.subaccount;
                                     amount = 50 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -429,8 +441,8 @@ module {
 
                                 assertAllTrue([
                                     res == #ok(1),
-                                    ICRC1.balance_of(token, user1) == prev_balance - burn_args.amount,
-                                    ICRC1.total_supply(token) == prev_total_supply - burn_args.amount,
+                                    ICRC1.balance_of(token, user1) == ((prev_balance - burn_args.amount) : Nat),
+                                    ICRC1.total_supply(token) == ((prev_total_supply - burn_args.amount) : Nat),
                                 ]);
                             },
                         ),
@@ -441,7 +453,7 @@ module {
 
                                 let token = ICRC1.init(args);
 
-                                let burn_args : ICRC1.BurnArgs = {
+                                let burn_args : T.BurnArgs = {
                                     from_subaccount = user1.subaccount;
                                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -461,44 +473,44 @@ module {
                                 ]);
                             },
                         ),
-                        // it(
-                        //     "burn amount less than min_burn_amount",
-                        //     do {
-                        //         let args = default_token_args;
+                        it(
+                            "burn amount less than min_burn_amount",
+                            do {
+                                let args = default_token_args;
 
-                        //         let token = ICRC1.init(args);
+                                let token = ICRC1.init(args);
 
-                        //         let mint_args : ICRC1.Mint = {
-                        //             to = user1;
-                        //             amount = 200 * (10 ** Nat8.toNat(args.decimals));
-                        //             memo = null;
-                        //             created_at_time = null;
-                        //         };
+                                let mint_args : T.Mint = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(args.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
 
-                        //         ignore await ICRC1.mint(
-                        //             token,
-                        //             mint_args,
-                        //             args.minting_account.owner,
-                        //         );
+                                ignore await ICRC1.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
 
-                        //         let burn_args : ICRC1.BurnArgs = {
-                        //             from_subaccount = user1.subaccount;
-                        //             amount = 5 * (10 ** Nat8.toNat(args.decimals));
-                        //             memo = null;
-                        //             created_at_time = null;
-                        //         };
+                                let burn_args : T.BurnArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    amount = 5 * (10 ** Nat8.toNat(args.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
 
-                        //         let res = await ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await ICRC1.burn(token, burn_args, user1.owner);
 
-                        //         assertAllTrue([
-                        //             res == #err(
-                        //                 #BadBurn {
-                        //                     min_burn_amount = 10 * (10 ** 8);
-                        //                 },
-                        //             ),
-                        //         ]);
-                        //     },
-                        // ),
+                                assertAllTrue([
+                                    res == #err(
+                                        #BadBurn {
+                                            min_burn_amount = 10 * (10 ** 8);
+                                        },
+                                    ),
+                                ]);
+                            },
+                        ),
                     ],
                 ),
                 describe(
@@ -523,19 +535,13 @@ module {
                                     args.minting_account.owner,
                                 );
 
-                                let transfer_args : ICRC1.TransferArgs = {
+                                let transfer_args : T.TransferArgs = {
                                     from_subaccount = user1.subaccount;
                                     to = user2;
                                     amount = 50 * (10 ** Nat8.toNat(token.decimals));
-                                    fee = ?token.fee;
+                                    fee = ?token._fee;
                                     memo = null;
                                     created_at_time = null;
-                                };
-
-                                let prev = {
-                                    balance1 = ICRC1.balance_of(token, user1);
-                                    balance2 = ICRC1.balance_of(token, user2);
-                                    total_supply = ICRC1.total_supply(token);
                                 };
 
                                 let res = await ICRC1.transfer(
@@ -544,11 +550,13 @@ module {
                                     user1.owner,
                                 );
 
+
                                 assertAllTrue([
                                     res == #ok(1),
-                                    ICRC1.balance_of(token, user1) == prev.balance1 - transfer_args.amount,
-                                    ICRC1.balance_of(token, user2) == prev.balance2 + transfer_args.amount,
-                                    ICRC1.total_supply(token) == prev.total_supply,
+                                    ICRC1.balance_of(token, user1) == ICRC1.balance_from_float(token, 145),
+                                    token._burned_tokens == ICRC1.balance_from_float(token, 5),
+                                    ICRC1.balance_of(token, user2) == ICRC1.balance_from_float(token, 50),
+                                    ICRC1.total_supply(token) == ICRC1.balance_from_float(token, 195),
                                 ]);
                             },
                         ),

@@ -96,9 +96,9 @@ type MetaData = [MetaDatum]
 ```
 
 
-## Type `OperationKind`
+## Type `TxKind`
 ``` motoko no-repl
-type OperationKind = {#mint; #burn; #transfer}
+type TxKind = {#mint; #burn; #transfer}
 ```
 
 
@@ -133,22 +133,16 @@ type Transfer = { from : Account; to : Account; amount : Balance; fee : ?Balance
 ```
 
 
-## Type `Operation`
-``` motoko no-repl
-type Operation = {#mint : Mint; #burn : Burn; #transfer : Transfer}
-```
-
-
 ## Type `TransactionRequest`
 ``` motoko no-repl
-type TransactionRequest = { kind : OperationKind; from : Account; to : Account; amount : Balance; fee : ?Balance; memo : ?Blob; created_at_time : ?Nat64; encoded : { from : EncodedAccount; to : EncodedAccount } }
+type TransactionRequest = { kind : TxKind; from : Account; to : Account; amount : Balance; fee : ?Balance; memo : ?Blob; created_at_time : ?Nat64; encoded : { from : EncodedAccount; to : EncodedAccount } }
 ```
 
 Internal representation of a transaction request
 
 ## Type `Transaction`
 ``` motoko no-repl
-type Transaction = { kind : Text; mint : ?Mint; burn : ?Burn; transfer : ?Transfer; timestamp : Timestamp }
+type Transaction = { kind : Text; mint : ?Mint; burn : ?Burn; transfer : ?Transfer; index : TxIndex; timestamp : Timestamp }
 ```
 
 
@@ -166,7 +160,7 @@ type TransferError = TimeError or {#BadFee : { expected_fee : Balance }; #BadBur
 
 ## Type `TokenInterface`
 ``` motoko no-repl
-type TokenInterface = actor { icrc1_name : shared query () -> async Text; icrc1_symbol : shared query () -> async Text; icrc1_decimals : shared query () -> async Nat8; icrc1_fee : shared query () -> async Balance; icrc1_metadata : shared query () -> async MetaData; icrc1_total_supply : shared query () -> async Balance; icrc1_minting_account : shared query () -> async ?Account; icrc1_balance_of : shared query (Account) -> async Balance; icrc1_transfer : shared (TransferArgs) -> async Result.Result<Balance, TransferError>; icrc1_supported_standards : shared query () -> async [SupportedStandard] }
+type TokenInterface = actor { icrc1_name : shared query () -> async Text; icrc1_symbol : shared query () -> async Text; icrc1_decimals : shared query () -> async Nat8; icrc1_fee : shared query () -> async Balance; icrc1_metadata : shared query () -> async MetaData; icrc1_total_supply : shared query () -> async Balance; icrc1_minting_account : shared query () -> async ?Account; icrc1_balance_of : shared query (Account) -> async Balance; icrc1_transfer : shared (TransferArgs) -> async Result.Result<TxIndex, TransferError>; icrc1_supported_standards : shared query () -> async [SupportedStandard] }
 ```
 
 Interface for the ICRC token canister
@@ -186,16 +180,24 @@ The Interface for the Archive canister
 
 ## Type `InitArgs`
 ``` motoko no-repl
-type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; initial_balances : [(Account, Balance)]; transaction_window : ?Timestamp; permitted_drift : ?Timestamp }
+type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : Balance; advanced_settings : ?AdvancedSettings }
 ```
 
+Initial arguments for the setting up the icrc1 token canister
 
 ## Type `TokenInitArgs`
 ``` motoko no-repl
-type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; max_supply : Balance; minting_account : ?Account; initial_balances : [(Account, Balance)]; permitted_drift : ?Timestamp; transaction_window : ?Timestamp }
+type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : Balance; minting_account : ?Account; advanced_settings : ?AdvancedSettings }
 ```
 
-Init Args with optional fields for the token actor canister
+[InitArgs](#type.InitArgs) with optional fields for initializing a token canister
+
+## Type `AdvancedSettings`
+``` motoko no-repl
+type AdvancedSettings = { burned_tokens : Balance; transaction_window : Timestamp; permitted_drift : Timestamp }
+```
+
+Additional settings for the [InitArgs](#type.InitArgs) type during initialization of an icrc1 token canister
 
 ## Type `AccountBalances`
 ``` motoko no-repl
@@ -212,7 +214,7 @@ The details of the archive canister
 
 ## Type `TokenData`
 ``` motoko no-repl
-type TokenData = { name : Text; symbol : Text; decimals : Nat8; var fee : Balance; max_supply : Balance; minting_account : Account; accounts : AccountBalances; metadata : StableBuffer<MetaDatum>; supported_standards : StableBuffer<SupportedStandard>; transaction_window : Nat; permitted_drift : Nat; transactions : StableBuffer<Transaction>; archive : ArchiveData }
+type TokenData = { name : Text; symbol : Text; decimals : Nat8; var _fee : Balance; max_supply : Balance; var _minted_tokens : Balance; var _burned_tokens : Balance; minting_account : Account; accounts : AccountBalances; metadata : StableBuffer<MetaDatum>; supported_standards : StableBuffer<SupportedStandard>; transaction_window : Nat; min_burn_amount : Balance; permitted_drift : Nat; transactions : StableBuffer<Transaction>; archive : ArchiveData }
 ```
 
 The state of the token canister
@@ -247,19 +249,6 @@ type ArchivedTransaction = { start : TxIndex; length : Nat; callback : QueryArch
 type GetTransactionsResponse = { log_length : Nat; first_index : TxIndex; transactions : [Transaction]; archived_transactions : [ArchivedTransaction] }
 ```
 
-
-## Type `ArchiveTxWithoutCallback`
-``` motoko no-repl
-type ArchiveTxWithoutCallback = GetTransactionsRequest
-```
-
-
-## Type `TxResponseWithoutCallback`
-``` motoko no-repl
-type TxResponseWithoutCallback = { log_length : Nat; first_index : TxIndex; transactions : [Transaction]; archived_transactions : [ArchiveTxWithoutCallback] }
-```
-
-This type is used in the library because shared types are only allowed as a public field of an actor
 
 ## Type `RosettaInterface`
 ``` motoko no-repl

@@ -42,10 +42,11 @@ let success = run([
                             assertAllTrue([
                                 encoded == Principal.toBlob(account.owner),
                                 decoded == ?account,
+                                Account.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae") == ?account,
+                                Account.toText(account) == "prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae",
                             ]);
                         },
                     ),
-
                     it(
                         "subaccount with only zero bytes",
                         do {
@@ -60,12 +61,13 @@ let success = run([
                             assertAllTrue([
                                 encoded == Principal.toBlob(account.owner),
                                 decoded == ?{ account with subaccount = null },
+                                Account.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae") == ?{ account with subaccount = null },
+                                Account.toText(account) == "prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae",
                             ]);
                         },
                     ),
-
                     it(
-                        "subaccount with some zero bytes",
+                        "subaccount prefixed with zero bytes",
                         do {
                             let account = {
                                 owner = principal;
@@ -96,6 +98,82 @@ let success = run([
                             assertAllTrue([
                                 encoded == expected_blob,
                                 decoded == ?account,
+                                Account.fromText("hamcw-wpc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aeh6") == ?account,
+                                Account.toText(account) == "hamcw-wpc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aeh6",
+                            ]);
+                        },
+                    ),
+                    it(
+                        "subaccount with zero bytes surrounded by non zero bytes",
+                        do {
+                            let account = {
+                                owner = principal;
+                                subaccount = ?Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]);
+                            };
+
+                            let encoded = Account.encode(account);
+                            let decoded = Account.decode(encoded);
+
+                            let pricipal_iter = Principal.toBlob(account.owner).vals();
+
+                            let valid_bytes : [Nat8] = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+                            let suffix_bytes : [Nat8] = [
+                                32, // size of valid_bytes
+                                0x7f // ending tag
+                            ];
+
+                            let iter = Itertools.chain(
+                                pricipal_iter,
+                                Itertools.chain(
+                                    valid_bytes.vals(),
+                                    suffix_bytes.vals(),
+                                ),
+                            );
+
+                            let expected_blob = Blob.fromArray(Iter.toArray(iter));
+
+                            assertAllTrue([
+                                encoded == expected_blob,
+                                decoded == ?account,
+                                Account.fromText("ojuko-dhc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-aacaq-daqcq-mbyie-b7q") == ?account,
+                                Account.toText(account) == "ojuko-dhc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-aacaq-daqcq-mbyie-b7q",
+                            ]);
+                        },
+                    ),
+                    it(
+                        "subaccount with non zero bytes",
+                        do {
+                            let account = {
+                                owner = principal;
+                                subaccount = ?Blob.fromArray([123, 234, 156, 89, 92, 91, 42, 8, 15, 2, 20, 80, 60, 20, 30, 10, 78, 2, 3, 78, 89, 23, 52, 55, 1, 2, 3, 4, 5, 6, 7, 8]);
+                            };
+
+                            let encoded = Account.encode(account);
+                            let decoded = Account.decode(encoded);
+
+                            let pricipal_iter = Principal.toBlob(account.owner).vals();
+
+                            let valid_bytes : [Nat8] = [123, 234, 156, 89, 92, 91, 42, 8, 15, 2, 20, 80, 60, 20, 30, 10, 78, 2, 3, 78, 89, 23, 52, 55, 1, 2, 3, 4, 5, 6, 7, 8];
+                            let suffix_bytes : [Nat8] = [
+                                32, // size of valid_bytes
+                                0x7f // ending tag
+                            ];
+
+                            let iter = Itertools.chain(
+                                pricipal_iter,
+                                Itertools.chain(
+                                    valid_bytes.vals(),
+                                    suffix_bytes.vals(),
+                                ),
+                            );
+
+                            let expected_blob = Blob.fromArray(Iter.toArray(iter));
+
+                            assertAllTrue([
+                                encoded == expected_blob,
+                                decoded == ?account,
+                                Account.fromText("tx2rl-b7c7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae67-ktrmv-ywzkb-ahqef-cqhqk-b4cso-aibu4-wixgq-3qcaq-daqcq-mbyie-b7q") == ?account,
+                                Account.toText(account) == "tx2rl-b7c7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae67-ktrmv-ywzkb-ahqef-cqhqk-b4cso-aibu4-wixgq-3qcaq-daqcq-mbyie-b7q",
                             ]);
                         },
                     ),

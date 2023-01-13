@@ -38,8 +38,6 @@ module {
         url = "https://github.com/dfinity/ICRC-1";
     };
 
-    public let DAY_IN_NANO_SECONDS : T.Timestamp = 86_400_000_000_000;
-
     // Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);
@@ -83,44 +81,51 @@ module {
 
     // Formats the different operation arguements into
     // a `TransactionRequest`, an internal type to access fields easier.
-    public func args_to_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest {
-        switch (operation) {
-            case (#mint(args)) {
+    public func create_transfer_req(
+        args : T.TransferArgs,
+        owner : Principal,
+        tx_kind: T.TxKind,
+    ) : T.TransactionRequest {
+        
+        let from = {
+            owner;
+            subaccount = args.from_subaccount;
+        };
+
+        let encoded = {
+            from = Account.encode(from);
+            to = Account.encode(args.to);
+        };
+
+        switch (tx_kind) {
+            case (#mint) {
                 {
                     args with kind = #mint;
-                    from = minting_account;
                     fee = null;
-                    encoded = {
-                        from = Account.encode(minting_account);
-                        to = Account.encode(args.to);
-                    };
+                    from;
+                    encoded;
                 };
             };
-            case (#burn(args)) {
+            case (#burn) {
                 {
                     args with kind = #burn;
-                    to = minting_account;
                     fee = null;
-                    encoded = {
-                        from = Account.encode(args.from);
-                        to = Account.encode(minting_account);
-                    };
+                    from;
+                    encoded;
                 };
             };
-            case (#transfer(args)) {
+            case (#transfer) {
                 {
                     args with kind = #transfer;
-                    encoded = {
-                        from = Account.encode(args.from);
-                        to = Account.encode(args.to);
-                    };
+                    from;
+                    encoded;
                 };
             };
         };
     };
 
     // Transforms the transaction kind from `variant` to `Text`
-    public func kind_to_text(kind : T.OperationKind) : Text {
+    public func kind_to_text(kind : T.TxKind) : Text {
         switch (kind) {
             case (#mint) "MINT";
             case (#burn) "BURN";
@@ -129,7 +134,7 @@ module {
     };
 
     // Formats the tx request into a finalised transaction
-    public func req_to_tx(token: T.TokenData,  tx_req : T.TransactionRequest) : T.Transaction {
+    public func req_to_tx(tx_req : T.TransactionRequest, index: Nat) : T.Transaction {
 
         {
             kind = kind_to_text(tx_req.kind);
@@ -148,13 +153,107 @@ module {
                 case (_) null;
             };
             
-            index = token.archive.stored_txs + SB.size(token.transactions);
+            index;
             timestamp = Nat64.fromNat(Int.abs(Time.now()));
         };
     };
 
     public func div_ceil(n : Nat, d : Nat) : Nat {
         (n + d - 1) / d;
+    };
+
+    /// Retrieves the balance of an account
+    public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
+        let res = STMap.get(
+            accounts,
+            Blob.equal,
+            Blob.hash,
+            encoded_account,
+        );
+
+        switch (res) {
+            case (?balance) {
+                balance;
+            };
+            case (_) 0;
+        };
+    };
+
+    /// Updates the balance of an account
+    public func update_balance(
+        accounts : T.AccountBalances,
+        encoded_account : T.EncodedAccount,
+        update : (T.Balance) -> T.Balance,
+    ) {
+        let prev_balance = get_balance(accounts, encoded_account);
+        let updated_balance = update(prev_balance);
+
+        if (updated_balance != prev_balance) {
+            STMap.put(
+                accounts,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                updated_balance,
+            );
+        };
+    };
+
+    // Transfers tokens from the sender to the
+    // recipient in the tx request
+    public func transfer_balance(
+        token : T.TokenData,
+        tx_req : T.TransactionRequest,
+    ) { 
+        let { encoded; amount } = tx_req;
+
+        update_balance(
+            token.accounts,
+            encoded.from,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        update_balance(
+            token.accounts,
+            encoded.to,
+            func(balance) {
+                balance + amount;
+            },
+        );
+    };
+
+    public func mint_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance + amount;
+            },
+        );
+
+        token._minted_tokens += amount;
+    };
+
+    public func burn_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        token._burned_tokens += amount;
     };
 
     // Stable Buffer Module with some additional functions

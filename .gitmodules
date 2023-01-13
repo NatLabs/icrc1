@@ -1,0 +1,3 @@
+[submodule "Dfnity-ICRC1-Reference"]
+	path = Dfnity-ICRC1-Reference
+	url = https://github.com/dfinity/ICRC-1

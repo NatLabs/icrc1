@@ -18,10 +18,10 @@ import STMap "mo:StableTrieMap";
 import Account "Account";
 
 import T "Types";
-import U "Utils";
+import Utils "Utils";
 
 module {
-    let { SB } = U;
+    let { SB } = Utils;
 
     /// Checks if a transaction memo is valid
     public func validate_memo(memo : ?T.Memo) : Bool {
@@ -127,6 +127,27 @@ module {
         #ok();
     };
 
+    /// Checks if a transfer fee is valid
+    public func validate_fee(
+        token : T.TokenData,
+        opt_fee : ?T.Balance,
+    ) : Bool {
+        switch (opt_fee) {
+            case (?tx_fee) {
+                if (tx_fee < token._fee) {
+                    return false;
+                };
+            };
+            case (null) {
+                if (token._fee > 0) {
+                    return false;
+                };
+            };
+        };
+
+        true;
+    };
+
     /// Checks if a transfer request is valid
     public func validate_request(
         token : T.TokenData,
@@ -178,19 +199,54 @@ module {
             );
         };
 
-        let sender_balance : T.Balance = Account.get_balance(
-            token.accounts,
-            tx_req.encoded.from,
-        );
+        switch (tx_req.kind) {
+            case (#transfer) {
+                if (not validate_fee(token, tx_req.fee)) {
+                    return #err(
+                        #BadFee {
+                            expected_fee = token._fee;
+                        },
+                    );
+                };
 
-        if (tx_req.amount > sender_balance) {
-            return #err(#InsufficientFunds { balance = sender_balance });
-        };
+                let balance : T.Balance = Utils.get_balance(
+                    token.accounts,
+                    tx_req.encoded.from,
+                );
 
-        if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
-            return #err(
-                #BadBurn { min_burn_amount = token.min_burn_amount },
-            );
+                if (tx_req.amount > balance + token._fee) {
+                    return #err(#InsufficientFunds { balance = balance });
+                };
+            };
+
+            case (#mint) {
+                if (token.max_supply < token._minted_tokens + tx_req.amount) {
+                    let remaining_tokens = (token.max_supply - token._minted_tokens) : Nat;
+
+                    return #err(
+                        #GenericError({
+                            error_code = 0;
+                            message = "Cannot mint more than " # Nat.toText(remaining_tokens) # " tokens";
+                        }),
+                    );
+                };
+            };
+            case (#burn) {
+                if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
+                    return #err(
+                        #BadBurn { min_burn_amount = token.min_burn_amount },
+                    );
+                };
+
+                let balance : T.Balance = Utils.get_balance(
+                    token.accounts,
+                    tx_req.encoded.from,
+                );
+
+                if (balance < tx_req.amount) {
+                    return #err(#InsufficientFunds { balance = balance });
+                };
+            };
         };
 
         switch (tx_req.created_at_time) {
@@ -224,4 +280,5 @@ module {
 
         #ok();
     };
+
 };
