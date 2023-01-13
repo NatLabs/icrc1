@@ -214,10 +214,8 @@ module {
             max_supply = 1_000_000_000 * (10 ** 8);
             minting_account = canister;
             initial_balances = [];
-            min_burn_amount = ?(10 * (10 ** 8));
-            burned_tokens = null;
-            permitted_drift = null;
-            transaction_window = null;
+            min_burn_amount = (10 * (10 ** 8));
+            advanced_settings = null;
         };
 
         return describe(
@@ -443,8 +441,8 @@ module {
 
                                 assertAllTrue([
                                     res == #ok(1),
-                                    ICRC1.balance_of(token, user1) == prev_balance - burn_args.amount,
-                                    ICRC1.total_supply(token) == prev_total_supply - burn_args.amount,
+                                    ICRC1.balance_of(token, user1) == ((prev_balance - burn_args.amount) : Nat),
+                                    ICRC1.total_supply(token) == ((prev_total_supply - burn_args.amount) : Nat),
                                 ]);
                             },
                         ),

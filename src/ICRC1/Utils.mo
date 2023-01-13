@@ -38,8 +38,6 @@ module {
         url = "https://github.com/dfinity/ICRC-1";
     };
 
-    public let DAY_IN_NANO_SECONDS : T.Timestamp = 86_400_000_000_000;
-
     // Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);

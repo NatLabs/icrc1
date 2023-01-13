@@ -34,10 +34,9 @@ This repo contains the implementation of the
         fee = 1_000_000; \
         max_supply = 1_000_000_000_000; \
         initial_balances = vec {}; \
-        min_burn_amount = opt 10_000_000; \
+        min_burn_amount = 10_000_000; \
         minting_account = null; \
-        permitted_drift = null; \
-        transaction_window = null; \
+        advanced_settings = null; \
     })"
   ```
 
@@ -60,13 +59,14 @@ This repo contains the implementation of the
                 fee = add_decimals(1);
                 max_supply = add_decimals(1_000_000);
                 initial_balances = [];
-                min_burn_amount = ?add_decimals(10);
-                minting_account = null; // defaults to the caller
-                permitted_drift = null; // defaults to one hour
-                transaction_window = null; // defaults to a day
+                min_burn_amount = add_decimals(10);
+                minting_account = null; // defaults to the canister id of the caller
+                advanced_settings = null; 
             });
         }
     ```
+
+> The fields for the `advanced_settings` record are documented [here](./docs/ICRC1/Types.md#type-advancedsettings)
 
 ## Tests
 #### Internal Tests

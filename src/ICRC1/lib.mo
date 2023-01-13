@@ -63,7 +63,6 @@ module {
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
     public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
-
     /// Initialize a new ICRC-1 token
     public func init(args : T.InitArgs) : T.TokenData {
         let {
@@ -75,10 +74,21 @@ module {
             max_supply;
             initial_balances;
             min_burn_amount;
-            burned_tokens;
-            permitted_drift;
-            transaction_window;
+            advanced_settings;
         } = args;
+
+        var _burned_tokens = 0;
+        var permitted_drift = 60_000_000_000;
+        var transaction_window = 86_400_000_000_000;
+
+        switch(advanced_settings){
+            case(?options) {
+                _burned_tokens := options.burned_tokens;
+                permitted_drift := Nat64.toNat(options.permitted_drift);
+                transaction_window := Nat64.toNat(options.transaction_window);
+            };
+            case(null) { };
+        };
 
         if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");
@@ -89,10 +99,6 @@ module {
         };
 
         let accounts : T.AccountBalances = StableTrieMap.new();
-        let _burned_tokens = switch (burned_tokens){
-            case(?burned) burned;
-            case(null) 0;
-        };
 
         var _minted_tokens = _burned_tokens;
 
@@ -125,21 +131,14 @@ module {
             max_supply;
             var _minted_tokens = _minted_tokens;
             var _burned_tokens = _burned_tokens;
+            min_burn_amount;
             minting_account;
             accounts;
             metadata = U.init_metadata(args);
             supported_standards = U.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
-            min_burn_amount = switch (min_burn_amount) {
-                case (?min) min;
-                case (null) 0;
-            };
-            permitted_drift = Nat64.toNat(
-                Option.get(permitted_drift, (60 * 60 * 1000) : Nat64),
-            );
-            transaction_window = Nat64.toNat(
-                Option.get(transaction_window, U.DAY_IN_NANO_SECONDS),
-            );
+            permitted_drift;
+            transaction_window;
             archive = {
                 var canister = actor ("aaaaa-aa");
                 var stored_txs = 0;
@@ -180,6 +179,21 @@ module {
     /// Returns the total supply of circulating tokens
     public func total_supply(token : T.TokenData) : T.Balance {
         token._minted_tokens - token._burned_tokens;
+    };
+
+    /// Returns the total supply of minted tokens
+    public func minted_supply(token : T.TokenData) : T.Balance {
+        token._minted_tokens;
+    };
+
+    /// Returns the total supply of burned tokens
+    public func burned_supply(token : T.TokenData) : T.Balance {
+        token._burned_tokens;
+    };
+
+    /// Returns the maximum supply of tokens
+    public func max_supply(token : T.TokenData) : T.Balance {
+        token.max_supply;
     };
 
     /// Returns the account with the permission to mint tokens
