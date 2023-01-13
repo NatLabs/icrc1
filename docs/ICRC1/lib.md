@@ -156,18 +156,6 @@ type ArchivedTransaction = T.ArchivedTransaction
 ```
 
 
-## Type `ArchiveTxWithoutCallback`
-``` motoko no-repl
-type ArchiveTxWithoutCallback = T.ArchiveTxWithoutCallback
-```
-
-
-## Type `TxResponseWithoutCallback`
-``` motoko no-repl
-type TxResponseWithoutCallback = T.TxResponseWithoutCallback
-```
-
-
 ## Value `MAX_TRANSACTIONS_IN_LEDGER`
 ``` motoko no-repl
 let MAX_TRANSACTIONS_IN_LEDGER
@@ -188,21 +176,21 @@ let MAX_TRANSACTIONS_PER_REQUEST
 
 ## Function `init`
 ``` motoko no-repl
-func init(args : InitArgs) : TokenData
+func init(args : T.InitArgs) : T.TokenData
 ```
 
 Initialize a new ICRC-1 token
 
 ## Function `name`
 ``` motoko no-repl
-func name(token : TokenData) : Text
+func name(token : T.TokenData) : Text
 ```
 
 Retrieve the name of the token
 
 ## Function `symbol`
 ``` motoko no-repl
-func symbol(token : TokenData) : Text
+func symbol(token : T.TokenData) : Text
 ```
 
 Retrieve the symbol of the token
@@ -216,35 +204,35 @@ Retrieve the number of decimals specified for the token
 
 ## Function `fee`
 ``` motoko no-repl
-func fee(token : TokenData) : Balance
+func fee(token : T.TokenData) : T.Balance
 ```
 
 Retrieve the fee for each transfer
 
 ## Function `set_fee`
 ``` motoko no-repl
-func set_fee(token : TokenData, fee : Nat)
+func set_fee(token : T.TokenData, fee : Nat)
 ```
 
 Set the fee for each transfer
 
 ## Function `metadata`
 ``` motoko no-repl
-func metadata(token : TokenData) : [MetaDatum]
+func metadata(token : T.TokenData) : [T.MetaDatum]
 ```
 
 Retrieve all the metadata of the token
 
 ## Function `total_supply`
 ``` motoko no-repl
-func total_supply(token : TokenData) : Balance
+func total_supply(token : T.TokenData) : T.Balance
 ```
 
 Returns the total supply of circulating tokens
 
 ## Function `minting_account`
 ``` motoko no-repl
-func minting_account(token : TokenData) : Account
+func minting_account(token : T.TokenData) : T.Account
 ```
 
 Returns the account with the permission to mint tokens
@@ -255,56 +243,63 @@ considered burned.**
 
 ## Function `balance_of`
 ``` motoko no-repl
-func balance_of(account : Account) : Balance
+func balance_of(account : T.Account) : T.Balance
 ```
 
 Retrieve the balance of a given account
 
 ## Function `supported_standards`
 ``` motoko no-repl
-func supported_standards(token : TokenData) : [SupportedStandard]
+func supported_standards(token : T.TokenData) : [T.SupportedStandard]
 ```
 
 Returns an array of standards supported by this token
 
-## Function `transfer`
+## Function `balance_from_float`
 ``` motoko no-repl
-func transfer(token : TokenData, args : TransferArgs, caller : Principal) : async Result.Result<Balance, TransferError>
+func balance_from_float(token : T.TokenData, float : Float) : T.Balance
 ```
 
-Transfers tokens from one account to another
+Formats a float to a nat balance and applies the correct number of decimal places
+
+## Function `transfer`
+``` motoko no-repl
+func transfer(token : T.TokenData, args : T.TransferArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
+```
+
+Transfers tokens from one account to another account (minting and burning included)
 
 ## Function `mint`
 ``` motoko no-repl
-func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError>
+func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
 ```
 
 Helper function to mint tokens with minimum args
 
 ## Function `burn`
 ``` motoko no-repl
-func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError>
+func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
 ```
 
 Helper function to burn tokens with minimum args
 
 ## Function `total_transactions`
 ``` motoko no-repl
-func total_transactions(token : TokenData) : Nat
+func total_transactions(token : T.TokenData) : Nat
 ```
 
 Returns the total number of transactions that have been processed by the given token.
 
 ## Function `get_transaction`
 ``` motoko no-repl
-func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?Transaction
+func get_transaction(token : T.TokenData, tx_index : T.TxIndex) : async ?T.Transaction
 ```
 
 Retrieves the transaction specified by the given `tx_index`
 
 ## Function `get_transactions`
 ``` motoko no-repl
-func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : ICRC1.GetTransactionsResponse
+func get_transactions(token : T.TokenData, req : T.GetTransactionsRequest) : T.GetTransactionsResponse
 ```
 
 Retrieves the transactions specified by the given range

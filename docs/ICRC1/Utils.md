@@ -38,19 +38,19 @@ func hash(n : Nat) : Hash.Hash
 
 ## Function `create_transfer_req`
 ``` motoko no-repl
-func create_transfer_req(operation : T.Operation, minting_account : T.Account) : T.TransactionRequest
+func create_transfer_req(args : T.TransferArgs, owner : Principal, tx_kind : T.TxKind) : T.TransactionRequest
 ```
 
 
 ## Function `kind_to_text`
 ``` motoko no-repl
-func kind_to_text(kind : T.OperationKind) : Text
+func kind_to_text(kind : T.TxKind) : Text
 ```
 
 
 ## Function `req_to_tx`
 ``` motoko no-repl
-func req_to_tx(tx_req : T.TransactionRequest) : T.Transaction
+func req_to_tx(tx_req : T.TransactionRequest, index : Nat) : T.Transaction
 ```
 
 

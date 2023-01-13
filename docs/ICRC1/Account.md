@@ -44,8 +44,34 @@ Updates the balance of an account
 
 ## Function `transfer_balance`
 ``` motoko no-repl
-func transfer_balance(accounts : T.AccountBalances, tx_req : T.TransactionRequest)
+func transfer_balance(token : T.TokenData, tx_req : T.TransactionRequest)
 ```
 
 Transfers tokens from the sender to the
 recipient in the tx request
+
+## Function `mint_balance`
+``` motoko no-repl
+func mint_balance(token : T.TokenData, encoded_account : T.EncodedAccount, amount : T.Balance)
+```
+
+
+## Function `burn_balance`
+``` motoko no-repl
+func burn_balance(token : T.TokenData, encoded_account : T.EncodedAccount, amount : T.Balance)
+```
+
+
+## Function `fromText`
+``` motoko no-repl
+func fromText(encoded : Text) : ?T.Account
+```
+
+Converts an ICRC-1 Account from its Textual representation to the `Account` type
+
+## Function `toText`
+``` motoko no-repl
+func toText(account : T.Account) : Text
+```
+
+Converts an ICRC-1 `Account` to its Textual representation
