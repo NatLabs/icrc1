@@ -21,10 +21,10 @@ import U "Utils";
 import Transfer "Transfer";
 import Archive "Canisters/Archive";
 
-/// The ICRC1 Module with all the functions for creating an
+/// The ICRC1 class with all the functions for creating an
 /// ICRC1 token on the Internet Computer
-module ICRC1 {
-    public let { SB } = U;
+module {
+    let { SB } = U;
 
     public type Account = T.Account;
     public type Subaccount = T.Subaccount;
@@ -58,15 +58,14 @@ module ICRC1 {
     public type QueryArchiveFn = T.QueryArchiveFn;
     public type TransactionRange = T.TransactionRange;
     public type ArchivedTransaction = T.ArchivedTransaction;
-    public type ArchiveTxWithoutCallback = T.ArchiveTxWithoutCallback;
-    public type TxResponseWithoutCallback = T.TxResponseWithoutCallback;
 
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
     public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
+
     /// Initialize a new ICRC-1 token
-    public func init(args : InitArgs) : TokenData {
+    public func init(args : T.InitArgs) : T.TokenData {
         let {
             name;
             symbol;
@@ -76,6 +75,7 @@ module ICRC1 {
             max_supply;
             initial_balances;
             min_burn_amount;
+            burned_tokens;
             permitted_drift;
             transaction_window;
         } = args;
@@ -88,8 +88,13 @@ module ICRC1 {
             Debug.trap("max_supply must be >= 1");
         };
 
-        let accounts : AccountBalances = StableTrieMap.new();
-        var _minted_tokens = 0;
+        let accounts : T.AccountBalances = StableTrieMap.new();
+        let _burned_tokens = switch (burned_tokens){
+            case(?burned) burned;
+            case(null) 0;
+        };
+
+        var _minted_tokens = _burned_tokens;
 
         for ((i, (account, balance)) in Itertools.enumerate(initial_balances.vals())) {
 
@@ -119,7 +124,7 @@ module ICRC1 {
             var _fee = fee;
             max_supply;
             var _minted_tokens = _minted_tokens;
-            var _burned_tokens = 0;
+            var _burned_tokens = _burned_tokens;
             minting_account;
             accounts;
             metadata = U.init_metadata(args);
@@ -143,37 +148,37 @@ module ICRC1 {
     };
 
     /// Retrieve the name of the token
-    public func name(token : TokenData) : Text {
+    public func name(token : T.TokenData) : Text {
         token.name;
     };
 
     /// Retrieve the symbol of the token
-    public func symbol(token : TokenData) : Text {
+    public func symbol(token : T.TokenData) : Text {
         token.symbol;
     };
 
     /// Retrieve the number of decimals specified for the token
-    public func decimals({ decimals } : TokenData) : Nat8 {
+    public func decimals({ decimals } : T.TokenData) : Nat8 {
         decimals;
     };
 
     /// Retrieve the fee for each transfer
-    public func fee(token : TokenData) : Balance {
+    public func fee(token : T.TokenData) : T.Balance {
         token._fee;
     };
 
     /// Set the fee for each transfer
-    public func set_fee(token : TokenData, fee : Nat) {
+    public func set_fee(token : T.TokenData, fee : Nat) {
         token._fee := fee;
     };
 
     /// Retrieve all the metadata of the token
-    public func metadata(token : TokenData) : [MetaDatum] {
+    public func metadata(token : T.TokenData) : [T.MetaDatum] {
         SB.toArray(token.metadata);
     };
 
     /// Returns the total supply of circulating tokens
-    public func total_supply(token : TokenData) : Balance {
+    public func total_supply(token : T.TokenData) : T.Balance {
         token._minted_tokens - token._burned_tokens;
     };
 
@@ -183,23 +188,23 @@ module ICRC1 {
     /// and burning transactions, so any tokens sent to it will be
     /// considered burned.**
 
-    public func minting_account(token : TokenData) : Account {
+    public func minting_account(token : T.TokenData) : T.Account {
         token.minting_account;
     };
 
     /// Retrieve the balance of a given account
-    public func balance_of({ accounts } : TokenData, account : Account) : Balance {
+    public func balance_of({ accounts } : T.TokenData, account : T.Account) : T.Balance {
         let encoded_account = Account.encode(account);
         Account.get_balance(accounts, encoded_account);
     };
 
     /// Returns an array of standards supported by this token
-    public func supported_standards(token : TokenData) : [SupportedStandard] {
+    public func supported_standards(token : T.TokenData) : [T.SupportedStandard] {
         SB.toArray(token.supported_standards);
     };
 
     /// Formats a float to a nat balance and applies the correct number of decimal places
-    public func balance_from_float(token : TokenData, float : Float) : Balance {
+    public func balance_from_float(token : T.TokenData, float : Float) : T.Balance {
         if (float <= 0) {
             return 0;
         };
@@ -211,10 +216,10 @@ module ICRC1 {
 
     /// Transfers tokens from one account to another account (minting and burning included)
     public func transfer(
-        token : TokenData,
-        args : TransferArgs,
+        token : T.TokenData,
+        args : T.TransferArgs,
         caller : Principal,
-    ) : async Result.Result<Balance, TransferError> {
+    ) : async Result.Result<T.Balance, T.TransferError> {
 
         let from = {
             owner = caller;
@@ -268,7 +273,7 @@ module ICRC1 {
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : TokenData, args : Mint, caller : Principal) : async Result.Result<Balance, TransferError> {
+    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async Result.Result<T.Balance, T.TransferError> {
 
         if (caller != token.minting_account.owner) {
             return #err(
@@ -288,7 +293,7 @@ module ICRC1 {
     };
 
     /// Helper function to burn tokens with minimum args
-    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async Result.Result<Balance, TransferError> {
+    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError> {
 
         let transfer_args : T.TransferArgs = {
             args with to = token.minting_account;
@@ -299,13 +304,13 @@ module ICRC1 {
     };
 
     /// Returns the total number of transactions that have been processed by the given token.
-    public func total_transactions(token : TokenData) : Nat {
+    public func total_transactions(token : T.TokenData) : Nat {
         let { archive; transactions } = token;
         archive.stored_txs + SB.size(transactions);
     };
 
     /// Retrieves the transaction specified by the given `tx_index`
-    public func get_transaction(token : TokenData, tx_index : ICRC1.TxIndex) : async ?Transaction {
+    public func get_transaction(token : T.TokenData, tx_index : T.TxIndex) : async ?T.Transaction {
         let { archive; transactions } = token;
 
         let archived_txs = archive.stored_txs;
@@ -319,7 +324,7 @@ module ICRC1 {
     };
 
     /// Retrieves the transactions specified by the given range
-    public func get_transactions(token : TokenData, req : ICRC1.GetTransactionsRequest) : ICRC1.GetTransactionsResponse {
+    public func get_transactions(token : T.TokenData, req : T.GetTransactionsRequest) : T.GetTransactionsResponse {
         let { archive; transactions } = token;
 
         var first_index = 0xFFFF_FFFF_FFFF_FFFF; // returned if no transactions are found
@@ -327,7 +332,7 @@ module ICRC1 {
         let req_end = req.start + req.length;
         let tx_end = archive.stored_txs + SB.size(transactions);
 
-        var txs_in_canister: [Transaction] = [];
+        var txs_in_canister: [T.Transaction] = [];
         
         if (req.start < tx_end and req_end >= archive.stored_txs) {
             first_index := Nat.max(req.start, archive.stored_txs);
@@ -354,7 +359,7 @@ module ICRC1 {
 
         let archived_transactions = Array.tabulate(
             size,
-            func(i : Nat) : ICRC1.ArchivedTransaction {
+            func(i : Nat) : T.ArchivedTransaction {
                 let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
                 let start = offset + archived_range.start;
                 let length = Nat.min(
@@ -379,7 +384,7 @@ module ICRC1 {
     // Updates the token's data and manages the transactions
     //
     // **added at the end of any function that creates a new transaction**
-    func update_canister(token : TokenData) : async () {
+    func update_canister(token : T.TokenData) : async () {
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
@@ -409,4 +414,5 @@ module ICRC1 {
             case (#err(_)) {};
         };
     };
+
 };

@@ -15,3 +15,5 @@
 # frontend code
 node_modules/
 dist/
+
+Cargo.lock

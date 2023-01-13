@@ -9,7 +9,7 @@ import Principal "mo:base/Principal";
 import EC "mo:base/ExperimentalCycles";
 
 import Archive "../../src/ICRC1/Canisters/Archive";
-import ICRC1 "../../src/ICRC1/";
+import T "../../src/ICRC1/Types";
 
 import ActorSpec "../utils/ActorSpec";
 
@@ -25,7 +25,7 @@ module {
         run;
     } = ActorSpec;
 
-    func new_tx(i : Nat) : ICRC1.Transaction {
+    func new_tx(i : Nat) : T.Transaction {
         {
             kind = "";
             mint = null;
@@ -37,16 +37,16 @@ module {
     };
 
     // [start, end)
-    func txs_range(start : Nat, end : Nat) : [ICRC1.Transaction] {
+    func txs_range(start : Nat, end : Nat) : [T.Transaction] {
         Array.tabulate(
             (end - start) : Nat,
-            func(i : Nat) : ICRC1.Transaction {
+            func(i : Nat) : T.Transaction {
                 new_tx(start + i);
             },
         );
     };
 
-    func new_txs(length : Nat) : [ICRC1.Transaction] {
+    func new_txs(length : Nat) : [T.Transaction] {
         txs_range(0, length);
     };
 

@@ -246,39 +246,6 @@ module {
 
     /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
     public func fromText(encoded : Text) : ?T.Account {
-        // let chars = encoded.chars();
-        // var invalid_format = false;
-
-        // func to_hex(chars_iter : Iter<Char>) : Iter<Nat8> {
-        //     let first = switch (chars_iter.next()) {
-        //         case (?char) from_hex(char);
-        //         case (_) return Itertools.empty();
-        //     };
-
-        //     let second = switch (chars_iter.next()) {
-        //         case (?char) from_hex(char);
-        //         case (_) {
-        //             invalid_format := true;
-        //             return Itertools.empty();
-        //         };
-        //     };
-
-        //     Itertools.prepend(
-        //         (first << 4) | second,
-        //         to_hex(chars_iter),
-        //     );
-        // };
-
-        // if (invalid_format){
-        //     return null;
-        // };
-
-        // let blob = Blob.fromArray(
-        //     Iter.toArray(
-        //         to_hex(chars),
-        //     ),
-        // );
-
         let p = Principal.fromText(encoded);
         let blob = Principal.toBlob(p);
 
@@ -290,24 +257,6 @@ module {
         let blob = encode(account);
         let principal = Principal.fromBlob(blob);
         Principal.toText(principal);
-
-        // let text = debug_show (blob);
-
-        // func matchAny(options : [Char]) : Text.Pattern {
-        //     let isMatch = func(char : Char) : Bool {
-        //         for (option in options.vals()) {
-        //             if (char == option) {
-        //                 return true;
-        //             };
-        //         };
-
-        //         return false;
-        //     };
-
-        //     #predicate isMatch;
-        // };
-
-        // Text.replace(text, matchAny(['\\', '\"']), "");
     };
 
     func from_hex(char : Char) : Nat8 {

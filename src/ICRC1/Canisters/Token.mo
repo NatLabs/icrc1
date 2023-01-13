@@ -8,22 +8,24 @@ import ExperimentalCycles "mo:base/ExperimentalCycles";
 
 import SB "mo:StableBuffer/StableBuffer";
 
-import ICRC1 "../";
+import ICRC1 "..";
 import Archive "Archive";
 
 shared ({ caller = _owner }) actor class Token(
-    token_args : ICRC1.TokenInitArgs,
+    init_args : ICRC1.TokenInitArgs,
 ) : async ICRC1.FullInterface {
 
-    stable let token = ICRC1.init({
-        token_args with minting_account = Option.get(
-            token_args.minting_account,
+    let icrc1_args : ICRC1.InitArgs = {
+        init_args with minting_account = Option.get(
+            init_args.minting_account,
             {
                 owner = _owner;
                 subaccount = null;
             },
         );
-    });
+    };
+
+    stable let token = ICRC1.init(icrc1_args);
 
     /// Functions for the ICRC1 token standard
     public shared query func icrc1_name() : async Text {

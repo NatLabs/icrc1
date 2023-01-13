@@ -5,7 +5,7 @@ import Time "mo:base/Time";
 
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 
-import ICRC1 "../../src/ICRC1/"; // replace with "mo:icrc1/ICRC1"
+import ICRC1 "../../src/ICRC1"; // replace with "mo:icrc1/ICRC1"
 import Array "mo:base/Array";
 
 shared ({ caller = _owner }) actor class Token(

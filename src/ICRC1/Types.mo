@@ -190,6 +190,9 @@ module {
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
         min_burn_amount : ?Balance;
+
+        /// needed if a token ever needs to be migrated to a new canister
+        burned_tokens : ?Balance; 
         transaction_window : ?Timestamp;
         permitted_drift : ?Timestamp;
     };
@@ -203,6 +206,7 @@ module {
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
         min_burn_amount : ?Balance;
+        burned_tokens : ?Balance;
 
         /// optional value that defaults to the caller if not provided
         minting_account : ?Account;
@@ -312,19 +316,6 @@ module {
 
         /// Pagination request for archived transactions in the given range
         archived_transactions : [ArchivedTransaction];
-    };
-
-    public type ArchiveTxWithoutCallback = GetTransactionsRequest;
-
-    /// This type is used in the library because shared types are only allowed as a public field of an actor
-    public type TxResponseWithoutCallback = {
-        log_length : Nat;
-
-        first_index : TxIndex;
-
-        transactions : [Transaction];
-
-        archived_transactions : [ArchiveTxWithoutCallback];
     };
 
     /// Functions supported by the rosetta 
