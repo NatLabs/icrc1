@@ -68,7 +68,7 @@ This repo contains the implementation of the
 
 > The fields for the `advanced_settings` record are documented [here](./docs/ICRC1/Types.md#type-advancedsettings)
 
-### Textual Representation of the ICRC-1 Accounts
+## Textual Representation of the ICRC-1 Accounts
 This library implements the [Textual Representation](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-1/README.md#textual-representation-of-accounts) format for accounts defined by the standard. It utilizes this implementation to encode each account into a sequence of bytes for improved hashing and comparison.
 To help with this process, the library provides functions in the [ICRC1/Account](./src/ICRC1/Account.mo) module for [encoding](./docs/ICRC1/Account.md#encode), [decoding](./docs/ICRC1/Account.md#decode), [converting from text](./docs/ICRC1/Account.md#fromText), and [converting to text](./docs/ICRC1/Account.md#toText).
 
@@ -87,9 +87,18 @@ To help with this process, the library provides functions in the [ICRC1/Account]
 ```
 
 - Follow these [instructions](./readme.md#L29-40) to start the dfx local replica and deploy the icrc1 token
-
-- Run this command and add the `id` of the deployed canister
+- Once the canister is deployed you should see a message like this
 
 ```
-    make ref-test id=<enter canister id>
+    ...
+    Building canisters...
+    Shrink WASM module size.
+    Installing canisters...
+    Installing code for canister icrc1, 
+    with canister ID q3fc5-haaaa-aaaaa-aaahq-cai
+```
+- Copy the text on the last line after the `ID` and replace it with the `<Enter Canister ID>` in the command below
+
+```
+    make ref-test ID=<Enter Canister ID>
 ```
