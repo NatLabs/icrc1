@@ -39,7 +39,7 @@ This repo contains the implementation of the
                     owner = principal \"<Insert Principal>\";   \
                     subaccount = null;                          \
                 };                                              \
-                100_000_000_000                             \
+                100_000_000_000                                 \
             }                                                   \
         };                                                      \
         min_burn_amount = 10_000_000;                           \
@@ -118,3 +118,7 @@ To help with this process, the library provides functions in the [ICRC1/Account]
 ```
     make ref-test ID=<Enter Canister ID>
 ```
+
+## Funding
+
+This library was initially incentivized by [ICDevs](https://icdevs.org/). You can view more about the bounty on the [forum](https://forum.dfinity.org/t/completed-icdevs-org-bounty-26-icrc-1-motoko-up-to-10k/14868/54) or [website](https://icdevs.org/bounties/2022/08/14/ICRC-1-Motoko.html). The bounty was funded by The ICDevs.org community and the DFINITY Foundation and the award was paid to [@NatLabs](https://github.com/NatLabs). If you use this library and gain value from it, please consider a [donation](https://icdevs.org/donations.html) to ICDevs.
