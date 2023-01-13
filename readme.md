@@ -8,8 +8,8 @@ This repo contains the implementation of the
 - [ICRC1 Rosetta API](https://github.com/dfinity/ic/blob/master/rs/rosetta-api/icrc1/ledger)
 
 ## Documentation 
-- [markdown](./docs/index.md)
-- [web](https://natlabs.github.io/icrc1/)
+- [markdown](https://github.com/NatLabs/icrc1/blob/main/docs/ICRC1/lib.md#function-init)
+- [web](https://natlabs.github.io/icrc1/ICRC1/lib.html#init)
  
 ## Getting Started 
 - Expose the ICRC-1 token functions from your canister 
@@ -27,25 +27,25 @@ This repo contains the implementation of the
     mops install
     dfx start --background --clean
 
-    dfx deploy icrc1 --argument "( record {                     \
-        name = \"<Insert Token Name>\";                         \
-        symbol = \"<Insert Symbol>\";                           \
-        decimals = 6;                                           \
-        fee = 1_000_000;                                        \
-        max_supply = 1_000_000_000_000;                         \
-        initial_balances = vec {                                \
-            record {                                            \
-                record {                                        \
-                    owner = principal \"<Insert Principal>\";   \
-                    subaccount = null;                          \
-                };                                              \
-                100_000_000_000                                 \
-            }                                                   \
-        };                                                      \
-        min_burn_amount = 10_000_000;                           \
-        minting_account = null;                                 \
-        advanced_settings = null;                               \
-    })"
+    dfx deploy icrc1 --argument '( record {                     
+        name = \"<Insert Token Name>\";                         
+        symbol = \"<Insert Symbol>\";                           
+        decimals = 6;                                           
+        fee = 1_000_000;                                        
+        max_supply = 1_000_000_000_000;                         
+        initial_balances = vec {                                
+            record {                                            
+                record {                                        
+                    owner = principal \"<Insert Principal>\";   
+                    subaccount = null;                          
+                };                                              
+                100_000_000_000                                 
+            }                                                   
+        };                                                      
+        min_burn_amount = 10_000_000;                           
+        minting_account = null;                                 
+        advanced_settings = null;                               
+    })'
   ```
 
 - Create a token dynamically from a canister
