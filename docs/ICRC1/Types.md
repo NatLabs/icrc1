@@ -180,16 +180,24 @@ The Interface for the Archive canister
 
 ## Type `InitArgs`
 ``` motoko no-repl
-type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : ?Balance; burned_tokens : ?Balance; transaction_window : ?Timestamp; permitted_drift : ?Timestamp }
+type InitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; minting_account : Account; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : Balance; advanced_settings : ?AdvancedSettings }
 ```
 
+Initial arguments for the setting up the icrc1 token canister
 
 ## Type `TokenInitArgs`
 ``` motoko no-repl
-type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : ?Balance; burned_tokens : ?Balance; minting_account : ?Account; permitted_drift : ?Timestamp; transaction_window : ?Timestamp }
+type TokenInitArgs = { name : Text; symbol : Text; decimals : Nat8; fee : Balance; max_supply : Balance; initial_balances : [(Account, Balance)]; min_burn_amount : Balance; minting_account : ?Account; advanced_settings : ?AdvancedSettings }
 ```
 
-Init Args with optional fields for the token actor canister
+[InitArgs](#type.InitArgs) with optional fields for initializing a token canister
+
+## Type `AdvancedSettings`
+``` motoko no-repl
+type AdvancedSettings = { burned_tokens : Balance; transaction_window : Timestamp; permitted_drift : Timestamp }
+```
+
+Additional settings for the [InitArgs](#type.InitArgs) type during initialization of an icrc1 token canister
 
 ## Type `AccountBalances`
 ``` motoko no-repl

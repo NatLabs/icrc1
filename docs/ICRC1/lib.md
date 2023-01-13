@@ -230,6 +230,27 @@ func total_supply(token : T.TokenData) : T.Balance
 
 Returns the total supply of circulating tokens
 
+## Function `minted_supply`
+``` motoko no-repl
+func minted_supply(token : T.TokenData) : T.Balance
+```
+
+Returns the total supply of minted tokens
+
+## Function `burned_supply`
+``` motoko no-repl
+func burned_supply(token : T.TokenData) : T.Balance
+```
+
+Returns the total supply of burned tokens
+
+## Function `max_supply`
+``` motoko no-repl
+func max_supply(token : T.TokenData) : T.Balance
+```
+
+Returns the maximum supply of tokens
+
 ## Function `minting_account`
 ``` motoko no-repl
 func minting_account(token : T.TokenData) : T.Account

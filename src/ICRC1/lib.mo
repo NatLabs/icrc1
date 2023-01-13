@@ -17,14 +17,14 @@ import StableTrieMap "mo:StableTrieMap";
 
 import Account "Account";
 import T "Types";
-import U "Utils";
+import Utils "Utils";
 import Transfer "Transfer";
 import Archive "Canisters/Archive";
 
 /// The ICRC1 class with all the functions for creating an
 /// ICRC1 token on the Internet Computer
 module {
-    let { SB } = U;
+    let { SB } = Utils;
 
     public type Account = T.Account;
     public type Subaccount = T.Subaccount;
@@ -134,8 +134,8 @@ module {
             min_burn_amount;
             minting_account;
             accounts;
-            metadata = U.init_metadata(args);
-            supported_standards = U.init_standards();
+            metadata = Utils.init_metadata(args);
+            supported_standards = Utils.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
             permitted_drift;
             transaction_window;
@@ -209,7 +209,7 @@ module {
     /// Retrieve the balance of a given account
     public func balance_of({ accounts } : T.TokenData, account : T.Account) : T.Balance {
         let encoded_account = Account.encode(account);
-        Account.get_balance(accounts, encoded_account);
+        Utils.get_balance(accounts, encoded_account);
     };
 
     /// Returns an array of standards supported by this token
@@ -248,7 +248,7 @@ module {
             #transfer
         };
 
-        let tx_req = U.create_transfer_req(args, caller, tx_kind);
+        let tx_req = Utils.create_transfer_req(args, caller, tx_kind);
 
         switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
@@ -262,22 +262,22 @@ module {
         // process transaction
         switch(tx_req.kind){
             case(#mint){
-                Account.mint_balance(token, encoded.to, amount);
+                Utils.mint_balance(token, encoded.to, amount);
             };
             case(#burn){
-                Account.burn_balance(token, encoded.from, amount);
+                Utils.burn_balance(token, encoded.from, amount);
             };
             case(#transfer){
-                Account.transfer_balance(token, tx_req);
+                Utils.transfer_balance(token, tx_req);
 
                 // burn fee
-                Account.burn_balance(token, encoded.from, token._fee);
+                Utils.burn_balance(token, encoded.from, token._fee);
             };
         };
 
         // store transaction
         let index = SB.size(token.transactions) + token.archive.stored_txs;
-        let tx = U.req_to_tx(tx_req, index);
+        let tx = Utils.req_to_tx(tx_req, index);
         SB.add(token.transactions, tx);
 
         // transfer transaction to archive if necessary
@@ -369,7 +369,7 @@ module {
 
         let txs_in_archive = (archived_range.end - archived_range.start) : Nat;
 
-        let size = U.div_ceil(txs_in_archive, MAX_TRANSACTIONS_PER_REQUEST);
+        let size = Utils.div_ceil(txs_in_archive, MAX_TRANSACTIONS_PER_REQUEST);
 
         let archived_transactions = Array.tabulate(
             size,

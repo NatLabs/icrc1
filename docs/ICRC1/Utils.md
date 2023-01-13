@@ -12,12 +12,6 @@ let default_standard : T.SupportedStandard
 ```
 
 
-## Value `DAY_IN_NANO_SECONDS`
-``` motoko no-repl
-let DAY_IN_NANO_SECONDS : T.Timestamp
-```
-
-
 ## Function `init_standards`
 ``` motoko no-repl
 func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard>
@@ -57,6 +51,38 @@ func req_to_tx(tx_req : T.TransactionRequest, index : Nat) : T.Transaction
 ## Function `div_ceil`
 ``` motoko no-repl
 func div_ceil(n : Nat, d : Nat) : Nat
+```
+
+
+## Function `get_balance`
+``` motoko no-repl
+func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance
+```
+
+Retrieves the balance of an account
+
+## Function `update_balance`
+``` motoko no-repl
+func update_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount, update : (T.Balance) -> T.Balance)
+```
+
+Updates the balance of an account
+
+## Function `transfer_balance`
+``` motoko no-repl
+func transfer_balance(token : T.TokenData, tx_req : T.TransactionRequest)
+```
+
+
+## Function `mint_balance`
+``` motoko no-repl
+func mint_balance(token : T.TokenData, encoded_account : T.EncodedAccount, amount : T.Balance)
+```
+
+
+## Function `burn_balance`
+``` motoko no-repl
+func burn_balance(token : T.TokenData, encoded_account : T.EncodedAccount, amount : T.Balance)
 ```
 
 

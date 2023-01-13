@@ -18,10 +18,10 @@ import STMap "mo:StableTrieMap";
 import Account "Account";
 
 import T "Types";
-import U "Utils";
+import Utils "Utils";
 
 module {
-    let { SB } = U;
+    let { SB } = Utils;
 
     /// Checks if a transaction memo is valid
     public func validate_memo(memo : ?T.Memo) : Bool {
@@ -209,7 +209,7 @@ module {
                     );
                 };
 
-                let balance : T.Balance = Account.get_balance(
+                let balance : T.Balance = Utils.get_balance(
                     token.accounts,
                     tx_req.encoded.from,
                 );
@@ -238,7 +238,7 @@ module {
                     );
                 };
 
-                let balance : T.Balance = Account.get_balance(
+                let balance : T.Balance = Utils.get_balance(
                     token.accounts,
                     tx_req.encoded.from,
                 );

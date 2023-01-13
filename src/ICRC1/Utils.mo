@@ -162,6 +162,100 @@ module {
         (n + d - 1) / d;
     };
 
+    /// Retrieves the balance of an account
+    public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
+        let res = STMap.get(
+            accounts,
+            Blob.equal,
+            Blob.hash,
+            encoded_account,
+        );
+
+        switch (res) {
+            case (?balance) {
+                balance;
+            };
+            case (_) 0;
+        };
+    };
+
+    /// Updates the balance of an account
+    public func update_balance(
+        accounts : T.AccountBalances,
+        encoded_account : T.EncodedAccount,
+        update : (T.Balance) -> T.Balance,
+    ) {
+        let prev_balance = get_balance(accounts, encoded_account);
+        let updated_balance = update(prev_balance);
+
+        if (updated_balance != prev_balance) {
+            STMap.put(
+                accounts,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                updated_balance,
+            );
+        };
+    };
+
+    // Transfers tokens from the sender to the
+    // recipient in the tx request
+    public func transfer_balance(
+        token : T.TokenData,
+        tx_req : T.TransactionRequest,
+    ) { 
+        let { encoded; amount } = tx_req;
+
+        update_balance(
+            token.accounts,
+            encoded.from,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        update_balance(
+            token.accounts,
+            encoded.to,
+            func(balance) {
+                balance + amount;
+            },
+        );
+    };
+
+    public func mint_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance + amount;
+            },
+        );
+
+        token._minted_tokens += amount;
+    };
+
+    public func burn_balance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_balance(
+            token.accounts,
+            encoded_account,
+            func(balance) {
+                balance - amount;
+            },
+        );
+
+        token._burned_tokens += amount;
+    };
+
     // Stable Buffer Module with some additional functions
     public let SB = {
         StableBuffer with slice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : [A] {
