@@ -27,16 +27,24 @@ This repo contains the implementation of the
     mops install
     dfx start --background --clean
 
-    dfx deploy icrc1 --argument "( record {\
-        name = \"<Insert Token Name>\"; \
-        symbol = \"<Insert Symbol>\"; \
-        decimals = 6; \
-        fee = 1_000_000; \
-        max_supply = 1_000_000_000_000; \
-        initial_balances = vec {}; \
-        min_burn_amount = 10_000_000; \
-        minting_account = null; \
-        advanced_settings = null; \
+    dfx deploy icrc1 --argument "( record {                     \
+        name = \"<Insert Token Name>\";                         \
+        symbol = \"<Insert Symbol>\";                           \
+        decimals = 6;                                           \
+        fee = 1_000_000;                                        \
+        max_supply = 1_000_000_000_000;                         \
+        initial_balances = vec {                                \
+            record {                                            \
+                record {                                        \
+                    owner = principal \"<Insert Principal>\";   \
+                    subaccount = null;                          \
+                };                                              \
+                100_000_000_000                             \
+            }                                                   \
+        };                                                      \
+        min_burn_amount = 10_000_000;                           \
+        minting_account = null;                                 \
+        advanced_settings = null;                               \
     })"
   ```
 
@@ -52,13 +60,21 @@ This repo contains the implementation of the
                 n * 10 ** decimals
             };
 
+            let pre_mint_account = {
+                owner = Principal.fromText("<Insert Principal>");
+                subaccount = null;
+            };
+
             let token_canister = Token.Token({
                 name = "<Insert Token Name>";
                 symbol = "<Insert Token Symbol>";
                 decimals = Nat8.fromNat(decimals);
                 fee = add_decimals(1);
                 max_supply = add_decimals(1_000_000);
-                initial_balances = [];
+
+                // pre-mint 100,000 tokens for the account
+                initial_balances = [(pre_mint_account, add_decimals(100_000))]; 
+
                 min_burn_amount = add_decimals(10);
                 minting_account = null; // defaults to the canister id of the caller
                 advanced_settings = null; 
