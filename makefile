@@ -1,4 +1,4 @@
-.PHONY: test docs test_actor
+.PHONY: test docs actor-test
 
 test:
 	$(shell vessel bin)/moc -r $(shell vessel sources) -wasi-system-api ./tests/**/**.Test.mo
@@ -15,9 +15,6 @@ actor-test:
 
 ref-test:
 	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:8000 -c $(ID) -s ~/.config/dfx/identity/$(shell dfx identity whoami)/identity.pem
-
-print:
-	@echo "Running reference test with ID: "
 
 no-warn:
 	find src -type f -name '*.mo' -print0 | xargs -0 $(shell vessel bin)/moc -r $(shell vessel sources) -Werror -wasi-system-api

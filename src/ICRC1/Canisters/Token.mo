@@ -2,7 +2,6 @@ import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Option "mo:base/Option";
 import Time "mo:base/Time";
-import Result "mo:base/Result";
 
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 
@@ -64,15 +63,15 @@ shared ({ caller = _owner }) actor class Token(
         ICRC1.supported_standards(token);
     };
 
-    public shared ({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+    public shared ({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async ICRC1.TransferResult {
         await ICRC1.transfer(token, args, caller);
     };
 
-    public shared ({ caller }) func mint(args : ICRC1.Mint) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+    public shared ({ caller }) func mint(args : ICRC1.Mint) : async ICRC1.TransferResult {
         await ICRC1.mint(token, args, caller);
     };
 
-    public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async Result.Result<ICRC1.Balance, ICRC1.TransferError> {
+    public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async ICRC1.TransferResult {
         await ICRC1.burn(token, args, caller);
     };
 

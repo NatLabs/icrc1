@@ -156,6 +156,12 @@ type ArchivedTransaction = T.ArchivedTransaction
 ```
 
 
+## Type `TransferResult`
+``` motoko no-repl
+type TransferResult = T.TransferResult
+```
+
+
 ## Value `MAX_TRANSACTIONS_IN_LEDGER`
 ``` motoko no-repl
 let MAX_TRANSACTIONS_IN_LEDGER
@@ -285,21 +291,21 @@ Formats a float to a nat balance and applies the correct number of decimal place
 
 ## Function `transfer`
 ``` motoko no-repl
-func transfer(token : T.TokenData, args : T.TransferArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
+func transfer(token : T.TokenData, args : T.TransferArgs, caller : Principal) : async T.TransferResult
 ```
 
 Transfers tokens from one account to another account (minting and burning included)
 
 ## Function `mint`
 ``` motoko no-repl
-func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
+func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async T.TransferResult
 ```
 
 Helper function to mint tokens with minimum args
 
 ## Function `burn`
 ``` motoko no-repl
-func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError>
+func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async T.TransferResult
 ```
 
 Helper function to burn tokens with minimum args

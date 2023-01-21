@@ -158,9 +158,15 @@ type TransferError = TimeError or {#BadFee : { expected_fee : Balance }; #BadBur
 ```
 
 
+## Type `TransferResult`
+``` motoko no-repl
+type TransferResult = {#Ok : TxIndex; #Err : TransferError}
+```
+
+
 ## Type `TokenInterface`
 ``` motoko no-repl
-type TokenInterface = actor { icrc1_name : shared query () -> async Text; icrc1_symbol : shared query () -> async Text; icrc1_decimals : shared query () -> async Nat8; icrc1_fee : shared query () -> async Balance; icrc1_metadata : shared query () -> async MetaData; icrc1_total_supply : shared query () -> async Balance; icrc1_minting_account : shared query () -> async ?Account; icrc1_balance_of : shared query (Account) -> async Balance; icrc1_transfer : shared (TransferArgs) -> async Result.Result<TxIndex, TransferError>; icrc1_supported_standards : shared query () -> async [SupportedStandard] }
+type TokenInterface = actor { icrc1_name : shared query () -> async Text; icrc1_symbol : shared query () -> async Text; icrc1_decimals : shared query () -> async Nat8; icrc1_fee : shared query () -> async Balance; icrc1_metadata : shared query () -> async MetaData; icrc1_total_supply : shared query () -> async Balance; icrc1_minting_account : shared query () -> async ?Account; icrc1_balance_of : shared query (Account) -> async Balance; icrc1_transfer : shared (TransferArgs) -> async TransferResult; icrc1_supported_standards : shared query () -> async [SupportedStandard] }
 ```
 
 Interface for the ICRC token canister

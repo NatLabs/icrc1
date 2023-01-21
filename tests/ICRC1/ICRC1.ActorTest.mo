@@ -396,7 +396,7 @@ module {
                         );
 
                         assertAllTrue([
-                            res == #ok(0),
+                            res == #Ok(0),
                             ICRC1.balance_of(token, user1) == mint_args.amount,
                             ICRC1.balance_of(token, args.minting_account) == 0,
                             ICRC1.total_supply(token) == mint_args.amount,
@@ -440,7 +440,7 @@ module {
                                 let res = await ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
-                                    res == #ok(1),
+                                    res == #Ok(1),
                                     ICRC1.balance_of(token, user1) == ((prev_balance - burn_args.amount) : Nat),
                                     ICRC1.total_supply(token) == ((prev_total_supply - burn_args.amount) : Nat),
                                 ]);
@@ -465,7 +465,7 @@ module {
                                 let res = await ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
-                                    res == #err(
+                                    res == #Err(
                                         #InsufficientFunds {
                                             balance = 0;
                                         },
@@ -503,7 +503,7 @@ module {
                                 let res = await ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
-                                    res == #err(
+                                    res == #Err(
                                         #BadBurn {
                                             min_burn_amount = 10 * (10 ** 8);
                                         },
@@ -552,7 +552,7 @@ module {
 
 
                                 assertAllTrue([
-                                    res == #ok(1),
+                                    res == #Ok(1),
                                     ICRC1.balance_of(token, user1) == ICRC1.balance_from_float(token, 145),
                                     token._burned_tokens == ICRC1.balance_from_float(token, 5),
                                     ICRC1.balance_of(token, user2) == ICRC1.balance_from_float(token, 50),

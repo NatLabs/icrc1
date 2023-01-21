@@ -123,6 +123,11 @@ module {
         #TemporarilyUnavailable;
         #GenericError : { error_code : Nat; message : Text };
     };
+    
+    public type TransferResult = {
+        #Ok : TxIndex;
+        #Err : TransferError;
+    };
 
     /// Interface for the ICRC token canister
     public type TokenInterface = actor {
@@ -152,7 +157,7 @@ module {
         icrc1_balance_of : shared query (Account) -> async Balance;
 
         /// Transfers the given amount of tokens from the sender to the recipient
-        icrc1_transfer : shared (TransferArgs) -> async Result.Result<TxIndex, TransferError>;
+        icrc1_transfer : shared (TransferArgs) -> async TransferResult;
 
         /// Returns the standards supported by this token's implementation
         icrc1_supported_standards : shared query () -> async [SupportedStandard];

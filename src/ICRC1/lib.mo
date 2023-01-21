@@ -9,7 +9,6 @@ import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
-import Result "mo:base/Result";
 import EC "mo:base/ExperimentalCycles";
 
 import Itertools "mo:itertools/Iter";
@@ -59,6 +58,8 @@ module {
     public type TransactionRange = T.TransactionRange;
     public type ArchivedTransaction = T.ArchivedTransaction;
 
+    public type TransferResult = T.TransferResult;
+
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
     public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
@@ -92,10 +93,6 @@ module {
 
         if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");
-        };
-
-        if (max_supply < 10 ** Nat8.toNat(decimals)) {
-            Debug.trap("max_supply must be >= 1");
         };
 
         let accounts : T.AccountBalances = StableTrieMap.new();
@@ -233,7 +230,7 @@ module {
         token : T.TokenData,
         args : T.TransferArgs,
         caller : Principal,
-    ) : async Result.Result<T.Balance, T.TransferError> {
+    ) : async T.TransferResult {
 
         let from = {
             owner = caller;
@@ -252,7 +249,7 @@ module {
 
         switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {
-                return #err(errorType);
+                return #Err(errorType);
             };
             case (#ok(_)) {};
         };
@@ -283,14 +280,14 @@ module {
         // transfer transaction to archive if necessary
         await update_canister(token);
 
-        #ok(tx.index);
+        #Ok(tx.index);
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async Result.Result<T.Balance, T.TransferError> {
+    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async T.TransferResult {
 
         if (caller != token.minting_account.owner) {
-            return #err(
+            return #Err(
                 #GenericError {
                     error_code = 401;
                     message = "Unauthorized: Only the minting_account can mint tokens.";
@@ -307,7 +304,7 @@ module {
     };
 
     /// Helper function to burn tokens with minimum args
-    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async Result.Result<T.Balance, T.TransferError> {
+    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async T.TransferResult {
 
         let transfer_args : T.TransferArgs = {
             args with to = token.minting_account;
