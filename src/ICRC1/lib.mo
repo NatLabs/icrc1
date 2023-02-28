@@ -230,7 +230,7 @@ module {
         token : T.TokenData,
         args : T.TransferArgs,
         caller : Principal,
-    ) : async T.TransferResult {
+    ) : async* T.TransferResult {
 
         let from = {
             owner = caller;
@@ -278,13 +278,13 @@ module {
         SB.add(token.transactions, tx);
 
         // transfer transaction to archive if necessary
-        await update_canister(token);
+        await* update_canister(token);
 
         #Ok(tx.index);
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async T.TransferResult {
+    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async* T.TransferResult {
 
         if (caller != token.minting_account.owner) {
             return #Err(
@@ -300,18 +300,18 @@ module {
             fee = null;
         };
 
-        await transfer(token, transfer_args, caller);
+        await* transfer(token, transfer_args, caller);
     };
 
     /// Helper function to burn tokens with minimum args
-    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async T.TransferResult {
+    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async* T.TransferResult {
 
         let transfer_args : T.TransferArgs = {
             args with to = token.minting_account;
             fee = null;
         };
 
-        await transfer(token, transfer_args, caller);
+        await* transfer(token, transfer_args, caller);
     };
 
     /// Returns the total number of transactions that have been processed by the given token.
@@ -321,7 +321,7 @@ module {
     };
 
     /// Retrieves the transaction specified by the given `tx_index`
-    public func get_transaction(token : T.TokenData, tx_index : T.TxIndex) : async ?T.Transaction {
+    public func get_transaction(token : T.TokenData, tx_index : T.TxIndex) : async* ?T.Transaction {
         let { archive; transactions } = token;
 
         let archived_txs = archive.stored_txs;
@@ -395,17 +395,17 @@ module {
     // Updates the token's data and manages the transactions
     //
     // **added at the end of any function that creates a new transaction**
-    func update_canister(token : T.TokenData) : async () {
+    func update_canister(token : T.TokenData) : async* () {
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
-            await append_transactions(token);
+            await* append_transactions(token);
         };
     };
 
     // Moves the transactions from the ICRC1 canister to the archive canister
     // and returns a boolean that indicates the success of the data transfer
-    func append_transactions(token : T.TokenData) : async () {
+    func append_transactions(token : T.TokenData) : async* () {
         let { archive; transactions } = token;
 
         if (archive.stored_txs == 0) {
