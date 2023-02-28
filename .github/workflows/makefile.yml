@@ -35,6 +35,8 @@ jobs:
     name: ICRC-1 reference test
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: actions/setup-node@v3
         with:
           node-version: 14
