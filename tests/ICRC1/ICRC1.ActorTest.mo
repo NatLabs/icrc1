@@ -193,7 +193,7 @@ module {
 
         func create_mints(token : T.TokenData, minting_principal : Principal, n : Nat) : async () {
             for (i in Itertools.range(0, n)) {
-                ignore await ICRC1.mint(
+                ignore await* ICRC1.mint(
                     token,
                     {
                         to = user1;
@@ -389,7 +389,7 @@ module {
                             created_at_time = null;
                         };
 
-                        let res = await ICRC1.mint(
+                        let res = await* ICRC1.mint(
                             token,
                             mint_args,
                             args.minting_account.owner,
@@ -421,7 +421,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                ignore await ICRC1.mint(
+                                ignore await* ICRC1.mint(
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
@@ -437,7 +437,7 @@ module {
                                 let prev_balance = ICRC1.balance_of(token, user1);
                                 let prev_total_supply = ICRC1.total_supply(token);
 
-                                let res = await ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
                                     res == #Ok(1),
@@ -462,7 +462,7 @@ module {
 
                                 let prev_balance = ICRC1.balance_of(token, user1);
                                 let prev_total_supply = ICRC1.total_supply(token);
-                                let res = await ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
                                     res == #Err(
@@ -487,7 +487,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                ignore await ICRC1.mint(
+                                ignore await* ICRC1.mint(
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
@@ -500,7 +500,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                let res = await ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
 
                                 assertAllTrue([
                                     res == #Err(
@@ -529,7 +529,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                ignore await ICRC1.mint(
+                                ignore await* ICRC1.mint(
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
@@ -544,7 +544,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                let res = await ICRC1.transfer(
+                                let res = await* ICRC1.transfer(
                                     token,
                                     transfer_args,
                                     user1.owner,
@@ -590,23 +590,23 @@ module {
                                         do {
                                             assertAllTrue([
                                                 is_opt_tx_equal(
-                                                    (await ICRC1.get_transaction(token, 0)),
+                                                    (await* ICRC1.get_transaction(token, 0)),
                                                     ?mock_tx(user1, 0),
                                                 ),
                                                 is_opt_tx_equal(
-                                                    (await ICRC1.get_transaction(token, 1234)),
+                                                    (await* ICRC1.get_transaction(token, 1234)),
                                                     ?mock_tx(user1, 1234),
                                                 ),
                                                 is_opt_tx_equal(
-                                                    (await ICRC1.get_transaction(token, 2000)),
+                                                    (await* ICRC1.get_transaction(token, 2000)),
                                                     ?mock_tx(user1, 2000),
                                                 ),
                                                 is_opt_tx_equal(
-                                                    (await ICRC1.get_transaction(token, 4100)),
+                                                    (await* ICRC1.get_transaction(token, 4100)),
                                                     ?mock_tx(user1, 4100),
                                                 ),
                                                 is_opt_tx_equal(
-                                                    (await ICRC1.get_transaction(token, 4122)),
+                                                    (await* ICRC1.get_transaction(token, 4122)),
                                                     ?mock_tx(user1, 4122),
                                                 ),
                                             ]);
