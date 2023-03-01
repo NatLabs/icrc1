@@ -1,14 +1,10 @@
 {
     "version": 1,
-    "dfx": "0.12.1",
+    "dfx": "0.13.1",
     "canisters": {
         "icrc1": {
             "type": "motoko",
             "main": "src/ICRC1/Canisters/Token.mo"
-        },
-        "rosetta": {
-            "type": "motoko",
-            "main": "src/ICRC1/Canisters/Rosetta.mo"
         },
         "test": {
             "type": "motoko",

@@ -1,10 +1,6 @@
 name: Makefile CI
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -16,25 +12,50 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 14
+      - uses: aviate-labs/setup-dfx@v0.2.3
+        with:
+          dfx-version: 0.13.1
 
-      - name: "install vessel"
+      - name: install mops
         run: |
-            mkdir /home/runner/bin
-            echo "/home/runner/bin" >> $GITHUB_PATH
-            wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
-            chmod +x /home/runner/bin/vessel
-
-      # - name: Install dfx
-      #   run: sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
-
-      # - name: Setup dfx for mops
-      #   run: dfx identity new mops
-
-      # - name: Install motoko dependencies
-      #   run: npx mops i
+            npm --yes -g i ic-mops
+            mops i
 
       - name: Detect warnings
         run: make no-warn
 
       - name: Run Tests
-        run: make test
+        run: |
+          make test
+          make actor-test
+
+  icrc1-ref-test:
+    runs-on: ubuntu-latest
+
+    name: ICRC-1 reference test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+      - uses: aviate-labs/setup-dfx@v0.2.3
+        with:
+          dfx-version: 0.13.1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: install mops
+        run: |
+            npm --yes -g i ic-mops
+            mops i
+
+      - name: Run reference tests
+        run: make ref-test
+          
+
+      
