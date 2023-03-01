@@ -57,7 +57,10 @@ jobs:
             mops i
 
       - name: Run reference tests
-        run: make ref-test
+        run: |
+          dfx identity new icrc-ref-test --storage-mode plaintext
+          dfx identity use icrc-ref-test
+          make ref-test
           
 
       

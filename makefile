@@ -15,14 +15,13 @@ docs:
 
 actor-test: install-dfx-cache
 	-dfx start --background
-	dfx deploy test
+	dfx deploy test --no-wallet --identity anonymous
 	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
 
-canister_id=$(shell dfx canister id icrc1)
-user_id=$(shell dfx identity whoami)
-ref-test: 
+ref-test:
 	-dfx start --background
-	cat icrc1-default-args.txt | xargs -0 dfx deploy icrc1 --argument
-	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:8000 -c $(canister_id) -s ~/.config/dfx/identity/$(user_id)/identity.pem
-
+	cat icrc1-default-args.txt | xargs -0 dfx deploy icrc1 --identity default --argument
+	CANISTER=$$(dfx canister id icrc1); \
+	USER=$$(dfx identity whoami); \
+	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $$CANISTER -s ~/.config/dfx/identity/$$USER/identity.pem
