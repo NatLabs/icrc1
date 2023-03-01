@@ -167,7 +167,7 @@ module {
             return #err(
                 #GenericError({
                     error_code = 0;
-                    message = "Invalid account entered for sender.";
+                    message = "Invalid account entered for sender. "  # debug_show(tx_req.from);
                 }),
             );
         };
@@ -176,7 +176,7 @@ module {
             return #err(
                 #GenericError({
                     error_code = 0;
-                    message = "Invalid account entered for recipient";
+                    message = "Invalid account entered for recipient " # debug_show(tx_req.to);
                 }),
             );
         };
