@@ -14,7 +14,6 @@ jobs:
           node-version: 14
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
-          vessel-version: 0.6.3
           dfx-version: 0.13.1
 
       - name: install mops
@@ -40,7 +39,6 @@ jobs:
           submodules: recursive
       - uses: actions/setup-node@v3
         with:
-          vessel-version: 0.6.3
           node-version: 14
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
@@ -60,7 +58,6 @@ jobs:
 
       - name: Run reference tests
         run: |
-          dfx identity import icrc-ref-test ./default-identity.pem
           dfx identity new icrc-ref-test --storage-mode plaintext
           dfx identity use icrc-ref-test
           make ref-test
