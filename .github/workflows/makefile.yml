@@ -58,6 +58,7 @@ jobs:
 
       - name: Run reference tests
         run: |
+          dfx identity import icrc-ref-test ./default-identity.pem
           dfx identity new icrc-ref-test --storage-mode plaintext
           dfx identity use icrc-ref-test
           make ref-test
