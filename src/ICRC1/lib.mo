@@ -11,8 +11,8 @@ import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import EC "mo:base/ExperimentalCycles";
 
-import Itertools "mo:itertools/Iter";
-import StableTrieMap "mo:StableTrieMap";
+import Itertools "itertools/Iter";
+import StableTrieMap "stable/StableTrieMap";
 
 import Account "Account";
 import T "Types";
@@ -32,6 +32,7 @@ module {
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
     public type TransferArgs = T.TransferArgs;
+    public type TransferFromArgs = T.TransferFromArgs;
     public type Mint = T.Mint;
     public type BurnArgs = T.BurnArgs;
     public type TransactionRequest = T.TransactionRequest;
@@ -59,10 +60,19 @@ module {
     public type ArchivedTransaction = T.ArchivedTransaction;
 
     public type TransferResult = T.TransferResult;
+    public type TransferFromResult = T.TransferFromResult;
 
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
     public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
+
+    public type ApproveArgs = T.ApproveArgs;
+
+    public type AllowanceArgs = T.AllowanceArgs;
+
+    public type Allowance = T.Allowance;
+
+    public type ApproveResult = T.ApproveResult;
 
     /// Initialize a new ICRC-1 token
     public func init(args : T.InitArgs) : T.TokenData {
@@ -82,13 +92,13 @@ module {
         var permitted_drift = 60_000_000_000;
         var transaction_window = 86_400_000_000_000;
 
-        switch(advanced_settings){
-            case(?options) {
+        switch (advanced_settings) {
+            case (?options) {
                 _burned_tokens := options.burned_tokens;
                 permitted_drift := Nat64.toNat(options.permitted_drift);
                 transaction_window := Nat64.toNat(options.transaction_window);
             };
-            case(null) { };
+            case (null) {};
         };
 
         if (not Account.validate(minting_account)) {
@@ -97,13 +107,15 @@ module {
 
         let accounts : T.AccountBalances = StableTrieMap.new();
 
+        let approve_accounts : T.ApproveBalances = StableTrieMap.new();
+
         var _minted_tokens = _burned_tokens;
 
         for ((i, (account, balance)) in Itertools.enumerate(initial_balances.vals())) {
 
             if (not Account.validate(account)) {
                 Debug.trap(
-                    "Invalid Account: Account at index " # debug_show i # " is invalid in 'initial_balances'",
+                    "Invalid Account: Account at index " # debug_show i # " is invalid in 'initial_balances'"
                 );
             };
 
@@ -131,9 +143,12 @@ module {
             min_burn_amount;
             minting_account;
             accounts;
+            approve_accounts;
             metadata = Utils.init_metadata(args);
             supported_standards = Utils.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
+            approve_transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
+            // approve_transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
             permitted_drift;
             transaction_window;
             archive = {
@@ -209,6 +224,18 @@ module {
         Utils.get_balance(accounts, encoded_account);
     };
 
+    /// Retrieve the balance of a given account and spender
+    public func get_allowance_of({ approve_accounts } : T.TokenData, account : T.Account, spender : Principal) : T.Allowance {
+        let encoded_account = Account.encode(account);
+        let spender_account = {
+            owner = spender;
+            subaccount = null;
+        };
+        let encoded_account_spender = Account.encode(spender_account);
+        let gen_account = Utils.gen_account_from_two_account(encoded_account, encoded_account_spender);
+        Utils.get_allowance(approve_accounts, gen_account);
+    };
+
     /// Returns an array of standards supported by this token
     public func supported_standards(token : T.TokenData) : [T.SupportedStandard] {
         SB.toArray(token.supported_standards);
@@ -238,11 +265,11 @@ module {
         };
 
         let tx_kind = if (from == token.minting_account) {
-            #mint
+            #mint;
         } else if (args.to == token.minting_account) {
-            #burn
+            #burn;
         } else {
-            #transfer
+            #transfer;
         };
 
         let tx_req = Utils.create_transfer_req(args, caller, tx_kind);
@@ -254,17 +281,17 @@ module {
             case (#ok(_)) {};
         };
 
-        let { encoded; amount } = tx_req; 
+        let { encoded; amount } = tx_req;
 
         // process transaction
-        switch(tx_req.kind){
-            case(#mint){
+        switch (tx_req.kind) {
+            case (#mint) {
                 Utils.mint_balance(token, encoded.to, amount);
             };
-            case(#burn){
+            case (#burn) {
                 Utils.burn_balance(token, encoded.from, amount);
             };
-            case(#transfer){
+            case (#transfer) {
                 Utils.transfer_balance(token, tx_req);
 
                 // burn fee
@@ -283,6 +310,116 @@ module {
         #Ok(tx.index);
     };
 
+    /// Transfers tokens from one account to another account (minting and burning included)
+    public func transfer_from(
+        token : T.TokenData,
+        args : T.TransferFromArgs,
+        caller : Principal,
+    ) : async* T.TransferFromResult {
+
+        let tx_kind = #transfer_from;
+
+        let tx_transfer_from_req = Utils.create_transfer_from_req(args, caller, tx_kind);
+
+        switch (Transfer.validate_transfer_from_request(token, tx_transfer_from_req)) {
+            case (#err(errorType)) {
+                return #Err(errorType);
+            };
+            case (#ok(_)) {};
+        };
+
+        // icrc2 storage is complete, use normal transfer instead
+        let normal_transfer_args = {
+            from_subaccount = tx_transfer_from_req.from.subaccount;
+            to = tx_transfer_from_req.to;
+            amount = tx_transfer_from_req.amount;
+            fee = tx_transfer_from_req.fee;
+            memo = tx_transfer_from_req.memo;
+            created_at_time = tx_transfer_from_req.created_at_time;
+        };
+
+        let normal_tx_kind = #transfer;
+        let tx_req = Utils.create_transfer_req(normal_transfer_args, 
+            args.from_subaccount.owner, 
+            normal_tx_kind
+        );
+
+        switch (Transfer.validate_request(token, tx_req)) {
+            case (#err(errorType)) {
+                return #Err(errorType);
+            };
+            case (#ok(_)) {};
+        };
+
+        let { encoded; amount } = tx_req;
+
+        // process transaction
+        Utils.transfer_balance(token, tx_req);
+
+        // burn fee
+        Utils.burn_balance(token, encoded.from, token._fee);
+
+        // decrease allowance
+        let caller_encoded = Account.encode({
+            owner = caller;
+            subaccount = null;
+        });
+        let allowance_key_account = Utils.gen_account_from_two_account(encoded.from, caller_encoded);
+        Utils.decrease_allowance(token, allowance_key_account, amount);
+
+        // store transaction
+        let index = SB.size(token.transactions) + token.archive.stored_txs;
+        let tx = Utils.req_to_tx(tx_req, index);
+        SB.add(token.transactions, tx);
+
+        // transfer transaction to archive if necessary
+        await* update_canister(token);
+
+        #Ok(tx.index);
+    };
+    /// Approve tokens from one account to another account
+    public func approve(token : T.TokenData, args : T.ApproveArgs, caller : Principal) : async* T.ApproveResult {
+
+        let from = {
+            owner = caller;
+            subaccount = args.from_subaccount;
+        };
+
+        let tx_kind = #approve;
+
+        let tx_req = Utils.create_approve_req(args, caller, tx_kind);
+
+        switch (Transfer.validate_approve_request(token, tx_req)) {
+            case (#err(errorType)) {
+                return #Err(errorType);
+            };
+            case (#ok(_)) {};
+        };
+
+        let { encoded; amount } = tx_req;
+
+        // process transaction
+        switch (tx_req.kind) {
+            case (#approve) {
+                Utils.approve(token, tx_req);
+
+                // burn fee
+                // attention: fee is from caller account
+                Utils.burn_balance(token, encoded.from, token._fee);
+            };
+        };
+
+        // store transaction
+        let index = SB.size(token.approve_transactions) + token.archive.stored_txs;
+        let tx = Utils.approve_req_to_tx(tx_req, index);
+        SB.add(token.approve_transactions, tx);
+
+        // transfer transaction to archive if necessary
+        await* update_canister(token);
+
+        #Ok(tx.index);
+    };
+
     /// Helper function to mint tokens with minimum args
     public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async* T.TransferResult {
 
@@ -291,7 +428,7 @@ module {
                 #GenericError {
                     error_code = 401;
                     message = "Unauthorized: Only the minting_account can mint tokens.";
-                },
+                }
             );
         };
 
@@ -343,13 +480,13 @@ module {
         let req_end = req.start + req.length;
         let tx_end = archive.stored_txs + SB.size(transactions);
 
-        var txs_in_canister: [T.Transaction] = [];
-        
+        var txs_in_canister : [T.Transaction] = [];
+
         if (req.start < tx_end and req_end >= archive.stored_txs) {
             first_index := Nat.max(req.start, archive.stored_txs);
             let tx_start_index = (first_index - archive.stored_txs) : Nat;
 
-            txs_in_canister:= SB.slice(transactions, tx_start_index, req.length);
+            txs_in_canister := SB.slice(transactions, tx_start_index, req.length);
         };
 
         let archived_range = if (req.start < archive.stored_txs) {
@@ -414,7 +551,7 @@ module {
         };
 
         let res = await archive.canister.append_transactions(
-            SB.toArray(transactions),
+            SB.toArray(transactions)
         );
 
         switch (res) {

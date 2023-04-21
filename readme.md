@@ -1,30 +1,19 @@
-# ICRC-1 Implementation
+# ICRC-2 Implementation
 This repo contains the implementation of the 
-[ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
+[ICRC-2](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-2/README.md). 
 
-## References and other implementations
-- [demergent-labs/ICRC-1 (Typescript)](https://github.com/demergent-labs/ICRC-1)
-- [Ledger ref in Motoko](https://github.com/dfinity/ledger-ref/blob/main/src/Ledger.mo)
-- [ICRC1 Rosetta API](https://github.com/dfinity/ic/blob/master/rs/rosetta-api/icrc1/ledger)
+## References 
+- [ICRC-1](https://github.com/NatLabs/icrc1)
+- [ICRC1 test](https://github.com/NatLabs/icrc1/blob/main/example/icrc1/main.mo)
 
-## Documentation 
-- [markdown](https://github.com/NatLabs/icrc1/blob/main/docs/ICRC1/lib.md#function-init)
-- [web](https://natlabs.github.io/icrc1/ICRC1/lib.html#init)
  
 ## Getting Started 
-- Expose the ICRC-1 token functions from your canister 
+- Expose the ICRC-1 from your canister 
   - Import the `icrc1` lib and expose them in an `actor` class.
   
-    Take a look at the [examples](./example/icrc1/main.mo)
-    
-- Launch the basic token with all the standard functions for ICRC-1
-  - Install the [mops](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/#/docs/install) package manager
-  - Replace the values enclosed in `< >` with your desired values and run in the terminal 
 
   ```motoko
-    git clone https://github.com/NatLabs/icrc1
-    cd icrc1
-    mops install
+    git clone https://github.com/JingJingZhang9/I3-code.git
     dfx start --background --clean
 
     dfx deploy icrc1 --argument '( record {                     
@@ -84,9 +73,12 @@ This repo contains the implementation of the
 
 > The fields for the `advanced_settings` record are documented [here](./docs/ICRC1/Types.md#type-advancedsettings)
 
-## Textual Representation of the ICRC-1 Accounts
-This library implements the [Textual Representation](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-1/README.md#textual-representation-of-accounts) format for accounts defined by the standard. It utilizes this implementation to encode each account into a sequence of bytes for improved hashing and comparison.
-To help with this process, the library provides functions in the [ICRC1/Account](./src/ICRC1/Account.mo) module for [encoding](./docs/ICRC1/Account.md#encode), [decoding](./docs/ICRC1/Account.md#decode), [converting from text](./docs/ICRC1/Account.md#fromText), and [converting to text](./docs/ICRC1/Account.md#toText).
+## Textual Representation of the ICRC-2 
+This library implements the https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-2/README.md .
+
+ICRC-2 is an extension of the ICRC-1 standard. ICRC-2 provides a way for account owners to delegate token transfer authorization to a third party, allowing the third party to perform transfers on behalf of the owner:
+icrc2_approve: Authorizes the spender to transfer a certain amount of tokens on behalf of the caller from the account { owner = caller; subaccount = from_subaccount }. The number of transfers the spender can initiate from the caller's account is unlimited as long as the total amounts and fees of these transfers do not exceed the allowance.
+icrc2_transfer_from: Transfers a certain amount of tokens between two accounts.
 
 
 ## Tests
@@ -95,17 +87,7 @@ To help with this process, the library provides functions in the [ICRC1/Account]
 - Run `make test` 
 - Run `make actor-test`
 
-#### [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
-- Install Rust and Cargo via [rustup](https://rustup.rs/)
 
-```
-    curl https://sh.rustup.rs -sSf | sh
-```
-- Then run the `ref-test` command
-
-```
-    make ref-test
-```
 
 ## Funding
 
