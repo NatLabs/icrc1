@@ -14,10 +14,10 @@ import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 
-import ArrayModule "mo:array/Array";
-import Itertools "mo:itertools/Iter";
-import StableBuffer "mo:StableBuffer/StableBuffer";
-import STMap "mo:StableTrieMap";
+import ArrayModule "array/Array";
+import Itertools "itertools/Iter";
+import StableBuffer "stable/StableBuffer";
+import STMap "stable/StableTrieMap";
 
 import T "Types";
 

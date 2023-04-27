@@ -12,11 +12,12 @@ import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
+import Buffer "mo:base/Buffer";
 
-import ArrayModule "mo:array/Array";
-import Itertools "mo:itertools/Iter";
-import STMap "mo:StableTrieMap";
-import StableBuffer "mo:StableBuffer/StableBuffer";
+import ArrayModule "array/Array";
+import Itertools "itertools/Iter";
+import STMap "stable/StableTrieMap";
+import StableBuffer "stable/StableBuffer";
 
 import Account "Account";
 import T "Types";
@@ -38,11 +39,16 @@ module {
         url = "https://github.com/dfinity/ICRC-1";
     };
 
+    public let icrc2_standard : T.SupportedStandard = {
+        name = "ICRC-2";
+        url = "https://github.com/dfinity/ICRC-1/blob/roman-icrc2-cap/standards/ICRC-2";
+    };
+
     // Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);
         SB.add(standards, default_standard);
-
+        SB.add(standards, icrc2_standard);
         standards;
     };
 
@@ -50,7 +56,7 @@ module {
     // not specify it.
     public func default_subaccount() : T.Subaccount {
         Blob.fromArray(
-            Array.tabulate(32, func(_ : Nat) : Nat8 { 0 }),
+            Array.tabulate(32, func(_ : Nat) : Nat8 { 0 })
         );
     };
 
@@ -84,9 +90,9 @@ module {
     public func create_transfer_req(
         args : T.TransferArgs,
         owner : Principal,
-        tx_kind: T.TxKind,
+        tx_kind : T.TxKind,
     ) : T.TransactionRequest {
-        
+
         let from = {
             owner;
             subaccount = args.from_subaccount;
@@ -124,6 +130,62 @@ module {
         };
     };
 
+    // Formats the different operation arguements into
+    // a `TransactionFromRequest`, an new internal type to access fields easier for icrc2.
+    public func create_transfer_from_req(
+        args : T.TransferFromArgs,
+        caller : Principal,
+        tx_kind : T.ICRC2TxKind,
+    ) : T.TransactionFromRequest {
+
+        let encoded = {
+            from = Account.encode(args.from_subaccount);
+            to = Account.encode(args.to);
+        };
+
+        {
+            args with kind = #transfer_from;
+            from = args.from_subaccount;
+            caller;
+            encoded;
+        };
+    };
+
+    public func create_approve_req(
+        args : T.ApproveArgs,
+        owner : Principal,
+        tx_kind : T.OperationKind,
+    ) : T.ApproveTxRequest {
+
+        let from = {
+            owner;
+            subaccount = args.from_subaccount;
+        };
+
+        let to = {
+            owner = args.spender;
+            subaccount = null;
+        };
+
+        let encoded = {
+            from = Account.encode(from);
+            to = Account.encode(to);
+        };
+
+        {
+            kind = tx_kind;
+            from = from;
+            spender = to;
+            amount = args.amount;
+            expires_at = args.expires_at;
+            fee = args.fee;
+            memo = args.memo;
+            created_at_time = args.created_at_time;
+            // args with kind = #approve;
+            encoded;
+        };
+    };
+
     // Transforms the transaction kind from `variant` to `Text`
     public func kind_to_text(kind : T.TxKind) : Text {
         switch (kind) {
@@ -134,7 +196,7 @@ module {
     };
 
     // Formats the tx request into a finalised transaction
-    public func req_to_tx(tx_req : T.TransactionRequest, index: Nat) : T.Transaction {
+    public func req_to_tx(tx_req : T.TransactionRequest, index : Nat) : T.Transaction {
 
         {
             kind = kind_to_text(tx_req.kind);
@@ -152,7 +214,17 @@ module {
                 case (#transfer) { ?tx_req };
                 case (_) null;
             };
-            
+
+            index;
+            timestamp = Nat64.fromNat(Int.abs(Time.now()));
+        };
+    };
+
+    public func approve_req_to_tx(tx_req : T.ApproveTxRequest, index : Nat) : T.ApproveTransaction {
+
+        {
+            kind = "APPROVE";
+            approve = tx_req;
             index;
             timestamp = Nat64.fromNat(Int.abs(Time.now()));
         };
@@ -179,6 +251,28 @@ module {
         };
     };
 
+    /// Retrieves the balance of an account
+    public func get_allowance(accounts : T.ApproveBalances, encoded_account : T.EncodedAccount) : T.Allowance {
+        let res = STMap.get(
+            accounts,
+            Blob.equal,
+            Blob.hash,
+            encoded_account,
+        );
+
+        switch (res) {
+            case (?balance) {
+                balance;
+            };
+            case (_) {
+                {
+                    allowance = 0;
+                    expires_at = null;
+                };
+            };
+        };
+    };
+
     /// Updates the balance of an account
     public func update_balance(
         accounts : T.AccountBalances,
@@ -199,12 +293,51 @@ module {
         };
     };
 
+    public func update_approve_balance(
+        accounts : T.ApproveBalances,
+        encoded_account : T.EncodedAccount,
+        update_allowance : (T.Allowance) -> T.Allowance,
+        change_expires_at : Bool,
+    ) {
+        let prev_balance = get_allowance(accounts, encoded_account);
+        let updated_balance = update_allowance(prev_balance);
+
+        let prev_allowance = prev_balance.allowance;
+        let prev_expires_at = prev_balance.expires_at;
+
+        let updated_allowance = updated_balance.allowance;
+        let updated_expires_at = updated_balance.expires_at;
+
+        // update expire time
+        var expires_at : ?Nat64 = null;
+        if (change_expires_at) {
+            expires_at := updated_expires_at;
+        } else {
+            expires_at := prev_expires_at;
+        };
+
+        let insert_balance = {
+            allowance = updated_allowance;
+            expires_at;
+        };
+
+        if (updated_balance != prev_balance) {
+            STMap.put(
+                accounts,
+                Blob.equal,
+                Blob.hash,
+                encoded_account,
+                insert_balance,
+            );
+        };
+    };
+
     // Transfers tokens from the sender to the
     // recipient in the tx request
     public func transfer_balance(
         token : T.TokenData,
         tx_req : T.TransactionRequest,
-    ) { 
+    ) {
         let { encoded; amount } = tx_req;
 
         update_balance(
@@ -222,6 +355,34 @@ module {
                 balance + amount;
             },
         );
+    };
+
+    public func approve(
+        token : T.TokenData,
+        tx_req : T.ApproveTxRequest,
+    ) {
+        let { encoded; amount; expires_at } = tx_req;
+
+        update_approve_balance(
+            token.approve_accounts,
+            gen_account_from_two_account(encoded.from, encoded.to),
+            func(balance) {
+                {
+                    allowance = amount;
+                    expires_at = expires_at;
+                };
+            },
+            true,
+        );
+    };
+
+    /// create an account from Approver as `from` account and Spender as `to` account
+    public func gen_account_from_two_account(from : T.EncodedAccount, to : T.EncodedAccount) : T.EncodedAccount {
+        let from_buffer : Buffer.Buffer<Nat8> = Buffer.fromArray(Blob.toArray(from));
+        let to_buffer : Buffer.Buffer<Nat8> = Buffer.fromArray(Blob.toArray(to));
+        from_buffer.append(to_buffer);
+        let final_array = Buffer.toArray(from_buffer);
+        Blob.fromArray(final_array);
     };
 
     public func mint_balance(
@@ -254,6 +415,25 @@ module {
         );
 
         token._burned_tokens += amount;
+    };
+
+    public func decrease_allowance(
+        token : T.TokenData,
+        encoded_account : T.EncodedAccount,
+        amount : T.Balance,
+    ) {
+        update_approve_balance(
+            token.approve_accounts,
+            encoded_account,
+            func(balance) {
+                {
+                    allowance = balance.allowance - amount;
+                    expires_at = null;
+                };
+            },
+            false,
+        );
+
     };
 
     // Stable Buffer Module with some additional functions
