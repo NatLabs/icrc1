@@ -8,7 +8,6 @@ import ExperimentalCycles "mo:base/ExperimentalCycles";
 import SB "mo:StableBuffer/StableBuffer";
 
 import ICRC1 "..";
-import Archive "Archive";
 
 shared ({ caller = _owner }) actor class Token(
     init_args : ICRC1.TokenInitArgs,
