@@ -74,6 +74,15 @@ module {
         created_at_time : ?Nat64;
     };
 
+    public type WriteApproveRequest = {
+        amount : Balance;
+        expires_at : ?Nat64;
+        encoded : {
+            from : EncodedAccount;
+            spender : EncodedAccount;
+        };
+    };
+
     /// Internal representation of an Approve request
     public type ApproveRequest = {
         from : Account;
@@ -86,6 +95,23 @@ module {
         created_at_time : ?Nat64;
         encoded : {
             from : EncodedAccount;
+            spender : EncodedAccount;
+        };
+    };
+
+    /// Internal representation of a Transaction From request
+    public type TransactionFromRequest = {
+        kind : TxKind;
+        from : Account;
+        to : Account;
+        spender : Account;
+        amount : Balance;
+        fee : ?Balance;
+        memo : ?Memo;
+        created_at_time : ?Nat64;
+        encoded : {
+            from : EncodedAccount;
+            to : EncodedAccount;
             spender : EncodedAccount;
         };
     };
@@ -175,7 +201,7 @@ module {
     /// Functions supported by the ICRC-2 standard
     public type ICRC2Interface = actor {
         icrc2_approve : shared (ApproveArgs) -> async ApproveResult;
-        // icrc2_transfer_from : shared (TransferFromArgs) -> async TransferFromResult;
+        icrc2_transfer_from : shared (TransferFromArgs) -> async TransferFromResult;
         icrc2_allowance : shared query (AllowanceArgs) -> async Allowance;
     };
 

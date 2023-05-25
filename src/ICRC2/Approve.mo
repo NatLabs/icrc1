@@ -93,13 +93,8 @@ module {
         );
 
         // If no approval fee provided, validates against transaction fee.
-        switch (app_req.fee) {
-            case (?fee) {
-                if (fee > balance) return #err(#InsufficientFunds { balance });
-            };
-            case null {
-                if (token._fee > balance) return #err(#InsufficientFunds { balance });
-            };
+        if(Option.get(app_req.fee, token._fee) > balance){
+            return #err(#InsufficientFunds { balance });
         };
 
         // Validates that the approval contains the expected allowance
@@ -149,7 +144,7 @@ module {
     /// Writes/overwrites the allowance of an approval
     public func write_approval(
         token : T.TokenData,
-        app_req : T.ApproveRequest,
+        app_req : T.WriteApproveRequest,
     ) : async* T.ApproveResult {
 
         let { amount = allowance; expires_at; encoded } = app_req;

@@ -4,7 +4,9 @@ import Float "mo:base/Float";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
+import Option "mo:base/Option";
 import Principal "mo:base/Principal";
+import EC "mo:base/ExperimentalCycles";
 
 import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
@@ -12,8 +14,10 @@ import StableTrieMap "mo:StableTrieMap";
 import T "Types";
 import Utils "Utils";
 import Approve "Approve";
+import TransferFrom "TransferFrom";
 import ICRC1 "../ICRC1";
 import Account "../ICRC1/Account";
+import Archive "../ICRC1/Canisters/Archive";
 
 /// The ICRC2 class with all the functions for creating an
 /// ICRC2 token on the Internet Computer
@@ -268,6 +272,73 @@ module {
         Utils.get_allowance(approvals, encoded_args);
     };
 
+    /// Transfers tokens by spender from one account to another account (minting and burning included)
+    public func transfer_from(
+        token : T.TokenData,
+        args : T.TransferFromArgs,
+        caller : Principal,
+    ) : async* T.TransferFromResult {
+
+        let spender = {
+            owner = caller;
+            subaccount = args.spender_subaccount;
+        };
+
+        let txf_kind = if (args.from == token.minting_account) {
+            #mint;
+        } else if (args.to == token.minting_account) {
+            #burn;
+        } else {
+            #transfer;
+        };
+
+        let txf_req = Utils.create_transfer_from_req(args, caller, txf_kind);
+
+        switch (TransferFrom.validate_request(token, txf_req)) {
+            case (#err(errorType)) {
+                return #Err(errorType);
+            };
+            case (#ok(_)) {};
+        };
+
+        let { encoded; amount; fee } = txf_req;
+        let { allowance; expires_at } = Utils.get_allowance(token.approvals, encoded);
+        ignore Approve.write_approval(
+            token,
+            {
+                amount = allowance - amount - Option.get(fee, token._fee);
+                expires_at;
+                encoded;
+            },
+        );
+
+        // process transaction
+        switch (txf_req.kind) {
+            case (#mint) {
+                Utils.mint_balance(token, encoded.to, amount);
+            };
+            case (#burn) {
+                Utils.burn_balance(token, encoded.from, amount);
+            };
+            case (#transfer) {
+                Utils.transfer_balance(token, txf_req);
+
+                // burn fee
+                Utils.burn_balance(token, encoded.from, token._fee);
+            };
+        };
+
+        // store transaction
+        let index = SB.size(token.transactions) + token.archive.stored_txs;
+        let tx = Utils.req_to_tx(txf_req, index);
+        SB.add(token.transactions, tx);
+
+        // transfer transaction to archive if necessary
+        await* update_canister(token);
+
+        #Ok(tx.index);
+    };
+
     /// Returns the total number of transactions that have been processed by the given token.
     public func total_transactions(token : T.TokenData) : Nat {
         ICRC1.total_transactions(token);
@@ -281,6 +352,40 @@ module {
     /// Retrieves the transactions specified by the given range
     public func get_transactions(token : T.TokenData, req : T.GetTransactionsRequest) : T.GetTransactionsResponse {
         ICRC1.get_transactions(token, req);
+    };
+
+    // Updates the token's data and manages the transactions
+    //
+    // **added at the end of any function that creates a new transaction**
+    func update_canister(token : T.TokenData) : async* () {
+        let txs_size = SB.size(token.transactions);
+
+        if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
+            await* append_transactions(token);
+        };
+    };
+
+    // Moves the transactions from the ICRC1 canister to the archive canister
+    // and returns a boolean that indicates the success of the data transfer
+    func append_transactions(token : T.TokenData) : async* () {
+        let { archive; transactions } = token;
+
+        if (archive.stored_txs == 0) {
+            EC.add(200_000_000_000);
+            archive.canister := await Archive.Archive();
+        };
+
+        let res = await archive.canister.append_transactions(
+            SB.toArray(transactions)
+        );
+
+        switch (res) {
+            case (#ok(_)) {
+                archive.stored_txs += SB.size(transactions);
+                SB.clear(transactions);
+            };
+            case (#err(_)) {};
+        };
     };
 
 };

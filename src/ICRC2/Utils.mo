@@ -57,6 +57,28 @@ module {
         U1.create_transfer_req(args, owner, tx_kind);
     };
 
+    // Formats the different operation arguements into
+    // a `TransactionFromRequest`, an internal type to access fields easier.
+    public func create_transfer_from_req(
+        args : T.TransferFromArgs,
+        owner : Principal,
+        tx_kind : T.TxKind,
+    ) : T.TransactionFromRequest {
+        let spender = { owner; subaccount = args.spender_subaccount };
+        var transfer_args = { args with from_subaccount = null };
+
+        var transfer_from_args = U1.create_transfer_req(transfer_args, owner, tx_kind);
+        {
+            transfer_from_args with encoded = {
+                from = Account.encode(args.from);
+                to = Account.encode(args.to);
+                spender = Account.encode(spender);
+            };
+            from = args.from;
+            spender;
+        };
+    };
+
     // Formats the different operation arguments into
     // an `ApproveRequest`, an internal type to access fields easier.
     public func create_approve_req(
