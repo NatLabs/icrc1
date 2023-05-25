@@ -26,6 +26,7 @@ module {
 
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
+    public type Allowance = T.Allowance;
     public type TransferArgs = T.TransferArgs;
     public type AllowanceArgs = T.AllowanceArgs;
     public type ApproveArgs = T.ApproveArgs;
@@ -256,6 +257,15 @@ module {
         let { encoded; amount } = app_req;
 
         await* Approve.write_approval(token, app_req);
+    };
+
+    /// Retrieve the allowance of a given approval
+    public func allowance({ approvals } : T.TokenData, args : T.AllowanceArgs) : T.Allowance {
+        let encoded_args = {
+            from = Account.encode(args.account);
+            spender = Account.encode(args.spender);
+        };
+        Utils.get_allowance(approvals, encoded_args);
     };
 
     /// Returns the total number of transactions that have been processed by the given token.

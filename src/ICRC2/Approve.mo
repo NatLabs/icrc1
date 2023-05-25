@@ -106,7 +106,7 @@ module {
         switch (app_req.expected_allowance) {
             case null {};
             case (?expected) {
-                let allowance_record = Utils.get_allowance(token.approvals, app_req);
+                let allowance_record = Utils.get_allowance(token.approvals, app_req.encoded);
                 if (expected != allowance_record.allowance) {
                     return #err(
                         #AllowanceChanged {
@@ -153,7 +153,7 @@ module {
     ) : async* T.ApproveResult {
 
         let { amount = allowance; expires_at; encoded } = app_req;
-        let prev_allowance = Utils.get_allowance(token.approvals, app_req);
+        let prev_allowance = Utils.get_allowance(token.approvals, encoded);
         let new_allowance : T.Allowance = { allowance; expires_at };
 
         if (new_allowance != prev_allowance) {

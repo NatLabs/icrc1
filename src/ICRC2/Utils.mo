@@ -109,7 +109,7 @@ module {
     /// Retrieves an approval's allowance
     public func get_allowance(
         approval_allowances : T.ApprovalAllowances,
-        { encoded } : T.ApproveRequest,
+        encoded : {from : T.EncodedAccount; spender : T.EncodedAccount},
     ) : T.Allowance {
         let default_allowance = { allowance = 0; expires_at = null };
         let account_approvals = get_account_approvals(approval_allowances, encoded.from);

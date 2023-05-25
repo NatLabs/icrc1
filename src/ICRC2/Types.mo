@@ -176,7 +176,7 @@ module {
     public type ICRC2Interface = actor {
         icrc2_approve : shared (ApproveArgs) -> async ApproveResult;
         // icrc2_transfer_from : shared (TransferFromArgs) -> async TransferFromResult;
-        // icrc2_allowance : shared query (AllowanceArgs) -> async Allowance;
+        icrc2_allowance : shared query (AllowanceArgs) -> async Allowance;
     };
 
     /// Interface of the ICRC token and Rosetta canister
