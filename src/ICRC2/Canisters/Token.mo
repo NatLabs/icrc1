@@ -74,6 +74,10 @@ shared ({ caller = _owner }) actor class Token(
         await* ICRC2.burn(token, args, caller);
     };
 
+    public shared ({ caller }) func icrc2_approve(args : ICRC2.ApproveArgs) : async ICRC2.ApproveResult {
+        await* ICRC2.approve(token, args, caller);
+    };
+
     // Functions for integration with the rosetta standard
     public shared query func get_transactions(req : ICRC2.GetTransactionsRequest) : async ICRC2.GetTransactionsResponse {
         ICRC2.get_transactions(token, req);

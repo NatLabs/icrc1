@@ -1,12 +1,15 @@
+import Blob "mo:base/Blob";
 import Hash "mo:base/Hash";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
 
+import STMap "mo:StableTrieMap";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import T "Types";
 import U1 "../ICRC1/Utils";
+import Account "../ICRC1/Account";
 
 module {
     // Creates a Stable Buffer with the default metadata and returns it.
@@ -54,6 +57,29 @@ module {
         U1.create_transfer_req(args, owner, tx_kind);
     };
 
+    // Formats the different operation arguments into
+    // an `ApproveRequest`, an internal type to access fields easier.
+    public func create_approve_req(
+        args : T.ApproveArgs,
+        owner : Principal,
+    ) : T.ApproveRequest {
+
+        let from = {
+            owner;
+            subaccount = args.from_subaccount;
+        };
+
+        let encoded = {
+            from = Account.encode(from);
+            spender = Account.encode(args.spender);
+        };
+
+        {
+            args with from = from;
+            encoded;
+        };
+    };
+
     // Transforms the transaction kind from `variant` to `Text`
     public func kind_to_text(kind : T.TxKind) : Text {
         U1.kind_to_text(kind);
@@ -71,6 +97,40 @@ module {
     /// Retrieves the balance of an account
     public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
         U1.get_balance(accounts, encoded_account);
+    };
+
+    public func get_account_approvals(
+        approval_allowances : T.ApprovalAllowances,
+        encoded_account : T.EncodedAccount,
+    ) : ?T.Approvals {
+        return STMap.get(approval_allowances, Blob.equal, Blob.hash, encoded_account);
+    };
+
+    /// Retrieves an approval's allowance
+    public func get_allowance(
+        approval_allowances : T.ApprovalAllowances,
+        { encoded } : T.ApproveRequest,
+    ) : T.Allowance {
+        let default_allowance = { allowance = 0; expires_at = null };
+        let account_approvals = get_account_approvals(approval_allowances, encoded.from);
+
+        switch (account_approvals) {
+            case (?approvals) {
+                let spender_allowance = STMap.get(
+                    approvals,
+                    Blob.equal,
+                    Blob.hash,
+                    encoded.spender,
+                );
+                switch (spender_allowance) {
+                    case (?allowance) { allowance };
+                    case (_) {
+                        default_allowance;
+                    };
+                };
+            };
+            case (_) { default_allowance };
+        };
     };
 
     /// Updates the balance of an account

@@ -115,13 +115,16 @@ module {
         #CreatedInFuture : { ledger_time : Timestamp };
     };
 
-    public type TransferError = TimeError or {
+    public type OperationError = TimeError or {
         #BadFee : { expected_fee : Balance };
-        #BadBurn : { min_burn_amount : Balance };
         #InsufficientFunds : { balance : Balance };
         #Duplicate : { duplicate_of : TxIndex };
         #TemporarilyUnavailable;
         #GenericError : { error_code : Nat; message : Text };
+    };
+
+    public type TransferError = OperationError or {
+        #BadBurn : { min_burn_amount : Balance };
     };
     
     public type TransferResult = {

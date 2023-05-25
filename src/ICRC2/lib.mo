@@ -11,6 +11,7 @@ import StableTrieMap "mo:StableTrieMap";
 
 import T "Types";
 import Utils "Utils";
+import Approve "Approve";
 import ICRC1 "../ICRC1";
 import Account "../ICRC1/Account";
 
@@ -26,10 +27,15 @@ module {
     public type Transaction = T.Transaction;
     public type Balance = T.Balance;
     public type TransferArgs = T.TransferArgs;
+    public type AllowanceArgs = T.AllowanceArgs;
+    public type ApproveArgs = T.ApproveArgs;
+    public type TransferFromArgs = T.TransferFromArgs;
     public type Mint = T.Mint;
     public type BurnArgs = T.BurnArgs;
     public type TransactionRequest = T.TransactionRequest;
     public type TransferError = T.TransferError;
+    public type ApproveError = T.ApproveError;
+    public type TransferFromError = T.TransferFromError;
 
     public type SupportedStandard = T.SupportedStandard;
 
@@ -53,6 +59,8 @@ module {
     public type ArchivedTransaction = T.ArchivedTransaction;
 
     public type TransferResult = T.TransferResult;
+    public type ApproveResult = T.ApproveResult;
+    public type TransferFromResult = T.TransferFromResult;
 
     public let MAX_TRANSACTIONS_IN_LEDGER = ICRC1.MAX_TRANSACTIONS_IN_LEDGER;
     public let MAX_TRANSACTION_BYTES : Nat64 = ICRC1.MAX_TRANSACTION_BYTES;
@@ -90,6 +98,7 @@ module {
         };
 
         let accounts : T.AccountBalances = StableTrieMap.new();
+        let approvals : T.ApprovalAllowances = StableTrieMap.new();
 
         var _minted_tokens = _burned_tokens;
 
@@ -125,6 +134,7 @@ module {
             min_burn_amount;
             minting_account;
             accounts;
+            approvals;
             metadata = Utils.init_metadata(args);
             supported_standards = Utils.init_standards();
             transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
@@ -230,6 +240,22 @@ module {
     /// Helper function to burn tokens with minimum args
     public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async* T.TransferResult {
         await* ICRC1.burn(token, args, caller);
+    };
+
+    /// Creates or updates an approval allowance
+    public func approve(token : T.TokenData, args : T.ApproveArgs, caller : Principal) : async* T.ApproveResult {
+        let app_req = Utils.create_approve_req(args, caller);
+
+        switch (Approve.validate_request(token, app_req)) {
+            case (#err(errorType)) {
+                return #Err(errorType);
+            };
+            case (#ok(_)) {};
+        };
+
+        let { encoded; amount } = app_req;
+
+        await* Approve.write_approval(token, app_req);
     };
 
     /// Returns the total number of transactions that have been processed by the given token.
