@@ -7,7 +7,7 @@
     initial_balances = vec {
         record {
             record {
-                owner = principal "<Insert Principal>";
+                owner = principal "r7inp-6aaaa-aaaaa-aaabq-cai";
                 subaccount = null;
             };
             100_000_000

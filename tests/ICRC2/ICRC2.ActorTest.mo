@@ -91,9 +91,9 @@ module {
         };
 
         func validate_get_transactions(
-            token : T.TokenData, 
-            tx_req : T.GetTransactionsRequest, 
-            tx_res : T.GetTransactionsResponse
+            token : T.TokenData,
+            tx_req : T.GetTransactionsRequest,
+            tx_res : T.GetTransactionsResponse,
         ) : Bool {
             let { archive } = token;
 
@@ -251,7 +251,7 @@ module {
                         let token = ICRC2.init(args);
 
                         assertTrue(
-                            ICRC2.name(token) == args.name,
+                            ICRC2.name(token) == args.name
                         );
                     },
                 ),
@@ -264,7 +264,7 @@ module {
                         let token = ICRC2.init(args);
 
                         assertTrue(
-                            ICRC2.symbol(token) == args.symbol,
+                            ICRC2.symbol(token) == args.symbol
                         );
                     },
                 ),
@@ -277,7 +277,7 @@ module {
                         let token = ICRC2.init(args);
 
                         assertTrue(
-                            ICRC2.decimals(token) == args.decimals,
+                            ICRC2.decimals(token) == args.decimals
                         );
                     },
                 ),
@@ -289,7 +289,7 @@ module {
                         let token = ICRC2.init(args);
 
                         assertTrue(
-                            ICRC2.fee(token) == args.fee,
+                            ICRC2.fee(token) == args.fee
                         );
                     },
                 ),
@@ -301,7 +301,7 @@ module {
                         let token = ICRC2.init(args);
 
                         assertTrue(
-                            ICRC2.minting_account(token) == args.minting_account,
+                            ICRC2.minting_account(token) == args.minting_account
                         );
                     },
                 ),
@@ -310,8 +310,8 @@ module {
                     do {
                         let args = default_token_args;
 
-                        let token = ICRC2.init({ args 
-                            with initial_balances = [
+                        let token = ICRC2.init({
+                            args with initial_balances = [
                                 (user1, 100),
                                 (user2, 200),
                             ];
@@ -328,15 +328,15 @@ module {
                     do {
                         let args = default_token_args;
 
-                        let token = ICRC2.init({ args 
-                            with initial_balances = [
+                        let token = ICRC2.init({
+                            args with initial_balances = [
                                 (user1, 100),
                                 (user2, 200),
                             ];
                         });
 
                         assertTrue(
-                            ICRC2.total_supply(token) == 300,
+                            ICRC2.total_supply(token) == 300
                         );
                     },
                 ),
@@ -354,7 +354,7 @@ module {
                                 ("icrc2:name", #Text(args.name)),
                                 ("icrc2:symbol", #Text(args.symbol)),
                                 ("icrc2:decimals", #Nat(Nat8.toNat(args.decimals))),
-                            ],
+                            ]
                         );
                     },
                 ),
@@ -370,7 +370,7 @@ module {
                             ICRC2.supported_standards(token) == [{
                                 name = "ICRC-2";
                                 url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-2";
-                            }],
+                            }]
                         );
                     },
                 ),
@@ -468,7 +468,7 @@ module {
                                     res == #Err(
                                         #InsufficientFunds {
                                             balance = 0;
-                                        },
+                                        }
                                     ),
                                 ]);
                             },
@@ -506,7 +506,7 @@ module {
                                     res == #Err(
                                         #BadBurn {
                                             min_burn_amount = 10 * (10 ** 8);
-                                        },
+                                        }
                                     ),
                                 ]);
                             },
@@ -549,7 +549,6 @@ module {
                                     transfer_args,
                                     user1.owner,
                                 );
-
 
                                 assertAllTrue([
                                     res == #Ok(1),
