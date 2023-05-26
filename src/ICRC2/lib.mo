@@ -260,6 +260,9 @@ module {
 
         let { encoded; amount } = app_req;
 
+        // burn fee
+        Utils.burn_balance(token, encoded.from, Option.get(args.fee, token._fee));
+
         await* Approve.write_approval(token, app_req);
     };
 

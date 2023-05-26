@@ -1,9 +1,12 @@
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
+import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
+import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
+import Time "mo:base/Time";
 
 import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
@@ -63,6 +66,11 @@ module {
 
         let user2 : T.Account = {
             owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
+            subaccount = null;
+        };
+
+        let user3 : T.Account = {
+            owner = Principal.fromText("qnr6q-xmlmu-t6jhl-fyjlg-lf3fv-6mnao-oyrpr-76s4k-3lngw-jrrsd-yae");
             subaccount = null;
         };
 
@@ -556,6 +564,297 @@ module {
                                     token._burned_tokens == ICRC2.balance_from_float(token, 5),
                                     ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 50),
                                     ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 195),
+                                ]);
+                            },
+                        ),
+                    ],
+                ),
+                describe(
+                    "approve() & allowance()",
+                    [
+                        it(
+                            "Approval from funded account",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Ok(approve_args.amount),
+                                    allowance == ICRC2.balance_from_float(token, 50),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 195),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 5),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 195),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Approval from account with no funds",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Err(
+                                        #InsufficientFunds { balance = 0 }
+                                    ),
+                                    allowance == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Approval from account with exact funds to pay fee",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 5 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Ok(approve_args.amount),
+                                    allowance == ICRC2.balance_from_float(token, 50),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 5),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 0),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Approval with correct expected allowance",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 5 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = ?0;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Ok(approve_args.amount),
+                                    allowance == ICRC2.balance_from_float(token, 50),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 5),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 0),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Approval with incorrect expected allowance",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 5 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = ?50;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Err(
+                                        #AllowanceChanged {
+                                            current_allowance = 0;
+                                        }
+                                    ),
+                                    allowance == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 5),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 5),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Approval with expired allowance",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 5 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let now = Nat64.fromNat(Int.abs(Time.now()));
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = ?(now + 100);
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res == #Err(
+                                        #Expired {
+                                            ledger_time = now;
+                                        }
+                                    ),
+                                    allowance == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 5),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 5),
                                 ]);
                             },
                         ),
