@@ -227,7 +227,7 @@ module {
         };
 
         return describe(
-            "ICRC2 Token Implementation Tessts",
+            "ICRC2 Token Implementation Tests",
             [
                 it(
                     "init()",
@@ -860,7 +860,218 @@ module {
                         ),
                     ],
                 ),
+                describe(
+                    "transfer_from()",
+                    [
+                        it(
+                            "Spender Transfer From funded Allowance and Account",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
 
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 20 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(approve_args.amount),
+                                    res2 == #Ok(1),
+                                    allowance1 == ICRC2.balance_from_float(token, 50),
+                                    allowance2 == ICRC2.balance_from_float(token, 25),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 10),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 170),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 20),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 190),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Spender Transfer From funded Allowance but Account with insufficient funds",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 20 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 20 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(approve_args.amount),
+                                    res2 == #Err(#InsufficientFunds({ balance = ICRC2.balance_from_float(token, 15) })),
+                                    allowance1 == ICRC2.balance_from_float(token, 50),
+                                    allowance2 == ICRC2.balance_from_float(token, 50),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 5),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 15),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 15),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Spender Transfer From Allowance with insufficient funds",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 50 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 20 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 20 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(approve_args.amount),
+                                    res2 == #Err(#InsufficientAllowance({ allowance = ICRC2.balance_from_float(token, 20) })),
+                                    allowance1 == ICRC2.balance_from_float(token, 20),
+                                    allowance2 == ICRC2.balance_from_float(token, 20),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 5),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 45),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 45),
+                                ]);
+                            },
+                        ),
+                    ],
+                ),
                 describe(
                     "Internal Archive Testing",
                     [

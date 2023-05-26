@@ -306,7 +306,7 @@ module {
 
         let { encoded; amount; fee } = txf_req;
         let { allowance; expires_at } = Utils.get_allowance(token.approvals, encoded);
-        ignore Approve.write_approval(
+        ignore await* Approve.write_approval(
             token,
             {
                 amount = allowance - amount - Option.get(fee, token._fee);
