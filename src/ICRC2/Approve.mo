@@ -69,15 +69,6 @@ module {
             );
         };
 
-        if (app_req.amount == 0) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "Amount must be greater than 0";
-                })
-            );
-        };
-
         // TODO: Verify if approval fee should be validated as a transfer fee.
         if (not Transfer.validate_fee(token, app_req.fee)) {
             return #err(

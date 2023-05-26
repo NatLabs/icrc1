@@ -920,7 +920,7 @@ module {
                                 let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
 
                                 assertAllTrue([
-                                    res1 == #Ok(approve_args.amount),
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 50)),
                                     res2 == #Ok(1),
                                     allowance1 == ICRC2.balance_from_float(token, 50),
                                     allowance2 == ICRC2.balance_from_float(token, 25),
@@ -989,7 +989,7 @@ module {
                                 let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
 
                                 assertAllTrue([
-                                    res1 == #Ok(approve_args.amount),
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 50)),
                                     res2 == #Err(#InsufficientFunds({ balance = ICRC2.balance_from_float(token, 15) })),
                                     allowance1 == ICRC2.balance_from_float(token, 50),
                                     allowance2 == ICRC2.balance_from_float(token, 50),
@@ -1058,7 +1058,7 @@ module {
                                 let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
 
                                 assertAllTrue([
-                                    res1 == #Ok(approve_args.amount),
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 20)),
                                     res2 == #Err(#InsufficientAllowance({ allowance = ICRC2.balance_from_float(token, 20) })),
                                     allowance1 == ICRC2.balance_from_float(token, 20),
                                     allowance2 == ICRC2.balance_from_float(token, 20),
@@ -1067,6 +1067,457 @@ module {
                                     ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
                                     ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 0),
                                     ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 45),
+                                ]);
+                            },
+                        ),
+                    ],
+                ),
+                describe(
+                    "ICRC-2 Examples",
+                    [
+                        it(
+                            "Alice deposits tokens to canister C",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                // 1. Alice wants to deposit 100 tokens on an ICRC-2 ledger to canister C.
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 105 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                // 2. Alice calls icrc2_approve with spender set to the canister's default
+                                // account ({ owner = C; subaccount = null}) and amount set to the token amount
+                                // she wants to deposit (100) plus the transfer fee.
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 3. Alice can then call some deposit method on the canister, which calls
+                                // icrc2_transfer_from with from set to Alice's (the caller) account, to set to
+                                // the canister's account, and amount set to the token amount she wants to deposit (100).
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user2;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                // 4. The canister can now determine from the result of the call whether the transfer
+                                // was successful. If it was successful, the canister can now safely commit the
+                                // deposit to state and know that the tokens are in its account.
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 105)),
+                                    res2 == #Ok(1),
+                                    allowance1 == ICRC2.balance_from_float(token, 105),
+                                    allowance2 == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 10),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 90),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 100),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 190),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Canister C transfers tokens from Alice's account to Bob's account, on Alice's behalf",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                // 1. Canister C wants to transfer 100 tokens on an ICRC-2 ledger from Alice's account to Bob's account.
+                                let approve_args : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 105 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                // 2. Alice previously approved canister C to transfer tokens on her behalf by calling
+                                // icrc2_approve with spender set to the canister's default account ({ owner = C; subaccount = null })
+                                // and amount set to the token amount she wants to allow (100) plus the transfer fee.
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 3. During some update call, the canister can now call icrc2_transfer_from with from set to
+                                // Alice's account, to set to Bob's account, and amount set to the token amount she wants to transfer (100).
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                // 4. Once the call completes successfully, Bob has 100 extra tokens on his account,
+                                // and Alice has 100 (plus the fee) tokens less in her account.
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 105)),
+                                    res2 == #Ok(1),
+                                    allowance1 == ICRC2.balance_from_float(token, 105),
+                                    allowance2 == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 10),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 90),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 100),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 190),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Alice removes her allowance for canister C",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args1 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args1,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 1. Alice wants to remove her allowance of 100 tokens on an ICRC-2 ledger for canister C.
+
+                                // 2. Alice calls icrc2_approve on the ledger with spender set to the canister's
+                                // default account ({ owner = C; subaccount = null }) and amount set to 0.
+                                let approve_args2 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 0;
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.approve(
+                                    token,
+                                    approve_args2,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 3. The canister can no longer transfer tokens on Alice's behalf.
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res3 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                assertAllTrue([
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 100)),
+                                    res2 == #Ok(0),
+                                    res3 == #Err(#InsufficientAllowance({ allowance = 0 })),
+                                    allowance1 == ICRC2.balance_from_float(token, 100),
+                                    allowance2 == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 10),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 190),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 190),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Alice atomically removes her allowance for canister C",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args1 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args1,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 1. Alice wants to remove her allowance of 100 tokens on an ICRC-2 ledger for canister C.
+
+                                // 2. Alice calls icrc2_approve on the ledger with spender set to the canister's default
+                                // account ({ owner = C; subaccount = null }), amount set to 0, and expected_allowance set to 100 tokens.
+                                let approve_args2 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 0;
+                                    expected_allowance = ?(100 * (10 ** Nat8.toNat(token.decimals)));
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.approve(
+                                    token,
+                                    approve_args2,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 3. If the call succeeds, the allowance got removed successfully. An AllowanceChanged error
+                                // would indicate that canister C used some of the allowance before Alice's call completed.
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res3 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                assertAllTrue([
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 100)),
+                                    res2 == #Ok(0),
+                                    res3 == #Err(#InsufficientAllowance({ allowance = 0 })),
+                                    allowance1 == ICRC2.balance_from_float(token, 100),
+                                    allowance2 == ICRC2.balance_from_float(token, 0),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 10),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 190),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 190),
+                                ]);
+                            },
+                        ),
+                        it(
+                            "Alice atomically removes her allowance for canister C - AllowanceChanged",
+                            do {
+                                let args = default_token_args;
+                                let token = ICRC2.init(args);
+
+                                let mint_args = {
+                                    to = user1;
+                                    amount = 200 * (10 ** Nat8.toNat(token.decimals));
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                ignore await* ICRC2.mint(
+                                    token,
+                                    mint_args,
+                                    args.minting_account.owner,
+                                );
+
+                                let approve_args1 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 100 * (10 ** Nat8.toNat(token.decimals));
+                                    expected_allowance = null;
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res1 = await* ICRC2.approve(
+                                    token,
+                                    approve_args1,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance1 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // Adds transfer to check for AllowanceChanged
+                                let transfer_from_args : T.TransferFromArgs = {
+                                    spender_subaccount = user2.subaccount;
+                                    from = user1;
+                                    to = user3;
+                                    amount = 10 * (10 ** Nat8.toNat(token.decimals));
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res2 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                let { allowance = allowance2 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 1. Alice wants to remove her allowance of 100 tokens on an ICRC-2 ledger for canister C.
+
+                                // 2. Alice calls icrc2_approve on the ledger with spender set to the canister's default
+                                // account ({ owner = C; subaccount = null }), amount set to 0, and expected_allowance set to 100 tokens.
+                                let approve_args2 : T.ApproveArgs = {
+                                    from_subaccount = user1.subaccount;
+                                    spender = user2;
+                                    amount = 0;
+                                    expected_allowance = ?(100 * (10 ** Nat8.toNat(token.decimals)));
+                                    expires_at = null;
+                                    fee = ?token._fee;
+                                    memo = null;
+                                    created_at_time = null;
+                                };
+
+                                let res3 = await* ICRC2.approve(
+                                    token,
+                                    approve_args2,
+                                    user1.owner,
+                                );
+
+                                let { allowance = allowance3 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                // 3. If the call succeeds, the allowance got removed successfully. An AllowanceChanged error
+                                // would indicate that canister C used some of the allowance before Alice's call completed.
+                                let res4 = await* ICRC2.transfer_from(
+                                    token,
+                                    transfer_from_args,
+                                    user2.owner,
+                                );
+
+                                let { allowance = allowance4 } = ICRC2.allowance(token, { account = user1; spender = user2 });
+
+                                assertAllTrue([
+                                    res1 == #Ok(ICRC2.balance_from_float(token, 100)),
+                                    res2 == #Ok(1),
+                                    res3 == #Err(#AllowanceChanged({ current_allowance = ICRC2.balance_from_float(token, 85) })),
+                                    res4 == #Ok(2),
+                                    allowance1 == ICRC2.balance_from_float(token, 100),
+                                    allowance2 == ICRC2.balance_from_float(token, 85),
+                                    allowance3 == ICRC2.balance_from_float(token, 85),
+                                    allowance4 == ICRC2.balance_from_float(token, 70),
+                                    token._burned_tokens == ICRC2.balance_from_float(token, 15),
+                                    ICRC2.balance_of(token, user1) == ICRC2.balance_from_float(token, 165),
+                                    ICRC2.balance_of(token, user2) == ICRC2.balance_from_float(token, 0),
+                                    ICRC2.balance_of(token, user3) == ICRC2.balance_from_float(token, 20),
+                                    ICRC2.total_supply(token) == ICRC2.balance_from_float(token, 185),
                                 ]);
                             },
                         ),
