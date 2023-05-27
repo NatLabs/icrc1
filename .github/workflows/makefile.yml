@@ -6,8 +6,6 @@ on:
   pull_request_target:
     branches: "*"
     types: [labeled]
-  pull_request:
-    branches: "*"
 
 jobs:
   build:
@@ -25,6 +23,7 @@ jobs:
         with:
           dfx-version: 0.14.0
 
+          
       - name: Install moc version manager
         run: |
           npm  --yes -g i mocv
