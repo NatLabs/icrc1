@@ -44,6 +44,7 @@ let success = run([
                                 decoded == ?account,
                                 Account.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae") == ?account,
                                 Account.toText(account) == "prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae",
+                                Account.validate(account)
                             ]);
                         },
                     ),
@@ -63,6 +64,7 @@ let success = run([
                                 decoded == ?{ account with subaccount = null },
                                 Account.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae") == ?{ account with subaccount = null },
                                 Account.toText(account) == "prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae",
+                                Account.validate(account)
                             ]);
                         },
                     ),
@@ -100,6 +102,7 @@ let success = run([
                                 decoded == ?account,
                                 Account.fromText("hamcw-wpc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aeh6") == ?account,
                                 Account.toText(account) == "hamcw-wpc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aeh6",
+                                Account.validate(account)
                             ]);
                         },
                     ),
@@ -137,6 +140,7 @@ let success = run([
                                 decoded == ?account,
                                 Account.fromText("ojuko-dhc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-aacaq-daqcq-mbyie-b7q") == ?account,
                                 Account.toText(account) == "ojuko-dhc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iaeai-camca-kbqhb-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-aacaq-daqcq-mbyie-b7q",
+                                Account.validate(account)
                             ]);
                         },
                     ),
@@ -174,9 +178,21 @@ let success = run([
                                 decoded == ?account,
                                 Account.fromText("tx2rl-b7c7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae67-ktrmv-ywzkb-ahqef-cqhqk-b4cso-aibu4-wixgq-3qcaq-daqcq-mbyie-b7q") == ?account,
                                 Account.toText(account) == "tx2rl-b7c7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae67-ktrmv-ywzkb-ahqef-cqhqk-b4cso-aibu4-wixgq-3qcaq-daqcq-mbyie-b7q",
+                                Account.validate(account)
                             ]);
                         },
                     ),
+                    it(
+                        "should return false for invalid subaccount (length < 32)",
+                        do {
+                            let account = {
+                                owner = principal;
+                                subaccount = ?Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8]);
+                            };
+
+                            not Account.validate(account)
+                        }
+                    )
                 ],
             ),
         ],
