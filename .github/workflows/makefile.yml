@@ -1,10 +1,19 @@
 name: Makefile CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: "*"
+  pull_request_target:
+    branches: "*"
+    types: [labeled]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
 
     name: Build and test
     steps:
@@ -37,6 +46,8 @@ jobs:
 
   icrc1-ref-test:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request_target' || (github.event_name != 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
 
     name: ICRC-1 reference test
     steps:
