@@ -3,11 +3,11 @@ name: Makefile CI
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: "*"
   pull_request_target:
     branches: "*"
     types: [labeled]
+  pull_request:
+    branches: "*"
 
 jobs:
   build:
@@ -24,17 +24,17 @@ jobs:
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
           dfx-version: 0.14.0
-          
+
       - name: Install moc version manager
-        run: | 
+        run: |
           npm  --yes -g i mocv
           mocv use 0.9.1
           export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: install mops
         run: |
-            npm --yes -g i ic-mops
-            mops i
+          npm --yes -g i ic-mops
+          mops i
 
       - name: Detect warnings
         run: make no-warn
@@ -47,7 +47,7 @@ jobs:
   icrc1-ref-test:
     runs-on: ubuntu-latest
     if: |
-      github.event_name != 'pull_request_target' || (github.event_name != 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
+      github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
 
     name: ICRC-1 reference test
     steps:
@@ -62,7 +62,7 @@ jobs:
           dfx-version: 0.14.0
 
       - name: Install moc version manager
-        run: | 
+        run: |
           npm  --yes -g i mocv
           mocv use 0.9.1
           export DFX_MOC_PATH=$(mocv bin current)/moc
@@ -76,8 +76,8 @@ jobs:
 
       - name: install mops
         run: |
-            npm --yes -g i ic-mops
-            mops i
+          npm --yes -g i ic-mops
+          mops i
 
       - name: Run reference tests
         run: |
@@ -86,6 +86,3 @@ jobs:
           dfx identity use icrc-ref-test
           dfx identity whoami
           make ref-test
-          
-
-      
