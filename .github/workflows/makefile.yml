@@ -1,6 +1,6 @@
 name: Makefile CI
 
-on: [push, pull_request]
+on: [push, pull_request_target]
 
 jobs:
   build:
@@ -68,11 +68,9 @@ jobs:
             npm --yes -g i ic-mops
             mops i
 
-
       - name: Run reference tests
         run: |
           echo "${{ secrets.IDENTITY_SSH }}" > ./identity.pem
-          echo "${{ secrets.IDENTITY_SSH }}"
           dfx identity import icrc-ref-test ./identity.pem --storage-mode plaintext
           dfx identity use icrc-ref-test
           dfx identity whoami

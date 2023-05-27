@@ -1,6 +1,8 @@
+import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
+import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
 
 import Itertools "mo:itertools/Iter";
@@ -185,16 +187,27 @@ let success = run([
                     it(
                         "should return false for invalid subaccount (length < 32)",
                         do {
-                            
-                            let account = {
-                                owner = principal;
-                                subaccount = ?Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8]);
-                            };
 
-                            assertAllTrue([
-                                not Account.validate(account),
-                                not Account.validate_subaccount(account.subaccount)
-                            ])
+                            var len = 0;
+                            var is_valid = false;
+
+                            label _loop while (len < 32){
+                                let account = {
+                                    owner = principal;
+                                    subaccount = ?Blob.fromArray(Array.tabulate(len, Nat8.fromNat));
+                                };
+
+                                is_valid := is_valid or Account.validate(account) 
+                                            or Account.validate_subaccount(account.subaccount);
+
+                                if (is_valid) {
+                                    break _loop;
+                                };
+
+                                len += 1;
+                            };
+                            
+                            not is_valid;
                         }
                     )
                 ],
