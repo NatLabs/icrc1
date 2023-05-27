@@ -1,11 +1,6 @@
 name: Makefile CI
 
-on:
-  push:
-    branches: ["main"]
-  pull_request_target:
-    branches: ["*"]
-    types: [labeled]
+on: [pull_request_target]
 
 jobs:
   build:
