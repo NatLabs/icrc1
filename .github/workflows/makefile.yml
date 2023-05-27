@@ -1,6 +1,10 @@
 name: Makefile CI
 
+<<<<<<< HEAD
 on: [pull_request_target]
+=======
+on: [push, pull_request_target]
+>>>>>>> f5e7eb4c3edf249756d1c711cc68f95d2fd8fdb7
 
 jobs:
   build:
