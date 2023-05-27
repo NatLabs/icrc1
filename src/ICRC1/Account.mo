@@ -22,6 +22,7 @@ import STMap "mo:StableTrieMap";
 import T "Types";
 
 module {
+    
     type Iter<A> = Iter.Iter<A>;
 
     /// Checks if a subaccount is valid
