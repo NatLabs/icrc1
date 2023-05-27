@@ -185,12 +185,16 @@ let success = run([
                     it(
                         "should return false for invalid subaccount (length < 32)",
                         do {
+                            
                             let account = {
                                 owner = principal;
                                 subaccount = ?Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8]);
                             };
 
-                            not Account.validate(account)
+                            assertAllTrue([
+                                not Account.validate(account),
+                                not Account.validate_subaccount(account.subaccount)
+                            ])
                         }
                     )
                 ],
