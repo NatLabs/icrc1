@@ -86,3 +86,4 @@ jobs:
           dfx identity use icrc-ref-test
           dfx identity whoami
           make ref-test
+          make ref-test
