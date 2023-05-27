@@ -38,7 +38,7 @@ jobs:
   icrc1-ref-test:
     runs-on: ubuntu-latest
     if: |
-      github.event_name != 'pull_request_target' || (github.event_name != 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
+      github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'safe to test'))
 
     name: ICRC-1 reference test
     steps:
