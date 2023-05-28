@@ -153,7 +153,7 @@ module {
     };
 
     /// Interface for the ICRC token canister
-    public type TokenInterface = Types1.TokenInterface;
+    public type ICRC1Interface = Types1.ICRC1Interface;
 
     public type TxCandidBlob = Types1.TxCandidBlob;
 
@@ -183,7 +183,6 @@ module {
         approvals : ApprovalAllowances;
     };
 
-    // Rosetta API
     /// The type to request a range of transactions from the ledger canister
     public type GetTransactionsRequest = Types1.GetTransactionsRequest;
 
@@ -195,9 +194,6 @@ module {
 
     public type GetTransactionsResponse = Types1.GetTransactionsResponse;
 
-    /// Functions supported by the rosetta
-    public type RosettaInterface = Types1.RosettaInterface;
-
     /// Functions supported by the ICRC-2 standard
     public type ICRC2Interface = actor {
         icrc2_approve : shared (ApproveArgs) -> async ApproveResult;
@@ -205,7 +201,7 @@ module {
         icrc2_allowance : shared query (AllowanceArgs) -> async Allowance;
     };
 
-    /// Interface of the ICRC token and Rosetta canister
-    public type FullInterface = TokenInterface and RosettaInterface and ICRC2Interface;
+    /// Interface of the ICRC token
+    public type FullInterface = ICRC1Interface and ICRC2Interface;
 
 };

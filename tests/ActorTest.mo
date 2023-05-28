@@ -4,6 +4,8 @@ import Archive1 "ICRC1/Archive.ActorTest";
 import ICRC1 "ICRC1/ICRC1.ActorTest";
 import Archive2 "ICRC2/Archive.ActorTest";
 import ICRC2 "ICRC2/ICRC2.ActorTest";
+import Archive3 "ICRC3/Archive.ActorTest";
+import ICRC3 "ICRC3/ICRC3.ActorTest";
 
 import ActorSpec "./utils/ActorSpec";
 
@@ -15,6 +17,8 @@ actor {
         ICRC1.test,
         Archive2.test,
         ICRC2.test,
+        Archive3.test,
+        ICRC3.test,
     ];
 
     public func run_tests() : async () {

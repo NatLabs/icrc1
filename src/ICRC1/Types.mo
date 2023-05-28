@@ -133,7 +133,7 @@ module {
     };
 
     /// Interface for the ICRC token canister
-    public type TokenInterface = actor {
+    public type ICRC1Interface = actor {
 
         /// Returns the name of the token
         icrc1_name : shared query () -> async Text;
@@ -292,7 +292,6 @@ module {
         archive : ArchiveData;
     };
 
-    // Rosetta API
     /// The type to request a range of transactions from the ledger canister
     public type GetTransactionsRequest = {
         start : TxIndex;
@@ -329,12 +328,7 @@ module {
         archived_transactions : [ArchivedTransaction];
     };
 
-    /// Functions supported by the rosetta 
-    public type RosettaInterface = actor {
-        get_transactions : shared query (GetTransactionsRequest) -> async GetTransactionsResponse;
-    };
-
-    /// Interface of the ICRC token and Rosetta canister
-    public type FullInterface = TokenInterface and RosettaInterface;
+    /// Interface of the ICRC token
+    public type FullInterface = ICRC1Interface;
 
 };

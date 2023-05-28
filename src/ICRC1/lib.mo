@@ -46,8 +46,7 @@ module {
     public type TxLog = T.TxLog;
     public type TxIndex = T.TxIndex;
 
-    public type TokenInterface = T.TokenInterface;
-    public type RosettaInterface = T.RosettaInterface;
+    public type ICRC1Interface = T.ICRC1Interface;
     public type FullInterface = T.FullInterface;
 
     public type ArchiveInterface = T.ArchiveInterface;
@@ -331,64 +330,6 @@ module {
         } else {
             let local_tx_index = (tx_index - archive.stored_txs) : Nat;
             SB.getOpt(token.transactions, local_tx_index);
-        };
-    };
-
-    /// Retrieves the transactions specified by the given range
-    public func get_transactions(token : T.TokenData, req : T.GetTransactionsRequest) : T.GetTransactionsResponse {
-        let { archive; transactions } = token;
-
-        var first_index = 0xFFFF_FFFF_FFFF_FFFF; // returned if no transactions are found
-
-        let req_end = req.start + req.length;
-        let tx_end = archive.stored_txs + SB.size(transactions);
-
-        var txs_in_canister: [T.Transaction] = [];
-        
-        if (req.start < tx_end and req_end >= archive.stored_txs) {
-            first_index := Nat.max(req.start, archive.stored_txs);
-            let tx_start_index = (first_index - archive.stored_txs) : Nat;
-
-            txs_in_canister:= SB.slice(transactions, tx_start_index, req.length);
-        };
-
-        let archived_range = if (req.start < archive.stored_txs) {
-            {
-                start = req.start;
-                end = Nat.min(
-                    archive.stored_txs,
-                    (req.start + req.length) : Nat,
-                );
-            };
-        } else {
-            { start = 0; end = 0 };
-        };
-
-        let txs_in_archive = (archived_range.end - archived_range.start) : Nat;
-
-        let size = Utils.div_ceil(txs_in_archive, MAX_TRANSACTIONS_PER_REQUEST);
-
-        let archived_transactions = Array.tabulate(
-            size,
-            func(i : Nat) : T.ArchivedTransaction {
-                let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
-                let start = offset + archived_range.start;
-                let length = Nat.min(
-                    MAX_TRANSACTIONS_PER_REQUEST,
-                    archived_range.end - start,
-                );
-
-                let callback = token.archive.canister.get_transactions;
-
-                { start; length; callback };
-            },
-        );
-
-        {
-            log_length = txs_in_archive + txs_in_canister.size();
-            first_index;
-            transactions = txs_in_canister;
-            archived_transactions;
         };
     };
 

@@ -9,6 +9,10 @@
             "type": "motoko",
             "main": "src/ICRC2/Canisters/Token.mo"
         },
+        "icrc3": {
+            "type": "motoko",
+            "main": "src/ICRC3/Canisters/Token.mo"
+        },
         "test": {
             "type": "motoko",
             "main": "tests/ActorTest.mo",
