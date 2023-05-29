@@ -40,12 +40,12 @@ module {
 
         func mock_tx(to : T.Account, index : Nat) : T.Transaction {
             {
-                burn = null;
-                transfer = null;
-                kind = "MINT";
+                icrc1_burn = null;
+                icrc1_transfer = null;
+                kind = "icrc1_mint";
                 timestamp = 0;
                 index;
-                mint = ?{
+                icrc1_mint = ?{
                     to;
                     amount = index + 1;
                     memo = null;
@@ -193,10 +193,6 @@ module {
             };
 
             true;
-        };
-
-        func are_txs_equal(t1 : [T.Transaction], t2 : [T.Transaction]) : Bool {
-            Itertools.equal<T.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
         };
 
         func create_mints(token : T.TokenData, minting_principal : Principal, n : Nat) : async () {

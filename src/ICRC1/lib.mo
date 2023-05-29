@@ -237,11 +237,11 @@ module {
         };
 
         let tx_kind = if (from == token.minting_account) {
-            #mint
+            #icrc1_mint
         } else if (args.to == token.minting_account) {
-            #burn
+            #icrc1_burn
         } else {
-            #transfer
+            #icrc1_transfer
         };
 
         let tx_req = Utils.create_transfer_req(args, caller, tx_kind);
@@ -257,13 +257,13 @@ module {
 
         // process transaction
         switch(tx_req.kind){
-            case(#mint){
+            case(#icrc1_mint){
                 Utils.mint_balance(token, encoded.to, amount);
             };
-            case(#burn){
+            case(#icrc1_burn){
                 Utils.burn_balance(token, encoded.from, amount);
             };
-            case(#transfer){
+            case(#icrc1_transfer){
                 Utils.transfer_balance(token, tx_req);
 
                 // burn fee

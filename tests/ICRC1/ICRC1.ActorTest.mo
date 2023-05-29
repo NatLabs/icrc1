@@ -37,12 +37,12 @@ module {
 
         func mock_tx(to : T.Account, index : Nat) : T.Transaction {
             {
-                burn = null;
-                transfer = null;
-                kind = "MINT";
+                icrc1_burn = null;
+                icrc1_transfer = null;
+                kind = "icrc1_mint";
                 timestamp = 0;
                 index;
-                mint = ?{
+                icrc1_mint = ?{
                     to;
                     amount = index + 1;
                     memo = null;
@@ -66,15 +66,6 @@ module {
             subaccount = null;
         };
 
-        func txs_range(start : Nat, end : Nat) : [T.Transaction] {
-            Array.tabulate(
-                (end - start) : Nat,
-                func(i : Nat) : T.Transaction {
-                    mock_tx(user1, start + i);
-                },
-            );
-        };
-
         func is_tx_equal(t1 : T.Transaction, t2 : T.Transaction) : Bool {
             { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
         };
@@ -88,107 +79,6 @@ module {
                 case (?t1, _) { false };
                 case (_, _) { true };
             };
-        };
-
-        func validate_get_transactions(
-            token : T.TokenData, 
-            tx_req : T.GetTransactionsRequest, 
-            tx_res : T.GetTransactionsResponse
-        ) : Bool {
-            let { archive } = token;
-
-            let token_start = 0;
-            let token_end = ICRC1.total_transactions(token);
-
-            let req_start = tx_req.start;
-            let req_end = tx_req.start + tx_req.length;
-
-            var log_length = 0;
-
-            if (req_start < token_end) {
-                log_length := (Nat.min(token_end, req_end) - Nat.max(token_start, req_start)) : Nat;
-            };
-
-            if (log_length != tx_res.log_length) {
-                Debug.print("Failed at log_length: " # Nat.toText(log_length) # " != " # Nat.toText(tx_res.log_length));
-                return false;
-            };
-
-            var txs_size = 0;
-            if (req_end > archive.stored_txs and req_start <= token_end) {
-                txs_size := Nat.min(req_end, token_end) - archive.stored_txs;
-            };
-
-            if (txs_size != tx_res.transactions.size()) {
-                Debug.print("Failed at txs_size: " # Nat.toText(txs_size) # " != " # Nat.toText(tx_res.transactions.size()));
-                return false;
-            };
-
-            if (txs_size > 0) {
-                let index = tx_res.transactions[0].index;
-
-                if (tx_res.first_index != index) {
-                    Debug.print("Failed at first_index: " # Nat.toText(tx_res.first_index) # " != " # Nat.toText(index));
-                    return false;
-                };
-
-                for (i in Iter.range(0, txs_size - 1)) {
-                    let tx = tx_res.transactions[i];
-                    let mocked_tx = mock_tx(user1, archive.stored_txs + i);
-
-                    if (not is_tx_equal(tx, mocked_tx)) {
-
-                        Debug.print("Failed at tx: " # debug_show (tx) # " != " # debug_show (mocked_tx));
-                        return false;
-                    };
-                };
-            } else {
-                if (tx_res.first_index != 0xFFFF_FFFF_FFFF_FFFF) {
-                    Debug.print("Failed at first_index: " # Nat.toText(tx_res.first_index) # " != " # Nat.toText(0xFFFF_FFFF_FFFF_FFFF));
-                    return false;
-                };
-            };
-
-            true;
-        };
-
-        func validate_archived_range(request : [T.GetTransactionsRequest], response : [T.ArchivedTransaction]) : async Bool {
-
-            if (request.size() != response.size()) {
-                return false;
-            };
-
-            for ((req, res) in Itertools.zip(request.vals(), response.vals())) {
-                if (res.start != req.start) {
-                    Debug.print("Failed at start: " # Nat.toText(res.start) # " != " # Nat.toText(req.start));
-                    return false;
-                };
-                if (res.length != req.length) {
-                    Debug.print("Failed at length: " # Nat.toText(res.length) # " != " # Nat.toText(req.length));
-                    return false;
-                };
-
-                let archived_txs = (await res.callback(req)).transactions;
-                let expected_txs = txs_range(res.start, res.start + res.length);
-
-                if (archived_txs.size() != expected_txs.size()) {
-                    return false;
-                };
-
-                for ((tx1, tx2) in Itertools.zip(archived_txs.vals(), expected_txs.vals())) {
-                    if (not is_tx_equal(tx1, tx2)) {
-                        Debug.print("Failed at archived_txs: " # debug_show (tx1, tx2));
-                        return false;
-                    };
-                };
-
-            };
-
-            true;
-        };
-
-        func are_txs_equal(t1 : [T.Transaction], t2 : [T.Transaction]) : Bool {
-            Itertools.equal<T.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
         };
 
         func create_mints(token : T.TokenData, minting_principal : Principal, n : Nat) : async () {

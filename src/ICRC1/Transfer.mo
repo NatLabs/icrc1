@@ -72,8 +72,8 @@ module {
         label for_loop for ((i, tx) in Itertools.enumerate(last_2000_txs)) {
 
             let is_duplicate = switch (tx_req.kind) {
-                case (#mint) {
-                    switch (tx.mint) {
+                case (#icrc1_mint) {
+                    switch (tx.icrc1_mint) {
                         case (?mint) {
                             ignore do ? {
                                 if (is_too_old(token, mint.created_at_time!)) {
@@ -88,8 +88,8 @@ module {
                         case (_) false;
                     };
                 };
-                case (#burn) {
-                    switch (tx.burn) {
+                case (#icrc1_burn) {
+                    switch (tx.icrc1_burn) {
                         case (?burn) {
                             ignore do ? {
                                 if (is_too_old(token, burn.created_at_time!)) {
@@ -103,8 +103,8 @@ module {
                         case (_) false;
                     };
                 };
-                case (#transfer) {
-                    switch (tx.transfer) {
+                case (#icrc1_transfer) {
+                    switch (tx.icrc1_transfer) {
                         case (?transfer) {
                             ignore do ? {
                                 if (is_too_old(token, transfer.created_at_time!)) {
@@ -200,7 +200,7 @@ module {
         };
 
         switch (tx_req.kind) {
-            case (#transfer) {
+            case (#icrc1_transfer) {
                 if (not validate_fee(token, tx_req.fee)) {
                     return #err(
                         #BadFee {
@@ -219,7 +219,7 @@ module {
                 };
             };
 
-            case (#mint) {
+            case (#icrc1_mint) {
                 if (token.max_supply < token._minted_tokens + tx_req.amount) {
                     let remaining_tokens = (token.max_supply - token._minted_tokens) : Nat;
 
@@ -231,7 +231,7 @@ module {
                     );
                 };
             };
-            case (#burn) {
+            case (#icrc1_burn) {
                 if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
                     return #err(
                         #BadBurn { min_burn_amount = token.min_burn_amount },

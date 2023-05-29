@@ -28,9 +28,9 @@ module {
     func new_tx(i : Nat) : T.Transaction {
         {
             kind = "";
-            mint = null;
-            burn = null;
-            transfer = null;
+            icrc1_mint = null;
+            icrc1_burn = null;
+            icrc1_transfer = null;
             index = i;
             timestamp = Nat64.fromNat(i);
         };

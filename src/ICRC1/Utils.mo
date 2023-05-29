@@ -98,25 +98,25 @@ module {
         };
 
         switch (tx_kind) {
-            case (#mint) {
+            case (#icrc1_mint) {
                 {
-                    args with kind = #mint;
+                    args with kind = #icrc1_mint;
                     fee = null;
                     from;
                     encoded;
                 };
             };
-            case (#burn) {
+            case (#icrc1_burn) {
                 {
-                    args with kind = #burn;
+                    args with kind = #icrc1_burn;
                     fee = null;
                     from;
                     encoded;
                 };
             };
-            case (#transfer) {
+            case (#icrc1_transfer) {
                 {
-                    args with kind = #transfer;
+                    args with kind = #icrc1_transfer;
                     from;
                     encoded;
                 };
@@ -127,9 +127,9 @@ module {
     // Transforms the transaction kind from `variant` to `Text`
     public func kind_to_text(kind : T.TxKind) : Text {
         switch (kind) {
-            case (#mint) "MINT";
-            case (#burn) "BURN";
-            case (#transfer) "TRANSFER";
+            case (#icrc1_mint) "icrc1_mint";
+            case (#icrc1_burn) "icrc1_burn";
+            case (#icrc1_transfer) "icrc1_transfer";
         };
     };
 
@@ -138,18 +138,18 @@ module {
 
         {
             kind = kind_to_text(tx_req.kind);
-            mint = switch (tx_req.kind) {
-                case (#mint) { ?tx_req };
+            icrc1_mint = switch (tx_req.kind) {
+                case (#icrc1_mint) { ?tx_req };
                 case (_) null;
             };
 
-            burn = switch (tx_req.kind) {
-                case (#burn) { ?tx_req };
+            icrc1_burn = switch (tx_req.kind) {
+                case (#icrc1_burn) { ?tx_req };
                 case (_) null;
             };
 
-            transfer = switch (tx_req.kind) {
-                case (#transfer) { ?tx_req };
+            icrc1_transfer = switch (tx_req.kind) {
+                case (#icrc1_transfer) { ?tx_req };
                 case (_) null;
             };
             

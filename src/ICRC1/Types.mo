@@ -38,9 +38,9 @@ module {
     public type MetaData = [MetaDatum];
 
     public type TxKind = {
-        #mint;
-        #burn;
-        #transfer;
+        #icrc1_mint;
+        #icrc1_burn;
+        #icrc1_transfer;
     };
 
     public type Mint = {
@@ -103,9 +103,9 @@ module {
 
     public type Transaction = {
         kind : Text;
-        mint : ?Mint;
-        burn : ?Burn;
-        transfer : ?Transfer;
+        icrc1_mint : ?Mint;
+        icrc1_burn : ?Burn;
+        icrc1_transfer : ?Transfer;
         index : TxIndex;
         timestamp : Timestamp;
     };
