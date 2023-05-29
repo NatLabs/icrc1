@@ -9,7 +9,7 @@ import Principal "mo:base/Principal";
 import EC "mo:base/ExperimentalCycles";
 
 import Archive "../../src/ICRC1/Canisters/Archive";
-import T "../../src/ICRC1/Types";
+import T "../../src/ICRC2/Types";
 
 import ActorSpec "../utils/ActorSpec";
 

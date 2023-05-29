@@ -8,7 +8,6 @@ import ExperimentalCycles "mo:base/ExperimentalCycles";
 import SB "mo:StableBuffer/StableBuffer";
 
 import ICRC1 "..";
-import Archive "Archive";
 
 shared ({ caller = _owner }) actor class Token(
     init_args : ICRC1.TokenInitArgs,
@@ -73,11 +72,6 @@ shared ({ caller = _owner }) actor class Token(
 
     public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async ICRC1.TransferResult {
         await* ICRC1.burn(token, args, caller);
-    };
-
-    // Functions for integration with the rosetta standard
-    public shared query func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
-        ICRC1.get_transactions(token, req);
     };
 
     // Additional functions not included in the ICRC1 standard

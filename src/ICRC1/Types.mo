@@ -38,9 +38,9 @@ module {
     public type MetaData = [MetaDatum];
 
     public type TxKind = {
-        #mint;
-        #burn;
-        #transfer;
+        #icrc1_mint;
+        #icrc1_burn;
+        #icrc1_transfer;
     };
 
     public type Mint = {
@@ -103,9 +103,9 @@ module {
 
     public type Transaction = {
         kind : Text;
-        mint : ?Mint;
-        burn : ?Burn;
-        transfer : ?Transfer;
+        icrc1_mint : ?Mint;
+        icrc1_burn : ?Burn;
+        icrc1_transfer : ?Transfer;
         index : TxIndex;
         timestamp : Timestamp;
     };
@@ -115,13 +115,16 @@ module {
         #CreatedInFuture : { ledger_time : Timestamp };
     };
 
-    public type TransferError = TimeError or {
+    public type OperationError = TimeError or {
         #BadFee : { expected_fee : Balance };
-        #BadBurn : { min_burn_amount : Balance };
         #InsufficientFunds : { balance : Balance };
         #Duplicate : { duplicate_of : TxIndex };
         #TemporarilyUnavailable;
         #GenericError : { error_code : Nat; message : Text };
+    };
+
+    public type TransferError = OperationError or {
+        #BadBurn : { min_burn_amount : Balance };
     };
     
     public type TransferResult = {
@@ -130,7 +133,7 @@ module {
     };
 
     /// Interface for the ICRC token canister
-    public type TokenInterface = actor {
+    public type ICRC1Interface = actor {
 
         /// Returns the name of the token
         icrc1_name : shared query () -> async Text;
@@ -289,7 +292,6 @@ module {
         archive : ArchiveData;
     };
 
-    // Rosetta API
     /// The type to request a range of transactions from the ledger canister
     public type GetTransactionsRequest = {
         start : TxIndex;
@@ -326,12 +328,7 @@ module {
         archived_transactions : [ArchivedTransaction];
     };
 
-    /// Functions supported by the rosetta 
-    public type RosettaInterface = actor {
-        get_transactions : shared query (GetTransactionsRequest) -> async GetTransactionsResponse;
-    };
-
-    /// Interface of the ICRC token and Rosetta canister
-    public type FullInterface = TokenInterface and RosettaInterface;
+    /// Interface of the ICRC token
+    public type FullInterface = ICRC1Interface;
 
 };
