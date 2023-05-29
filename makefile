@@ -23,6 +23,6 @@ ref-test:
 	-dfx start --background --clean
 	IDENTITY=$$(dfx identity whoami); \
 	echo $$IDENTITY; \
-	cat icrc1-default-args.txt | xargs -0 dfx deploy icrc1 --identity $$IDENTITY --no-wallet --argument ; \
-	CANISTER=$$(dfx canister id icrc1); \
+	cat icrc1-default-args.txt | xargs -0 dfx deploy icrc3 --identity $$IDENTITY --no-wallet --argument ; \
+	CANISTER=$$(dfx canister id icrc3); \
 	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $$CANISTER -s ~/.config/dfx/identity/$$IDENTITY/identity.pem

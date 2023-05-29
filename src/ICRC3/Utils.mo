@@ -32,6 +32,8 @@ module {
     // Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
         let standards = SB.initPresized<T.SupportedStandard>(4);
+        SB.add(standards, U1.default_standard);
+        SB.add(standards, U2.default_standard);
         SB.add(standards, default_standard);
 
         standards;

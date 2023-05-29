@@ -16,7 +16,9 @@ import ActorSpec "../utils/ActorSpec";
 import ICRC3 "../../src/ICRC3";
 import T "../../src/ICRC3/Types";
 
-import U "../../src/ICRC3/Utils";
+import U1 "../../src/ICRC1/Utils";
+import U2 "../../src/ICRC2/Utils";
+import U3 "../../src/ICRC3/Utils";
 
 module {
     public func test() : async ActorSpec.Group {
@@ -32,7 +34,7 @@ module {
             run;
         } = ActorSpec;
 
-        let { SB } = U;
+        let { SB } = U3;
 
         func add_decimals(n : Nat, decimals : Nat) : Nat {
             n * (10 ** decimals);
@@ -223,7 +225,7 @@ module {
         };
 
         return describe(
-            "ICRC2 Token Implementation Tests",
+            "ICRC3 Token Implementation Tests",
             [
                 it(
                     "init()",
@@ -241,7 +243,11 @@ module {
                             token.max_supply == args.max_supply,
 
                             token.minting_account == args.minting_account,
-                            SB.toArray(token.supported_standards) == [U.default_standard],
+                            SB.toArray(token.supported_standards) == [
+                                U1.default_standard,
+                                U2.default_standard,
+                                U3.default_standard,
+                            ],
                             SB.size(token.transactions) == 0,
                         ]);
                     },
@@ -371,10 +377,20 @@ module {
                         let token = ICRC3.init(args);
 
                         assertTrue(
-                            ICRC3.supported_standards(token) == [{
-                                name = "ICRC-3";
-                                url = "https://github.com/dfinity/ICRC-1/tree/roman-icrc3/standards/ICRC-3";
-                            }]
+                            ICRC3.supported_standards(token) == [
+                                {
+                                    name = "ICRC-1";
+                                    url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1";
+                                },
+                                {
+                                    name = "ICRC-2";
+                                    url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-2";
+                                },
+                                {
+                                    name = "ICRC-3";
+                                    url = "https://github.com/dfinity/ICRC-1/tree/roman-icrc3/standards/ICRC-3";
+                                },
+                            ]
                         );
                     },
                 ),
