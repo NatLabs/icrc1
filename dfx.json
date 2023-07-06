@@ -1,6 +1,5 @@
 {
     "version": 1,
-    "dfx": "0.13.1",
     "canisters": {
         "icrc1": {
             "type": "motoko",

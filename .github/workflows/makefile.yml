@@ -1,6 +1,6 @@
 name: Makefile CI
 
-on: [push, pull_request]
+on: [push, pull_request_target]
 
 jobs:
   build:
@@ -14,7 +14,13 @@ jobs:
           node-version: 14
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
-          dfx-version: 0.13.1
+          dfx-version: 0.14.0
+          
+      - name: Install moc version manager
+        run: | 
+          npm  --yes -g i mocv
+          mocv use 0.9.1
+          export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: install mops
         run: |
@@ -42,7 +48,13 @@ jobs:
           node-version: 14
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
-          dfx-version: 0.13.1
+          dfx-version: 0.14.0
+
+      - name: Install moc version manager
+        run: | 
+          npm  --yes -g i mocv
+          mocv use 0.9.1
+          export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -58,8 +70,10 @@ jobs:
 
       - name: Run reference tests
         run: |
-          dfx identity new icrc-ref-test --storage-mode plaintext
+          echo "${{ secrets.IDENTITY_SSH }}" > ./identity.pem
+          dfx identity import icrc-ref-test ./identity.pem --storage-mode plaintext
           dfx identity use icrc-ref-test
+          dfx identity whoami
           make ref-test
           
 
