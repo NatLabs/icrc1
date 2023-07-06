@@ -369,7 +369,7 @@ module {
                         assertTrue(
                             ICRC1.supported_standards(token) == [{
                                 name = "ICRC-1";
-                                url = "https://github.com/dfinity/ICRC-1";
+                                url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1";
                             }],
                         );
                     },

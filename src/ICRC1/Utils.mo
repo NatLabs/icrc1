@@ -35,7 +35,7 @@ module {
 
     public let default_standard : T.SupportedStandard = {
         name = "ICRC-1";
-        url = "https://github.com/dfinity/ICRC-1";
+        url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1";
     };
 
     // Creates a Stable Buffer with the default supported standards and returns it.

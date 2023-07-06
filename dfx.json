@@ -5,6 +5,10 @@
             "type": "motoko",
             "main": "src/ICRC1/Canisters/Token.mo"
         },
+        "icrc2": {
+            "type": "motoko",
+            "main": "src/ICRC2/Canisters/Token.mo"
+        },
         "test": {
             "type": "motoko",
             "main": "tests/ActorTest.mo",
