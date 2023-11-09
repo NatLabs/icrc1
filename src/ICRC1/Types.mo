@@ -123,10 +123,34 @@ module {
         #TemporarilyUnavailable;
         #GenericError : { error_code : Nat; message : Text };
     };
-    
+
+    public type SetParameterError = {
+        #GenericError : { error_code : Nat; message : Text };
+    };
+
     public type TransferResult = {
         #Ok : TxIndex;
         #Err : TransferError;
+    };
+    
+    public type SetTextParameterResult = {
+        #Ok : Text;
+        #Err : SetParameterError;
+    };
+    
+    public type SetNat8ParameterResult = {
+        #Ok : Nat8;
+        #Err : SetParameterError;
+    };
+    
+    public type SetBalanceParameterResult = {
+        #Ok : Balance;
+        #Err : SetParameterError;
+    };
+    
+    public type SetAccountParameterResult = {
+        #Ok : Account;
+        #Err : SetParameterError;
     };
 
     /// Interface for the ICRC token canister
@@ -184,6 +208,26 @@ module {
         /// Returns the number of bytes left in the archive before it is full
         /// > The capacity of the archive canister is 32GB
         remaining_capacity : shared query () -> async Nat;
+
+        total_used : shared query () -> async Nat;
+
+        max_memory : shared query () -> async Nat;
+
+        get_first_tx : shared query () -> async Nat;
+
+        get_last_tx : shared query () -> async Nat;
+
+        get_prev_archive : shared query () -> async ArchiveInterface;
+
+        get_next_archive : shared query () -> async ArchiveInterface;
+
+        set_first_tx : shared (Nat) -> async Result.Result<(), Text>;
+
+        set_last_tx : shared (Nat) -> async Result.Result<(), Text>;
+
+        set_prev_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
+
+        set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
     };
 
     /// Initial arguments for the setting up the icrc1 token canister
@@ -192,6 +236,7 @@ module {
         symbol : Text;
         decimals : Nat8;
         fee : Balance;
+        logo : Text;
         minting_account : Account;
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
@@ -207,6 +252,7 @@ module {
         symbol : Text;
         decimals : Nat8;
         fee : Balance;
+        logo : Text;
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
         min_burn_amount : Balance;
@@ -239,16 +285,19 @@ module {
     /// The state of the token canister
     public type TokenData = {
         /// The name of the token
-        name : Text;
+        var _name : Text;
 
         /// The symbol of the token
-        symbol : Text;
+        var _symbol : Text;
 
         /// The number of decimals the token uses
-        decimals : Nat8;
+        var _decimals : Nat8;
 
         /// The fee charged for each transaction
         var _fee : Balance;
+
+        /// The logo for the token
+        var _logo : Text;
 
         /// The maximum supply of the token
         max_supply : Balance;
@@ -261,7 +310,7 @@ module {
 
         /// The account that is allowed to mint new tokens
         /// On initialization, the maximum supply is minted to this account
-        minting_account : Account;
+        var _minting_account : Account;
 
         /// The balances of all accounts
         accounts : AccountBalances;
@@ -276,7 +325,7 @@ module {
         transaction_window : Nat;
 
         /// The minimum amount of tokens that must be burned in a transaction
-        min_burn_amount : Balance;
+        var _min_burn_amount : Balance;
 
         /// The allowed difference between the ledger time and the time of the device the transaction was created on
         permitted_drift : Nat;

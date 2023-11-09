@@ -206,12 +206,13 @@ module {
         tx_req : T.TransactionRequest,
     ) { 
         let { encoded; amount } = tx_req;
+		let tx_fee = token._fee;						
 
         update_balance(
             token.accounts,
             encoded.from,
             func(balance) {
-                balance - amount;
+                balance - (amount - tx_fee);
             },
         );
 
@@ -219,7 +220,7 @@ module {
             token.accounts,
             encoded.to,
             func(balance) {
-                balance + amount;
+                balance + (amount - tx_fee);
             },
         );
     };

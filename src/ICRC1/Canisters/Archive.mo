@@ -35,6 +35,8 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     stable let BUCKET_SIZE = 1000;
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
+    stable let MAX_TXS_LENGTH = 100;
+
     stable var memory_pages : Nat64 = ExperimentalStableMemory.size();
     stable var total_memory_used : Nat64 = 0;
 
@@ -42,6 +44,72 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     stable var trailing_txs = 0;
 
     stable let txStore = StableTrieMap.new<Nat, [MemoryBlock]>();
+
+    stable var prevArchive : T.ArchiveInterface = actor ("aaaaa-aa");
+    stable var nextArchive : T.ArchiveInterface = actor ("aaaaa-aa");
+    stable var first_tx : Nat = 0;
+    stable var last_tx : Nat = 0;
+
+
+    public shared query func get_prev_archive() : async T.ArchiveInterface {
+        prevArchive;
+    };
+
+    public shared query func get_next_archive() : async T.ArchiveInterface {
+        nextArchive;
+    };
+
+    public shared query func get_first_tx() : async Nat {
+        first_tx;
+    };
+
+    public shared query func get_last_tx() : async Nat {
+        last_tx;
+    };
+
+    public shared ({ caller }) func set_prev_archive(prev_archive : T.ArchiveInterface) : async Result.Result<(), Text> {
+
+        if (caller != ledger_canister_id) {
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
+        };
+
+        prevArchive := prev_archive;
+
+        #ok();
+    };
+
+    public shared ({ caller }) func set_next_archive(next_archive : T.ArchiveInterface) : async Result.Result<(), Text> {
+
+        if (caller != ledger_canister_id) {
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
+        };
+
+        nextArchive := next_archive;
+
+        #ok();
+    };
+
+    public shared ({ caller }) func set_first_tx(tx : Nat) : async Result.Result<(), Text> {
+
+        if (caller != ledger_canister_id) {
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
+        };
+
+        first_tx := tx;
+
+        #ok();
+    };
+
+    public shared ({ caller }) func set_last_tx(tx : Nat) : async Result.Result<(), Text> {
+
+        if (caller != ledger_canister_id) {
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
+        };
+
+        last_tx := tx;
+
+        #ok();
+    };
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
 
@@ -101,7 +169,9 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     };
 
     public shared query func get_transaction(tx_index : T.TxIndex) : async ?Transaction {
-        let bucket_key = tx_index / BUCKET_SIZE;
+        let tx_max = Nat.max(tx_index, first_tx);
+        let tx_off : Nat = tx_max - first_tx;
+        let bucket_key = tx_off / BUCKET_SIZE;
 
         let opt_bucket = StableTrieMap.get(
             txStore,
@@ -112,9 +182,9 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
         switch (opt_bucket) {
             case (?bucket) {
-                let i = tx_index % BUCKET_SIZE;
+                let i = tx_off % BUCKET_SIZE;
                 if (i < bucket.size()) {
-                    ?get_tx(bucket[tx_index % BUCKET_SIZE]);
+                    ?get_tx(bucket[tx_off % BUCKET_SIZE]);
                 } else {
                     null;
                 };
@@ -128,9 +198,13 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     public shared query func get_transactions(req : T.GetTransactionsRequest) : async T.TransactionRange {
         let { start; length } = req;
         var iter = Itertools.empty<MemoryBlock>();
+        let length_max = Nat.max(0, length);
+        let length_min = Nat.min(MAX_TXS_LENGTH, length_max);
 
-        let end = start + length;
-        let start_bucket = start / BUCKET_SIZE;
+        let start_max = Nat.max(start, first_tx);
+        let start_off : Nat = start_max - first_tx;
+        let end = start_off + length_min;
+        let start_bucket = start_off / BUCKET_SIZE;
         let end_bucket = (Nat.min(end, total_txs()) / BUCKET_SIZE) + 1;
 
         label _loop for (i in Itertools.range(start_bucket, end_bucket)) {
@@ -144,7 +218,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             switch (opt_bucket) {
                 case (?bucket) {
                     if (i == start_bucket) {
-                        iter := Itertools.fromArraySlice(bucket, start % BUCKET_SIZE, Nat.min(bucket.size(), end));
+                        iter := Itertools.fromArraySlice(bucket, start_off % BUCKET_SIZE, Nat.min(bucket.size(), end));
                     } else if (i + 1 == end_bucket) {
                         let bucket_iter = Itertools.fromArraySlice(bucket, 0, end % BUCKET_SIZE);
                         iter := Itertools.chain(iter, bucket_iter);
@@ -168,6 +242,14 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
     public shared query func remaining_capacity() : async Nat {
         MAX_MEMORY - Nat64.toNat(total_memory_used);
+    };
+
+    public shared query func max_memory() : async Nat {
+        MAX_MEMORY;
+    };
+
+    public shared query func total_used() : async Nat {
+        Nat64.toNat(total_memory_used);
     };
 
     /// Deposit cycles into this archive canister.

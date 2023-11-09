@@ -16,4 +16,7 @@
 node_modules/
 dist/
 
+#other files
+deploy*.sh
+
 Cargo.lock

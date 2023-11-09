@@ -1,6 +1,7 @@
-# ICRC-1 Implementation
+# ICRC-1 Implementation - with changes made by SNEED ICRC1 token
 This repo contains the implementation of the 
 [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
+Also the SNEED ICRC token was merged into this repository: https://github.com/icsneed/sneed
 
 ## References and other implementations
 - [demergent-labs/ICRC-1 (Typescript)](https://github.com/demergent-labs/ICRC-1)
@@ -22,16 +23,17 @@ This repo contains the implementation of the
   - Replace the values enclosed in `< >` with your desired values and run in the terminal 
 
   ```motoko
-    git clone https://github.com/NatLabs/icrc1
-    cd icrc1
+    git clone https://github.com/fGhost713/icrc1Ext.git
+    cd icrc1Ext
     mops install
     dfx start --background --clean
 
-    dfx deploy icrc1 --argument '( record {                     
+  dfx deploy icrc1 --argument '( record {                     
         name = "<Insert Token Name>";                         
         symbol = "<Insert Symbol>";                           
         decimals = 6;                                           
         fee = 1_000_000;                                        
+        logo = "data:image/png;base64,iVBORw0...K5CYII=";                                        
         max_supply = 1_000_000_000_000;                         
         initial_balances = vec {                                
             record {                                            
