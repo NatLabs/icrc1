@@ -134,14 +134,12 @@ module {
     ) : Bool {
         switch (opt_fee) {
             case (?tx_fee) {
-                if (tx_fee < token._fee) {
+                if (tx_fee != token._fee) { // ensure that the transaction was not sent assuming different current fee 
                     return false;
                 };
             };
             case (null) {
-                if (token._fee > 0) {
-                    return false;
-                };
+                return true; // if fee is not passed as arg, the transaction is assumed ok with current fee.
             };
         };
 
@@ -199,6 +197,15 @@ module {
             );
         };
 
+        if (tx_req.amount <= token._fee) {
+            return #err(
+                #GenericError({
+                    error_code = 0;
+                    message = "Amount must be greater than fee";
+                }),
+            );
+        };
+
         switch (tx_req.kind) {
             case (#transfer) {
                 if (not validate_fee(token, tx_req.fee)) {
@@ -214,27 +221,23 @@ module {
                     tx_req.encoded.from,
                 );
 
-                if (tx_req.amount + token._fee > balance) {
+                if (tx_req.amount > balance) { // amount is inclusive of fee
                     return #err(#InsufficientFunds { balance });
                 };
             };
 
             case (#mint) {
-                if (token.max_supply < token._minted_tokens + tx_req.amount) {
-                    let remaining_tokens = (token.max_supply - token._minted_tokens) : Nat;
-
-                    return #err(
-                        #GenericError({
-                            error_code = 0;
-                            message = "Cannot mint more than " # Nat.toText(remaining_tokens) # " tokens";
-                        }),
-                    );
-                };
-            };
+				return #err(
+					#GenericError({
+						error_code = 0;
+						message = "Minting not allowed";
+					}),
+				);
+			};
             case (#burn) {
-                if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
+                if (tx_req.to == token._minting_account and tx_req.amount < token._min_burn_amount) {
                     return #err(
-                        #BadBurn { min_burn_amount = token.min_burn_amount },
+                        #BadBurn { min_burn_amount = token._min_burn_amount },
                     );
                 };
 
