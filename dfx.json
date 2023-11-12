@@ -4,12 +4,7 @@
         "icrc1": {
             "type": "motoko",
             "main": "src/ICRC1/Canisters/Token.mo"
-        },
-        "test": {
-            "type": "motoko",
-            "main": "tests/ActorTest.mo",
-            "args": "-v --compacting-gc"
-        }
+        }       
     },
     "defaults": {
         "build": {

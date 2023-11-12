@@ -3,29 +3,83 @@ import Iter "mo:base/Iter";
 import Option "mo:base/Option";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
-
 import ExperimentalCycles "mo:base/ExperimentalCycles";
-
+import Text "mo:base/Text";
 import SB "mo:StableBuffer/StableBuffer";
-
-import ICRC1 ".."; 
+import ICRC1 ".."; // This is lib.mo
 import Archive "Archive";
+import Principal "mo:base/Principal";
+import T "../Types";
+import Debug "mo:base/Debug";
+import Error "mo:base/Error";
 
-shared ({ caller = _owner }) actor class Token(
-    init_args : ICRC1.TokenInitArgs,
-) : async ICRC1.FullInterface {
+shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs) : async ICRC1.FullInterface {
 
-    let icrc1_args : ICRC1.InitArgs = {
-        init_args with minting_account = Option.get(
-            init_args.minting_account,
-            {
-                owner = _owner;
-                subaccount = null;
-            },
-        );
+  
+    //The value of this variable should only be changed by the function 'ConvertArgs'
+    stable var wasInitializedWithArguments:Bool = false;
+    
+    private func ConvertArgs(init_arguments : ?ICRC1.TokenInitArgs): T.InitArgs
+    {        
+        if (init_arguments == null and wasInitializedWithArguments == false)
+        {
+            let infoText:Text="ERROR! Empty argument in dfx deploy is only allowed for canister updates";
+            Debug.print(infoText);
+
+            //Don't know how else we can cause exception, so that the deploy process will fail
+            var dummyVariable:Nat = 0;
+            dummyVariable := 0/0;
+            
+        };
+
+        //Default Token-Init-Arguments.
+        //This is only used if no parameter was used during 'dfx deploy'
+        //-> The stable var 'token' will not be changed by this, because the value of the stable var 'token' 
+        //   was already set.        
+        //So this is only dummy-variable in some sense, so we are able to omit arguments for 'dfx deploy'.
+        let defaultArgs:ICRC1.TokenInitArgs =   
+        {
+            name ="blabla";
+            symbol ="symbol";
+            decimals =8;
+            fee = 100000;
+            logo = "";
+            minting_account = null;
+            max_supply = 100000000;
+            initial_balances = [({owner = Principal.fromText("aaaaa-aa");subaccount = null;},10000)];
+            min_burn_amount = 100;       
+            advanced_settings = null;  
+        } ;
+        
+        var argsToUse:ICRC1.TokenInitArgs = switch(init_arguments){
+            case null defaultArgs;
+            case (?TokenInitArgs) TokenInitArgs;
+        };
+            
+        let icrc1_args : ICRC1.InitArgs = {
+            argsToUse with minting_account = Option.get(
+                argsToUse.minting_account,
+                {
+                    owner = _owner;
+                    subaccount = null;
+                },
+            );
+        };
+        if (init_arguments != null)
+        {
+            wasInitializedWithArguments := true;
+        };
+
+        return icrc1_args;
+        
     };
 
-    stable let token = ICRC1.init(icrc1_args);
+    
+    //Convert argument, because 'init_args' can now be null, in case of upgrade scenarios. ('dfx deploy')
+    let init_arguments:T.InitArgs =  ConvertArgs(init_args);
+
+    stable let token = ICRC1.init(init_arguments);
+
 
     /// Functions for the ICRC1 token standard
     public shared query func icrc1_name() : async Text {
@@ -73,7 +127,7 @@ shared ({ caller = _owner }) actor class Token(
             #GenericError {
                 error_code = 401;
                 message = "Unauthorized: Minting is not allowed.";
-            },
+            }
         );
     };
 
@@ -112,7 +166,6 @@ shared ({ caller = _owner }) actor class Token(
     public shared query func min_burn_amount() : async ICRC1.Balance {
         ICRC1.min_burn_amount(token);
     };
-
 
     public shared query func get_archive() : async ICRC1.ArchiveInterface {
         ICRC1.get_archive(token);

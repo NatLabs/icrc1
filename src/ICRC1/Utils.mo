@@ -180,6 +180,7 @@ module {
     };
 
     /// Updates the balance of an account
+    // Set to private, so that it can only be called from within this module
     public func update_balance(
         accounts : T.AccountBalances,
         encoded_account : T.EncodedAccount,

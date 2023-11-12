@@ -47,7 +47,7 @@ module {
     public type TxIndex = T.TxIndex;
 
     public type TokenInterface = T.TokenInterface;
-    public type RosettaInterface = T.RosettaInterface;
+    public type RosettaInterface = T.RosettaInterface;        
     public type FullInterface = T.FullInterface;
 
     public type ArchiveInterface = T.ArchiveInterface;
@@ -70,6 +70,10 @@ module {
 
     /// Initialize a new ICRC-1 token
     public func init(args : T.InitArgs) : T.TokenData {
+        
+       
+        //With this we map the fields of 'args' to direct variables.
+        //So for example we do not need to use 'args.advanced_settings' and we can use 'advanced_settings' directly.
         let {
             name;
             symbol;
@@ -95,7 +99,7 @@ module {
             };
             case(null) { };
         };
-
+        
         if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");
         };
@@ -115,11 +119,11 @@ module {
             let encoded_account = Account.encode(account);
 
             StableTrieMap.put(
-                accounts,
-                Blob.equal,
-                Blob.hash,
-                encoded_account,
-                balance,
+                accounts,        //Dictioninary to use
+                Blob.equal,      //compare function
+                Blob.hash,       //hash function
+                encoded_account, //key
+                balance,         //value
             );
 
             _minted_tokens += balance;

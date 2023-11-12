@@ -13,10 +13,6 @@ Also the SNEED ICRC token was merged into this repository: https://github.com/ic
 - [web](https://natlabs.github.io/icrc1/ICRC1/lib.html#init)
  
 ## Getting Started 
-- Expose the ICRC-1 token functions from your canister 
-  - Import the `icrc1` lib and expose them in an `actor` class.
-  
-    Take a look at the [examples](./example/icrc1/main.mo)
     
 - Launch the basic token with all the standard functions for ICRC-1
   - Install the [mops](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/#/docs/install) package manager
@@ -28,7 +24,7 @@ Also the SNEED ICRC token was merged into this repository: https://github.com/ic
     mops install
     dfx start --background --clean
 
-  dfx deploy icrc1 --argument '( record {                     
+  dfx deploy icrc1 --argument '( opt record {                     
         name = "<Insert Token Name>";                         
         symbol = "<Insert Symbol>";                           
         decimals = 6;                                           
@@ -92,6 +88,10 @@ To help with this process, the library provides functions in the [ICRC1/Account]
 
 
 ## Tests
+
+No working tests at the moment. Need to repair...
+
+Original message:
 #### Internal Tests
 - Download and Install [vessel](https://github.com/dfinity/vessel)
 - Run `make test` 
