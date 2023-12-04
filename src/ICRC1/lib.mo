@@ -119,7 +119,7 @@ module {
             let encoded_account = Account.encode(account);
 
             StableTrieMap.put(
-                accounts,        //Dictioninary to use
+                accounts,        //Dictionnary to use
                 Blob.equal,      //compare function
                 Blob.hash,       //hash function
                 encoded_account, //key

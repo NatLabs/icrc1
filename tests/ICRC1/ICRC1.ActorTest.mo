@@ -219,7 +219,7 @@ module {
         };
 
         return describe(
-            "ICRC1 Token Implementation Tessts",
+            "ICRC1 Token Implementation Tests",
             [
                 it(
                     "init()",

@@ -25,11 +25,7 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
         {
             let infoText:Text="ERROR! Empty argument in dfx deploy is only allowed for canister updates";
             Debug.print(infoText);
-
-            //Don't know how else we can cause exception, so that the deploy process will fail
-            var dummyVariable:Nat = 0;
-            dummyVariable := 0/0;
-            
+            Debug.trap(infoText);                                   
         };
 
         //Default Token-Init-Arguments.
