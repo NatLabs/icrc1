@@ -130,16 +130,16 @@ module {
         };
 
         {
-            var _name = name;
-            var _symbol = symbol;
-            var _decimals = decimals;
-            var _fee = fee;
-            var _logo = logo;
+            var name = name;
+            var symbol = symbol;
+            var decimals = decimals;
+            var fee = fee;
+            var logo = logo;
             max_supply;
-            var _minted_tokens = _minted_tokens;
-            var _burned_tokens = _burned_tokens;
-            var _min_burn_amount = min_burn_amount;
-            var _minting_account = minting_account;
+            var minted_tokens = _minted_tokens;
+            var burned_tokens = _burned_tokens;
+            var min_burn_amount = min_burn_amount;
+            var minting_account = minting_account;
             accounts;
             metadata = Utils.init_metadata(args);
             supported_standards = Utils.init_standards();
@@ -155,33 +155,33 @@ module {
 
     /// Retrieve the name of the token
     public func name(token : T.TokenData) : Text {
-        token._name;
+        token.name;
     };
 
     /// Retrieve the symbol of the token
     public func symbol(token : T.TokenData) : Text {
-        token._symbol;
+        token.symbol;
     };
 
     /// Retrieve the number of decimals specified for the token
     public func decimals(token : T.TokenData) : Nat8 {
-        token._decimals;
+        token.decimals;
     };
 
     /// Retrieve the fee for each transfer
     public func fee(token : T.TokenData) : T.Balance {
-        token._fee;
+        token.fee;
     };
 
     /// Retrieve the minimum burn amount for the token
     public func min_burn_amount(token : T.TokenData) : T.Balance {
-        token._min_burn_amount;
+        token.min_burn_amount;
     };
 
     /// Set the name of the token
     public func set_name(token : T.TokenData, name : Text, caller : Principal) : async* T.SetTextParameterResult {
-        if (caller == token._minting_account.owner) {
-            token._name := name;
+        if (caller == token.minting_account.owner) {
+            token.name := name;
         } else {
             return #Err(
                 #GenericError {
@@ -190,13 +190,13 @@ module {
                 },
             );
         };
-        #Ok(token._name);
+        #Ok(token.name);
     };
 
     /// Set the symbol of the token
     public func set_symbol(token : T.TokenData, symbol : Text, caller : Principal) : async* T.SetTextParameterResult {
-        if (caller == token._minting_account.owner) {
-            token._symbol := symbol;
+        if (caller == token.minting_account.owner) {
+            token.symbol := symbol;
         } else {
             return #Err(
                 #GenericError {
@@ -205,13 +205,13 @@ module {
                 },
             );
         };
-        #Ok(token._symbol);
+        #Ok(token.symbol);
     };
 
     /// Set the logo for the token
     public func set_logo(token : T.TokenData, logo : Text, caller : Principal) : async* T.SetTextParameterResult {
-        if (caller == token._minting_account.owner) {
-            token._logo := logo;
+        if (caller == token.minting_account.owner) {
+            token.logo := logo;
         } else {
             return #Err(
                 #GenericError {
@@ -220,14 +220,14 @@ module {
                 },
             );
         };
-        #Ok(token._logo);
+        #Ok(token.logo);
     };
 
     /// Set the fee for each transfer
     public func set_fee(token : T.TokenData, fee : Nat, caller : Principal) : async* T.SetBalanceParameterResult {
-        if (caller == token._minting_account.owner) {
+        if (caller == token.minting_account.owner) {
             if (fee >= 10_000 and fee <= 1_000_000_000) {
-                token._fee := fee;
+                token.fee := fee;
             } else {
                 return #Err(
                     #GenericError {
@@ -244,14 +244,14 @@ module {
                 },
             );
         };
-        #Ok(token._fee);
+        #Ok(token.fee);
     };
 
     /// Set the number of decimals specified for the token
     public func set_decimals(token : T.TokenData, decimals : Nat8, caller : Principal) : async* T.SetNat8ParameterResult {
-        if (caller == token._minting_account.owner) {
+        if (caller == token.minting_account.owner) {
             if (decimals >= 2 and decimals <= 12) {
-                token._decimals := decimals;
+                token.decimals := decimals;
             } else {
                 return #Err(
                     #GenericError {
@@ -268,14 +268,14 @@ module {
                 },
             );
         };
-        #Ok(token._decimals);
+        #Ok(token.decimals);
     };
 
     /// Set the minimum burn amount
     public func set_min_burn_amount(token : T.TokenData, min_burn_amount : Nat, caller : Principal) : async* T.SetBalanceParameterResult {
-        if (caller == token._minting_account.owner) {
+        if (caller == token.minting_account.owner) {
             if (min_burn_amount >= 10_000 and min_burn_amount <= 1_000_000_000_000) {
-                token._min_burn_amount := min_burn_amount;
+                token.min_burn_amount := min_burn_amount;
             } else {
                 return #Err(
                     #GenericError {
@@ -292,13 +292,13 @@ module {
                 },
             );
         };
-        #Ok(token._min_burn_amount);
+        #Ok(token.min_burn_amount);
     };
 
     /// Set the minting account
     public func set_minting_account(token : T.TokenData, minting_account : Text, caller : Principal) : async*  T.SetAccountParameterResult {
-        if (caller == token._minting_account.owner) {
-            token._minting_account := {
+        if (caller == token.minting_account.owner) {
+            token.minting_account := {
                 owner = Principal.fromText(minting_account);
                 subaccount = null;
             };
@@ -310,17 +310,17 @@ module {
                 },
             );
         };
-        #Ok(token._minting_account);
+        #Ok(token.minting_account);
     };
 
     /// Retrieve all the metadata of the token
     public func metadata(token : T.TokenData) : [T.MetaDatum] {
         [
-            ("icrc1:fee", #Nat(token._fee)),
-            ("icrc1:name", #Text(token._name)),
-            ("icrc1:symbol", #Text(token._symbol)),
-            ("icrc1:decimals", #Nat(Nat8.toNat(token._decimals))),
-            ("icrc1:logo", #Text(token._logo))
+            ("icrc1:fee", #Nat(token.fee)),
+            ("icrc1:name", #Text(token.name)),
+            ("icrc1:symbol", #Text(token.symbol)),
+            ("icrc1:decimals", #Nat(Nat8.toNat(token.decimals))),
+            ("icrc1:logo", #Text(token.logo))
         ]
     };
 
@@ -336,17 +336,17 @@ module {
 
     /// Returns the total supply of circulating tokens
     public func total_supply(token : T.TokenData) : T.Balance {
-        token._minted_tokens - token._burned_tokens;
+        token.minted_tokens - token.burned_tokens;
     };
 
     /// Returns the total supply of minted tokens
     public func minted_supply(token : T.TokenData) : T.Balance {
-        token._minted_tokens;
+        token.minted_tokens;
     };
 
     /// Returns the total supply of burned tokens
     public func burned_supply(token : T.TokenData) : T.Balance {
-        token._burned_tokens;
+        token.burned_tokens;
     };
 
     /// Returns the maximum supply of tokens
@@ -361,7 +361,7 @@ module {
     /// considered burned.**
 
     public func minting_account(token : T.TokenData) : T.Account {
-        token._minting_account;
+        token.minting_account;
     };
 
     /// Retrieve the balance of a given account
@@ -381,7 +381,7 @@ module {
             return 0;
         };
 
-        let float_with_decimals = float * (10 ** Float.fromInt(Nat8.toNat(token._decimals)));
+        let float_with_decimals = float * (10 ** Float.fromInt(Nat8.toNat(token.decimals)));
 
         Int.abs(Float.toInt(float_with_decimals));
     };
@@ -398,9 +398,9 @@ module {
             subaccount = args.from_subaccount;
         };
 
-        let tx_kind = if (from == token._minting_account) {
+        let tx_kind = if (from == token.minting_account) {
             #mint
-        } else if (args.to == token._minting_account) {
+        } else if (args.to == token.minting_account) {
             #burn
         } else {
             #transfer
@@ -429,7 +429,7 @@ module {
                 Utils.transfer_balance(token, tx_req);
 
                 // burn fee
-                Utils.burn_balance(token, encoded.from, token._fee);
+                Utils.burn_balance(token, encoded.from, token.fee);
             };
         };
 
@@ -458,7 +458,7 @@ module {
     public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async* T.TransferResult {
 
         let transfer_args : T.TransferArgs = {
-            args with to = token._minting_account;
+            args with to = token.minting_account;
             fee = null;
         };
 
@@ -604,11 +604,11 @@ module {
         let old_last_tx : Nat = old_first_tx + old_total_tx - 1;
                 // last_tx == SB.size(token.transactions) + token.archive.stored_txs
 
-        let res1 = await oldCanister.set_last_tx(old_last_tx);
-
-        EC.add(200_000_000_000);
+        //Add cycles, because we are creating new canister
+        EC.add(200_000_000_000);                
         let newCanister = await Archive.Archive();
 
+        let res1 = await oldCanister.set_last_tx(old_last_tx);        
         let res2 = await oldCanister.set_next_archive(newCanister);
         let res3 = await newCanister.set_prev_archive(oldCanister);
 
