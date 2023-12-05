@@ -607,7 +607,7 @@ module {
         //Add cycles, because we are creating new canister
         EC.add(200_000_000_000);                
         let newCanister = await Archive.Archive();
-
+        
         let res1 = await oldCanister.set_last_tx(old_last_tx);        
         let res2 = await oldCanister.set_next_archive(newCanister);
         let res3 = await newCanister.set_prev_archive(oldCanister);

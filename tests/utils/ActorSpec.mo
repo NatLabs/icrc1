@@ -4,6 +4,7 @@ import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Text "mo:base/Text";
+import Bool "mo:base/Bool";
 
 module {
   public type Group = {
@@ -18,6 +19,13 @@ module {
     pending : Nat;
     skipped : Nat;
   };
+
+   public type AssertParam<E,A> = object{
+    expected : ?E;
+    actual : ?A;
+    areEqual : (?E,?A) -> Bool;
+    description : Text;
+   };
 
   func eqStatus(x : Status, y : Status) : Bool {
     x.failed == y.failed and x.passed == y.passed and x.pending == y.pending and x.skipped == y.skipped;
@@ -176,4 +184,19 @@ module {
     };
     allTrue;
   };
+
+
+   public func assertAllEqualWithDescription<E,A>(params: [AssertParam<E,A>]) : Bool {
+    var allTrue = true;
+    for (val in params.vals()) {      
+      if (val.areEqual(val.expected, val.actual) == false) {
+        Debug.print("Testing: '" # val.description # "' ': failed");        
+        allTrue:=false;
+      };
+      Debug.print("Testing: '" # val.description # "' ': passed");      
+      
+    };
+    allTrue;
+  };
+
 };

@@ -1,5 +1,5 @@
 import Prim "mo:prim";
-
+import Bool "mo:base/Bool";
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
@@ -11,6 +11,7 @@ import Result "mo:base/Result";
 
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
+
 
 import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
@@ -39,7 +40,8 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
     stable var memory_pages : Nat64 = ExperimentalStableMemory.size();
     stable var total_memory_used : Nat64 = 0;
-
+    stable var total_previous_archives_count:Nat = 0;
+    stable var next_archive_was_set: Bool = false;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
 
@@ -67,6 +69,24 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         last_tx;
     };
 
+
+
+    public shared ({ caller }) func set_previous_archive_count(count : Nat) : async Result.Result<(), Text> {
+
+        if (caller != ledger_canister_id) {
+            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
+        };
+
+        
+        //Can only be set one time:
+        if (next_archive_was_set == false){
+            total_previous_archives_count:=count;
+            next_archive_was_set:=true;
+        };
+
+        #ok();
+    };
+
     public shared ({ caller }) func set_prev_archive(prev_archive : T.ArchiveInterface) : async Result.Result<(), Text> {
 
         if (caller != ledger_canister_id) {
@@ -84,7 +104,10 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
 
+        ignore await next_archive.set_previous_archive_count(total_previous_archives_count + 1);
+        
         nextArchive := next_archive;
+
 
         #ok();
     };
@@ -172,7 +195,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         let tx_max = Nat.max(tx_index, first_tx);
         let tx_off : Nat = tx_max - first_tx;
         let bucket_key = tx_off / BUCKET_SIZE;
-
+        
         let opt_bucket = StableTrieMap.get(
             txStore,
             Nat.equal,
