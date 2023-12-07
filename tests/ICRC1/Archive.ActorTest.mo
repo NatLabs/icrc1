@@ -219,7 +219,7 @@ module {
                         let txs = new_txs(9000);
 
                         let res = await archive.append_transactions(txs);
-                        
+                          
                         var returnResult = true;
                         let firstResult = assertAllEqualWithDescription<Nat,Nat>([
                             

@@ -150,6 +150,7 @@ module {
         };
     };
 
+    //TODO: Examine this function. it might be wrong
     /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
     public func fromText(encoded : Text) : ?T.Account {
         let p = Principal.fromText(encoded);
@@ -158,6 +159,7 @@ module {
         decode(blob);
     };
 
+    //TODO: Examine this function. it might be wrong
     /// Converts an ICRC-1 `Account` to its Textual representation
     public func toText(account : T.Account) : Text {
         let blob = encode(account);
