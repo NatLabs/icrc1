@@ -134,7 +134,7 @@ module {
     ) : Bool {
         switch (opt_fee) {
             case (?tx_fee) {
-                if (tx_fee != token._fee) { // ensure that the transaction was not sent assuming different current fee 
+                if (tx_fee != token.fee) { // ensure that the transaction was not sent assuming different current fee 
                     return false;
                 };
             };
@@ -197,7 +197,7 @@ module {
             );
         };
 
-        if (tx_req.amount <= token._fee) {
+        if (tx_req.amount <= token.fee) {
             return #err(
                 #GenericError({
                     error_code = 0;
@@ -211,7 +211,7 @@ module {
                 if (not validate_fee(token, tx_req.fee)) {
                     return #err(
                         #BadFee {
-                            expected_fee = token._fee;
+                            expected_fee = token.fee;
                         },
                     );
                 };
@@ -235,9 +235,9 @@ module {
 				);
 			};
             case (#burn) {
-                if (tx_req.to == token._minting_account and tx_req.amount < token._min_burn_amount) {
+                if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
                     return #err(
-                        #BadBurn { min_burn_amount = token._min_burn_amount },
+                        #BadBurn { min_burn_amount = token.min_burn_amount },
                     );
                 };
 

@@ -181,7 +181,7 @@ module {
 
     /// Updates the balance of an account
     // Set to private, so that it can only be called from within this module
-    public func update_balance(
+    private func update_balance(
         accounts : T.AccountBalances,
         encoded_account : T.EncodedAccount,
         update : (T.Balance) -> T.Balance,
@@ -207,7 +207,7 @@ module {
         tx_req : T.TransactionRequest,
     ) { 
         let { encoded; amount } = tx_req;
-		let tx_fee = token._fee;						
+		let tx_fee = token.fee;						
 
         update_balance(
             token.accounts,
@@ -239,7 +239,7 @@ module {
             },
         );
 
-        token._minted_tokens += amount;
+        token.minted_tokens += amount;
     };
 
     public func burn_balance(
@@ -255,7 +255,7 @@ module {
             },
         );
 
-        token._burned_tokens += amount;
+        token.burned_tokens += amount;
     };
 
     // Stable Buffer Module with some additional functions

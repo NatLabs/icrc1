@@ -214,12 +214,13 @@ module {
             max_supply = 1_000_000_000 * (10 ** 8);
             minting_account = canister;
             initial_balances = [];
+            logo = "";
             min_burn_amount = (10 * (10 ** 8));
             advanced_settings = null;
         };
 
         return describe(
-            "ICRC1 Token Implementation Tessts",
+            "ICRC1 Token Implementation Tests",
             [
                 it(
                     "init()",
@@ -233,7 +234,7 @@ module {
                             token.name == args.name,
                             token.symbol == args.symbol,
                             token.decimals == args.decimals,
-                            token._fee == args.fee,
+                            token.fee == args.fee,
                             token.max_supply == args.max_supply,
 
                             token.minting_account == args.minting_account,
@@ -539,7 +540,7 @@ module {
                                     from_subaccount = user1.subaccount;
                                     to = user2;
                                     amount = 50 * (10 ** Nat8.toNat(token.decimals));
-                                    fee = ?token._fee;
+                                    fee = ?token.fee;
                                     memo = null;
                                     created_at_time = null;
                                 };
@@ -554,7 +555,7 @@ module {
                                 assertAllTrue([
                                     res == #Ok(1),
                                     ICRC1.balance_of(token, user1) == ICRC1.balance_from_float(token, 145),
-                                    token._burned_tokens == ICRC1.balance_from_float(token, 5),
+                                    token.burned_tokens == ICRC1.balance_from_float(token, 5),
                                     ICRC1.balance_of(token, user2) == ICRC1.balance_from_float(token, 50),
                                     ICRC1.total_supply(token) == ICRC1.balance_from_float(token, 195),
                                 ]);

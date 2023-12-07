@@ -228,6 +228,10 @@ module {
         set_prev_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
 
         set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
+
+        set_previous_archive_count: shared(Nat) -> async Result.Result<(), Text>;
+
+        get_previous_archive_count: shared query () -> async Nat;
     };
 
     /// Initial arguments for the setting up the icrc1 token canister
@@ -285,32 +289,32 @@ module {
     /// The state of the token canister
     public type TokenData = {
         /// The name of the token
-        var _name : Text;
+        var name : Text;
 
         /// The symbol of the token
-        var _symbol : Text;
+        var symbol : Text;
 
         /// The number of decimals the token uses
-        var _decimals : Nat8;
+        var decimals : Nat8;
 
         /// The fee charged for each transaction
-        var _fee : Balance;
+        var fee : Balance;
 
         /// The logo for the token
-        var _logo : Text;
+        var logo : Text;
 
         /// The maximum supply of the token
         max_supply : Balance;
 
         /// The total amount of minted tokens
-        var _minted_tokens : Balance;
+        var minted_tokens : Balance;
 
         /// The total amount of burned tokens
-        var _burned_tokens : Balance;
+        var burned_tokens : Balance;
 
         /// The account that is allowed to mint new tokens
         /// On initialization, the maximum supply is minted to this account
-        var _minting_account : Account;
+        var minting_account : Account;
 
         /// The balances of all accounts
         accounts : AccountBalances;
@@ -325,7 +329,7 @@ module {
         transaction_window : Nat;
 
         /// The minimum amount of tokens that must be burned in a transaction
-        var _min_burn_amount : Balance;
+        var min_burn_amount : Balance;
 
         /// The allowed difference between the ledger time and the time of the device the transaction was created on
         permitted_drift : Nat;
