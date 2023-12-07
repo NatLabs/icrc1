@@ -54,6 +54,10 @@ module {
         txs_range(0, length);
     };
 
+    func new_txs_range(from:Nat, length : Nat) : [T.Transaction] {
+        txs_range(from, length);
+    };
+
     let TC = 1_000_000_000_000;
     let CREATE_CANISTER = 100_000_000_000;
 
@@ -215,32 +219,8 @@ module {
                         let txs = new_txs(9000);
 
                         let res = await archive.append_transactions(txs);
-
-                        // let tx_range = await archive.get_transactions({
-                        //     start = 3251;
-                        //     length = 2000;
-                        // });
-
-                        /*
-                        //let transTest = await archive.get_transactions({ start = 3251; length = 2000 });
-                        let transTest = await archive.get_transactions({ start = 3251; length = 1000 });
-                        //let transTest = await archive.get_transactions({ start = 980; length = 100 });
-                        let transCount = transTest.transactions.size();
-                        Debug.print("Array size: " # debug_show(transCount));
-                        */
-
-                        // assertAllTrue([
-                        //     res == #ok(),
-                        //     (await archive.total_transactions()) == 5000,
-                        //     (await archive.get_transactions({ start = 0; length = 100 })).transactions == txs_range(0, 100),
-                        //     (await archive.get_transactions({ start = 225; length = 100 })).transactions == txs_range(225, 325),
-                        //     (await archive.get_transactions({ start = 225; length = 1200 })).transactions == txs_range(225, 1425),
-                        //     //(await archive.get_transactions({ start = 980; length = 100 })).transactions == txs_range(980, 1080),
-                        //     //(await archive.get_transactions({ start = 3251; length = 2000 })).transactions == txs_range(3251, 4999),
-                        // ]);
-
-
-                          var returnResult = true;
+                        
+                        var returnResult = true;
                         let firstResult = assertAllEqualWithDescription<Nat,Nat>([
                             
                             {                                                            
@@ -255,8 +235,12 @@ module {
                                                
                         let secondResult = assertAllEqualWithDescription(
                             [
+                                                                
                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 0; length = 100 })).transactions, 
                                 ?(0,100), "0-100"),  
+
+                                GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 10; length = 15 })).transactions, 
+                                ?(10,25), "10-25"),  
 
                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 225; length = 100 })).transactions, 
                                 ?(225,325), "225-325"),
@@ -264,24 +248,24 @@ module {
                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 225; length = 1200 })).transactions, 
                                 ?(225,1425), "225-1425"),
 
+                                GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 225; length = 3000 })).transactions, 
+                                ?(225,3225), "225-3225"),
+
                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 980; length = 100 })).transactions, 
                                 ?(980,1080), "980-1080"),
 
                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 3251; length = 2000 })).transactions, 
-                                ?(3251,4999), "3251-4999"),
+                                ?(3251,5251), "3251-5251"),
 
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(1234), ?1234, "1234"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(2829), ?2829, "2829"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(3554), ?3554, "3554"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(3555), ?3555, "3555"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(9000), ?9000, "9000"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(15000), ?15000, "15000"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(25000), ?25000, "25000"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(54000), ?54000, "54000"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(54999), ?54999, "54999"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(55000), null, "55000"),
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(55001), null, "55001"),                                
-                                // GetAssertParamForTransactionCheck(await archive.get_transaction(999999), null, "999999")                                
+                                GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 451; length = 3200 })).transactions, 
+                                ?(451,3651), "451-3651"),     
+
+                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 6800; length = 3000 })).transactions, 
+                                ?(6800,9000), "6800-9800"),  
+
+                                 GetAssertParamForTransactionsCheck( (await archive.get_transactions({ start = 8300; length = 3000 })).transactions, 
+                                ?(8300,9000), "8300-11300"),                                                         
+                            
                             ]
                         );
                         

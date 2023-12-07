@@ -1,4 +1,5 @@
 import Prim "mo:prim";
+import Option "mo:base/Option";
 import Bool "mo:base/Bool";
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
@@ -34,9 +35,11 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     stable let MAX_MEMORY = 32 * GiB;
 
     stable let BUCKET_SIZE = 1000;
+
+    //The maximum number of transactions returned by request of 'get_transactions'
     stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
-    stable let MAX_TXS_LENGTH = 100;
+    //stable let MAX_TXS_LENGTH = 100;
 
     stable var memory_pages : Nat64 = ExperimentalStableMemory.size();
     stable var total_memory_used : Nat64 = 0;
@@ -69,7 +72,11 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         last_tx;
     };
 
-
+    
+    public shared query func get_previous_archive_count() : async Nat {
+                  
+         return total_previous_archives_count;      
+    };
 
     public shared ({ caller }) func set_previous_archive_count(count : Nat) : async Result.Result<(), Text> {
 
@@ -142,7 +149,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
         var txs_iter = txs.vals();
 
-        if (trailing_txs > 0) {
+        if (BucketIsNotEmpty()) {
             let last_bucket = StableTrieMap.get(
                 txStore,
                 Nat.equal,
@@ -192,9 +199,14 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     };
 
     public shared query func get_transaction(tx_index : T.TxIndex) : async ?Transaction {
-        let tx_max = Nat.max(tx_index, first_tx);
-        let tx_off : Nat = tx_max - first_tx;
-        let bucket_key = tx_off / BUCKET_SIZE;
+        
+        //Absolute index ==> global transaction index
+        let tx_absolute_index = Nat.max(tx_index, first_tx);
+
+        //Relative index ==> internal index for this specific archive canister (We can have more than one archive canister) 
+        let tx_relative_index : Nat = tx_absolute_index - first_tx;
+
+        let bucket_key = tx_relative_index / BUCKET_SIZE;
         
         let opt_bucket = StableTrieMap.get(
             txStore,
@@ -205,9 +217,9 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
         switch (opt_bucket) {
             case (?bucket) {
-                let i = tx_off % BUCKET_SIZE;
+                let i = tx_relative_index % BUCKET_SIZE;
                 if (i < bucket.size()) {
-                    ?get_tx(bucket[tx_off % BUCKET_SIZE]);
+                    ?get_tx(bucket[tx_relative_index % BUCKET_SIZE]);
                 } else {
                     null;
                 };
@@ -221,45 +233,53 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     public shared query func get_transactions(req : T.GetTransactionsRequest) : async T.TransactionRange {
         let { start; length } = req;
         var iter = Itertools.empty<MemoryBlock>();
-        let length_max = Nat.max(0, length);
-        let length_min = Nat.min(MAX_TXS_LENGTH, length_max);
-
-        let start_max = Nat.max(start, first_tx);
-        let start_off : Nat = start_max - first_tx;
-        let end = start_off + length_min;
-        let start_bucket = start_off / BUCKET_SIZE;
-        let end_bucket = (Nat.min(end, total_txs()) / BUCKET_SIZE) + 1;
-
-        label _loop for (i in Itertools.range(start_bucket, end_bucket)) {
+           
+        let numberOfTransactionsToReturn = Nat.min(Nat.max(0, length), MAX_TRANSACTIONS_PER_REQUEST);
+        let startTransactionNumber:Nat = Nat.max(start, first_tx);
+        let startTransactionRelativeIndex:Nat = startTransactionNumber - first_tx;
+        let start_bucket_index:Nat = startTransactionRelativeIndex / BUCKET_SIZE;        
+        let end_bucket_index:Nat = (startTransactionRelativeIndex + numberOfTransactionsToReturn) / BUCKET_SIZE;
+        var transactionsLeft = numberOfTransactionsToReturn;
+             
+        label _loop for (i in Itertools.range(start_bucket_index, end_bucket_index + 1)) {
             let opt_bucket = StableTrieMap.get(
                 txStore,
                 Nat.equal,
                 U.hash,
                 i,
             );
-
+           
             switch (opt_bucket) {
                 case (?bucket) {
-                    if (i == start_bucket) {
-                        iter := Itertools.fromArraySlice(bucket, start_off % BUCKET_SIZE, Nat.min(bucket.size(), end));
-                    } else if (i + 1 == end_bucket) {
-                        let bucket_iter = Itertools.fromArraySlice(bucket, 0, end % BUCKET_SIZE);
+                    if (i == start_bucket_index) {                        
+                        let indexInBucket:Nat = startTransactionRelativeIndex % BUCKET_SIZE;                         
+                        let numberOfIndizesToUse:Nat = Nat.min(bucket.size()-indexInBucket,numberOfTransactionsToReturn);                          
+                        iter := Itertools.fromArraySlice(bucket, indexInBucket, indexInBucket + numberOfIndizesToUse);   
+                        transactionsLeft:=transactionsLeft - numberOfIndizesToUse;                        
+                    } else if (i == end_bucket_index) {
+                        
+                        let numberOfIndizesToUse:Nat = Nat.min(bucket.size(),transactionsLeft);                             
+                        let bucket_iter = Itertools.fromArraySlice(bucket, 0, numberOfIndizesToUse);                        
                         iter := Itertools.chain(iter, bucket_iter);
-                    } else {
+                        transactionsLeft:=transactionsLeft - numberOfIndizesToUse;
+                    } else {                                                
+                        
                         iter := Itertools.chain(iter, bucket.vals());
+                        transactionsLeft:=transactionsLeft - bucket.size();
                     };
                 };
-                case (_) { break _loop };
+                case (_) {                                
+                    break _loop };
             };
         };
-
+        
         let transactions = Iter.toArray(
-            Iter.map(
-                Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
+            Iter.map(                
+                Itertools.take(iter, numberOfTransactionsToReturn),
                 get_tx,
             ),
         );
-
+        
         { transactions };
     };
 
@@ -340,4 +360,10 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             trailing_txs := bucket.size();
         };
     };
+
+
+    //Helper functions:
+    private func BucketIsNotEmpty():Bool{
+        trailing_txs > 0;
+    }
 };

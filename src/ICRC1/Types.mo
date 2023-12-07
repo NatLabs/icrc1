@@ -230,6 +230,8 @@ module {
         set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
 
         set_previous_archive_count: shared(Nat) -> async Result.Result<(), Text>;
+
+        get_previous_archive_count: shared query () -> async Nat;
     };
 
     /// Initial arguments for the setting up the icrc1 token canister
