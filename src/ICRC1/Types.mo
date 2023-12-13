@@ -251,9 +251,8 @@ module {
         max_supply : Balance;
         initial_balances : [(Account, Balance)];
         min_burn_amount : Balance;
-
-        /// optional settings for the icrc1 canister
-        advanced_settings: ?AdvancedSettings
+        //Only if set to true then minting is allowed
+        minting_allowed : Bool;        
     };
 
     /// [InitArgs](#type.InitArgs) with optional fields for initializing a token canister
@@ -270,16 +269,12 @@ module {
         /// optional value that defaults to the caller if not provided
         minting_account : ?Account;
 
-        advanced_settings: ?AdvancedSettings;
+        //Only if set to true then minting is allowed
+        minting_allowed : Bool;
+
     };
 
-    /// Additional settings for the [InitArgs](#type.InitArgs) type during initialization of an icrc1 token canister
-    public type AdvancedSettings = {
-        /// needed if a token ever needs to be migrated to a new canister
-        burned_tokens : Balance; 
-        transaction_window : Timestamp;
-        permitted_drift : Timestamp;
-    };
+   
 
     public type AccountBalances = StableTrieMap<EncodedAccount, Balance>;
 
@@ -314,6 +309,9 @@ module {
 
         /// The total amount of minted tokens
         var minted_tokens : Balance;
+
+        // Only if this is set to true then minting is allowed for this token
+        minting_allowed:Bool;
 
         /// The total amount of burned tokens
         var burned_tokens : Balance;
