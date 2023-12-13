@@ -84,22 +84,13 @@ module {
             max_supply;
             initial_balances;
             min_burn_amount;
-            advanced_settings;
+            minting_allowed;            
         } = args;
 
-        var _burned_tokens = 0;
+        var _burned_tokens = 0;        
         var permitted_drift = 60_000_000_000;
         var transaction_window = 86_400_000_000_000;
-
-        switch(advanced_settings){
-            case(?options) {
-                _burned_tokens := options.burned_tokens;
-                permitted_drift := Nat64.toNat(options.permitted_drift);
-                transaction_window := Nat64.toNat(options.transaction_window);
-            };
-            case(null) { };
-        };
-        
+           
         if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");
         };
@@ -140,6 +131,7 @@ module {
             var burned_tokens = _burned_tokens;
             var min_burn_amount = min_burn_amount;
             var minting_account = minting_account;
+            minting_allowed;
             accounts;
             metadata = Utils.init_metadata(args);
             supported_standards = Utils.init_standards();
@@ -398,18 +390,41 @@ module {
             subaccount = args.from_subaccount;
         };
 
+    
+        var argsToUse = args;
+
         let tx_kind = if (from == token.minting_account) {
+           
+            if (token.minting_allowed == false){                            
+                return #Err(#GenericError {error_code = 401;message = "Error: Minting not allowed for this token.";});
+            };
+
+            if (caller != token.minting_account.owner)
+            {                
+                return #Err(
+                #GenericError {
+                    error_code = 401;
+                    message = "Unauthorized: Minting not allowed.";
+                },);
+            };
+
             #mint
         } else if (args.to == token.minting_account) {
             #burn
-        } else {
+        } else {                       
+            argsToUse := {args with fee:?Balance = 
+                            switch(args.fee){
+                                case (null) ?token.fee;
+                                case (?feeValue) ?Nat.max(token.fee, feeValue);                                                
+                            }    
+                         };                         
             #transfer
         };
 
-        let tx_req = Utils.create_transfer_req(args, caller, tx_kind);
+        let tx_req = Utils.create_transfer_req(argsToUse, caller, tx_kind);
 
         switch (Transfer.validate_request(token, tx_req)) {
-            case (#err(errorType)) {
+            case (#err(errorType)) {                
                 return #Err(errorType);
             };
             case (#ok(_)) {};
@@ -432,7 +447,7 @@ module {
                 Utils.burn_balance(token, encoded.from, token.fee);
             };
         };
-
+        
         // store transaction
         let index = SB.size(token.transactions) + token.archive.stored_txs;
         let tx = Utils.req_to_tx(tx_req, index);
@@ -445,13 +460,23 @@ module {
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async* T.TransferResult {													
-        return #Err(
-            #GenericError {
-                error_code = 401;
-                message = "Unauthorized: Minting not allowed.";
-            },
-        );
+    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async* T.TransferResult {
+
+        if (token.minting_allowed == false){            
+            return #Err(#GenericError {error_code = 401;message = "Error: Minting not allowed for this token.";});
+        };
+        if (caller == token.minting_account.owner) {            
+            let transfer_args : T.TransferArgs = {
+                args with from = token.minting_account;
+                from_subaccount = null;
+                fee = null;
+            };
+            
+            await* transfer(token, transfer_args, caller);
+            
+        } else {            
+            return #Err(#GenericError {error_code = 401;message = "Unauthorized: Minting not allowed.";},);
+        };        													        
     };
 
     /// Helper function to burn tokens with minimum args

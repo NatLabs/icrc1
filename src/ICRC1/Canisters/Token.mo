@@ -15,67 +15,55 @@ import Error "mo:base/Error";
 
 shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs) : async ICRC1.FullInterface {
 
-  
     //The value of this variable should only be changed by the function 'ConvertArgs'
     stable var wasInitializedWithArguments:Bool = false;
     
-    private func ConvertArgs(init_arguments : ?ICRC1.TokenInitArgs): T.InitArgs
-    {        
-        if (init_arguments == null and wasInitializedWithArguments == false)
-        {
-            let infoText:Text="ERROR! Empty argument in dfx deploy is only allowed for canister updates";
+    private func ConvertArgs(init_arguments : ?ICRC1.TokenInitArgs): ?T.InitArgs
+    {   
+        if (init_arguments == null){
+
+            if (wasInitializedWithArguments == false)
+            {
+                let infoText:Text="ERROR! Empty argument in dfx deploy is only allowed for canister updates";
+                Debug.print(infoText);
+                Debug.trap(infoText);                                   
+            };                
+            return null;            
+        };
+
+
+        if (wasInitializedWithArguments == true){
+            let infoText:Text="ERROR! Re-initializing is not allowed";
             Debug.print(infoText);
-            Debug.trap(infoText);                                   
-        };
-
-        //Default Token-Init-Arguments.
-        //This is only used if no parameter was used during 'dfx deploy'
-        //-> The stable var 'token' will not be changed by this, because the value of the stable var 'token' 
-        //   was already set.        
-        //So this is only dummy-variable in some sense, so we are able to omit arguments for 'dfx deploy'.
-        let defaultArgs:ICRC1.TokenInitArgs =   
-        {
-            name ="blabla";
-            symbol ="symbol";
-            decimals =8;
-            fee = 100000;
-            logo = "";
-            minting_account = null;
-            max_supply = 100000000;
-            initial_balances = [({owner = Principal.fromText("aaaaa-aa");subaccount = null;},10000)];
-            min_burn_amount = 100;       
-            advanced_settings = null;  
-        } ;
-        
-        var argsToUse:ICRC1.TokenInitArgs = switch(init_arguments){
-            case null defaultArgs;
-            case (?TokenInitArgs) TokenInitArgs;
-        };
+            Debug.trap(infoText);                                               
+        }
+        else{
             
-        let icrc1_args : ICRC1.InitArgs = {
-            argsToUse with minting_account = Option.get(
-                argsToUse.minting_account,
-                {
-                    owner = _owner;
-                    subaccount = null;
-                },
-            );
-        };
-        if (init_arguments != null)
-        {
-            wasInitializedWithArguments := true;
-        };
+            var argsToUse:ICRC1.TokenInitArgs = switch(init_arguments){
+                case null return null; // should never happen
+                case (?tokenArgs) tokenArgs;                   
+            };                     
 
-        return icrc1_args;
-        
+            let icrc1_args : ICRC1.InitArgs = {
+                        argsToUse with minting_account = Option.get( argsToUse.minting_account,{owner = _owner;subaccount = null;});
+            };
+                            
+            wasInitializedWithArguments := true;            
+            return Option.make(icrc1_args);               
+        };                                                     
     };
 
     
     //Convert argument, because 'init_args' can now be null, in case of upgrade scenarios. ('dfx deploy')
-    let init_arguments:T.InitArgs =  ConvertArgs(init_args);
+    let init_arguments:?T.InitArgs =  ConvertArgs(init_args);
 
-    stable let token = ICRC1.init(init_arguments);
-
+    stable let token:T.TokenData = switch (init_arguments){
+        case null {
+            Debug.trap("Initialize token with no arguments not allowed.");   
+        };
+        case (?initArgsNotNull) ICRC1.init(initArgsNotNull);
+    }; 
+    
 
     /// Functions for the ICRC1 token standard
     public shared query func icrc1_name() : async Text {
@@ -118,13 +106,8 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
         await* ICRC1.transfer(token, args, caller);
     };
 
-    public shared ({ caller }) func mint(args : ICRC1.Mint) : async ICRC1.TransferResult {
-        return #Err(
-            #GenericError {
-                error_code = 401;
-                message = "Unauthorized: Minting is not allowed.";
-            }
-        );
+    public shared ({ caller }) func mint(args : ICRC1.Mint) : async ICRC1.TransferResult {                
+        await* ICRC1.mint(token, args, caller);        
     };
 
     public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async ICRC1.TransferResult {

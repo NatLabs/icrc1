@@ -24,7 +24,7 @@ module {
     let { SB } = Utils;
 
     /// Checks if a transaction memo is valid
-    public func validate_memo(memo : ?T.Memo) : Bool {
+    private func validate_memo(memo : ?T.Memo) : Bool {
         switch (memo) {
             case (?bytes) {
                 bytes.size() <= 32;
@@ -34,7 +34,7 @@ module {
     };
 
     /// Checks if the `created_at_time` of a transfer request is before the accepted time range
-    public func is_too_old(token : T.TokenData, created_at_time : Nat64) : Bool {
+    private func is_too_old(token : T.TokenData, created_at_time : Nat64) : Bool {
         let { permitted_drift; transaction_window } = token;
 
         let lower_bound = Time.now() - transaction_window - permitted_drift;
@@ -42,7 +42,7 @@ module {
     };
 
     /// Checks if the `created_at_time` of a transfer request has not been reached yet relative to the canister's time.
-    public func is_in_future(token : T.TokenData, created_at_time : Nat64) : Bool {
+    private func is_in_future(token : T.TokenData, created_at_time : Nat64) : Bool {
         let upper_bound = Time.now() + token.permitted_drift;
         Nat64.toNat(created_at_time) > upper_bound;
     };
@@ -50,7 +50,7 @@ module {
     /// Checks if there is a duplicate transaction that matches the transfer request in the main canister.
     ///
     /// If a duplicate is found, the function returns an error (`#err`) with the duplicate transaction's index.
-    public func deduplicate(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), Nat> {
+    private func deduplicate(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), Nat> {
         // only deduplicates if created_at_time is set
         if (tx_req.created_at_time == null) {
             return #ok();
@@ -128,7 +128,7 @@ module {
     };
 
     /// Checks if a transfer fee is valid
-    public func validate_fee(
+    private func validate_fee(
         token : T.TokenData,
         opt_fee : ?T.Balance,
     ) : Bool {
@@ -221,19 +221,23 @@ module {
                     tx_req.encoded.from,
                 );
 
-                if (tx_req.amount > balance) { // amount is inclusive of fee
+                if (tx_req.amount + token.fee > balance) { 
                     return #err(#InsufficientFunds { balance });
                 };
             };
 
             case (#mint) {
-				return #err(
-					#GenericError({
-						error_code = 0;
-						message = "Minting not allowed";
-					}),
-				);
-			};
+                if (token.minting_allowed == false){
+                    return #err(#GenericError({error_code = 0;message = "Minting not allowed";}));                    
+                };
+
+                let newAmount:Nat = Nat.max(token.minted_tokens - token.burned_tokens , 0);
+                if (newAmount > token.max_supply){
+                         
+                    return #err(#GenericError({error_code = 0;message = "Total supply would be exceeded. Minting rejected.";}));
+                };                
+            };
+			
             case (#burn) {
                 if (tx_req.to == token.minting_account and tx_req.amount < token.min_burn_amount) {
                     return #err(
