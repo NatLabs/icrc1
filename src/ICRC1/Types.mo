@@ -28,6 +28,12 @@ module {
         url : Text;
     };
 
+    public type ParseError = {
+        #malformed : Text;
+        #not_canonical;
+        #bad_checksum;
+    };
+    
     public type Memo = Blob;
     public type Timestamp = Nat64;
     public type Duration = Nat64;

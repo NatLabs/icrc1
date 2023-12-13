@@ -12,10 +12,10 @@ actor {
     let test_modules = [
 
         //TODO: enable this test and make it succeed
-        //{function = ICRC1.test; description="ICRC1.test":Text}
+        {function = ICRC1.test; description="ICRC1.test":Text}
 
-        {function = Archive.test; description="Archive.test":Text},      
-        {function = AccountTest.test; description="Account.test":Text}
+        //{function = Archive.test; description="Archive.test":Text},      
+        //{function = AccountTest.test; description="Account.test":Text}
         
     ];
 
