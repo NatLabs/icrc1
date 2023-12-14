@@ -349,7 +349,7 @@ module {
             first_index := Nat.max(req.start, archive.stored_txs);
             let tx_start_index = (first_index - archive.stored_txs) : Nat;
 
-            txs_in_canister:= SB.slice(transactions, tx_start_index, tx_start_index + req.length);
+            txs_in_canister:= SB.slice(transactions, tx_start_index, req.length);
         };
 
         let archived_range = if (req.start < archive.stored_txs) {
