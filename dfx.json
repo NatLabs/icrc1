@@ -7,7 +7,7 @@
         },
         "test": {
             "type": "motoko",
-            "main": "tests/ActorTest.mo",
+            "main": "tests/internal_tests/ActorTest.mo",
             "args": "-v --compacting-gc"
         }       
     },

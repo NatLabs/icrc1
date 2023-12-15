@@ -11,8 +11,8 @@ import EC "mo:base/ExperimentalCycles";
 import Text "mo:base/Text";
 import Bool "mo:base/Bool";
 
-import Archive "../../src/ICRC1/Canisters/Archive";
-import T "../../src/ICRC1/Types";
+import Archive "../../../src/ICRC1/Canisters/Archive";
+import T "../../../src/ICRC1/Types";
 
 import ActorSpec "../utils/ActorSpec";
 

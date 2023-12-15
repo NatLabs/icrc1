@@ -5,7 +5,7 @@ import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 import Bool "mo:base/Bool";
-import T "../../src/ICRC1/Types";
+import T "../../../src/ICRC1/Types";
 
 module {
   public type Group = {

@@ -12,6 +12,7 @@ import Principal "mo:base/Principal";
 import T "../Types";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
+import Itertools "mo:itertools/Iter";
 
 shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs) : async ICRC1.FullInterface {
 
@@ -47,7 +48,31 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
             let icrc1_args : ICRC1.InitArgs = {
                         argsToUse with minting_account = Option.get( argsToUse.minting_account,{owner = _owner;subaccount = null;});
             };
-                            
+
+            if (icrc1_args.initial_balances.size() < 1){
+                if (icrc1_args.minting_allowed == false){                                        
+                    let infoText:Text="ERROR! When minting feature is disabled at least one initial balances account is needed.";
+                    Debug.print(infoText);
+                    Debug.trap(infoText);             
+                };
+            }
+            else{
+
+                for ((i, (account, balance)) in Itertools.enumerate(icrc1_args.initial_balances.vals())) {               
+
+                    if (account.owner == icrc1_args.minting_account.owner){
+                        let infoText:Text="ERROR! Minting account was specified in initial balances account. This is not allowed.";
+                        Debug.print(infoText);
+                        Debug.trap(infoText); 
+
+                    };
+                }
+            };
+
+
+
+
+             
             wasInitializedWithArguments := true;            
             return Option.make(icrc1_args);               
         };                                                     

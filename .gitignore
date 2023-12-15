@@ -3,6 +3,7 @@
 .idea/
 **/*~
 
+
 # Mac OSX temporary files
 .DS_Store
 **/.DS_Store
@@ -19,5 +20,7 @@ dist/
 #other files
 deploy*.sh
 *.sh
+NUL
 
 Cargo.lock
+tests/Dfnity-ICRC1-Reference/target/**

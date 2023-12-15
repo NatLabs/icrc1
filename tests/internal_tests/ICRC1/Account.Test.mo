@@ -9,10 +9,10 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Itertools "mo:itertools/Iter";
-import Account "../../src/ICRC1/Account";
+import Account "../../../src/ICRC1/Account";
 import ActorSpec "../utils/ActorSpec";
-import Archive "../../src/ICRC1/Canisters/Archive";
-import T "../../src/ICRC1/Types";
+import Archive "../../../src/ICRC1/Canisters/Archive";
+import T "../../../src/ICRC1/Types";
 module {
     let {
         assertAllEqualWithDescription;
