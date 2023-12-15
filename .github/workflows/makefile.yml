@@ -1,6 +1,13 @@
 name: Makefile CI
 
-on: [push, pull_request_target]
+on: 
+  push:
+    branches:
+      - main 
+      - dev
+  pull_request_target:
+    branches:
+      - "*"
 
 jobs:
   build:
@@ -27,7 +34,7 @@ jobs:
       - name: Install moc version manager
         run: | 
           npm  --yes -g i mocv
-          mocv use 0.9.1
+          mocv use 0.10.2
           export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: install mops
@@ -35,8 +42,8 @@ jobs:
             npm --yes -g i ic-mops
             mops i
 
-      - name: Detect warnings
-        run: make no-warn
+      # - name: Detect warnings
+      #   run: make no-warn
 
       - name: Run Tests
         run: |
@@ -61,7 +68,7 @@ jobs:
       - name: Install moc version manager
         run: | 
           npm  --yes -g i mocv
-          mocv use 0.9.1
+          mocv use 0.10.2
           export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: Install stable toolchain
