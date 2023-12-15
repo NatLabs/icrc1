@@ -1,9 +1,9 @@
 ( record {               
     name = "<Insert Token Name>";                         
     symbol = "<Insert Symbol>";                           
-    decimals = 6;                                           
-    fee = 1_000_000;                                        
-    max_supply = 1_000_000_000_000;                         
+    decimals = 3;                                           
+    fee = 1_000;                                        
+    max_supply = 1_000_000_000;                         
     initial_balances = vec {                                
         record {                                            
             record {                                        
