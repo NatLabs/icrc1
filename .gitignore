@@ -1,7 +1,9 @@
 # Various IDEs and Editors
 .vscode/
 .idea/
-**/*~
+!/Dfnity-ICRC1-Reference/**
+#**/*~
+
 
 # Mac OSX temporary files
 .DS_Store

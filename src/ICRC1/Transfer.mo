@@ -197,13 +197,17 @@ module {
             );
         };
 
-        if (tx_req.amount <= token.fee) {
-            return #err(
-                #GenericError({
-                    error_code = 0;
-                    message = "Amount must be greater than fee";
-                }),
-            );
+        if (tx_req.kind == #transfer or tx_req.kind ==#mint){
+            if (tx_req.amount <= token.fee) {
+                Debug.print("req amount: " #debug_show(tx_req.amount) #" , fee: " # debug_show(token.fee));
+                Debug.print("type: " #debug_show(tx_req.kind));
+                return #err(
+                    #GenericError({
+                        error_code = 0;
+                        message = "Amount must be greater than fee";
+                    }),
+                );
+            };
         };
 
         switch (tx_req.kind) {
