@@ -84,11 +84,6 @@ This repo contains the implementation of the
 
 > The fields for the `advanced_settings` record are documented [here](./docs/ICRC1/Types.md#type-advancedsettings)
 
-## Textual Representation of the ICRC-1 Accounts
-This library implements the [Textual Representation](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-1/README.md#textual-representation-of-accounts) format for accounts defined by the standard. It utilizes this implementation to encode each account into a sequence of bytes for improved hashing and comparison.
-To help with this process, the library provides functions in the [ICRC1/Account](./src/ICRC1/Account.mo) module for [encoding](./docs/ICRC1/Account.md#encode), [decoding](./docs/ICRC1/Account.md#decode), [converting from text](./docs/ICRC1/Account.md#fromText), and [converting to text](./docs/ICRC1/Account.md#toText).
-
-
 ## Tests
 #### Internal Tests
 - Download and Install [vessel](https://github.com/dfinity/vessel)

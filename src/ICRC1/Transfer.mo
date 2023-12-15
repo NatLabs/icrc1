@@ -132,20 +132,10 @@ module {
         token : T.TokenData,
         opt_fee : ?T.Balance,
     ) : Bool {
-        switch (opt_fee) {
-            case (?tx_fee) {
-                if (tx_fee < token._fee) {
-                    return false;
-                };
-            };
-            case (null) {
-                if (token._fee > 0) {
-                    return false;
-                };
-            };
-        };
+        
+        let ?fee = opt_fee else return true; // if fee is not set, it is assumed to be the default fee
 
-        true;
+        return fee == token._fee;
     };
 
     /// Checks if a transfer request is valid
@@ -214,7 +204,9 @@ module {
                     tx_req.encoded.from,
                 );
 
-                if (tx_req.amount + token._fee > balance) {
+                let fee = Option.get(tx_req.fee, token._fee);
+
+                if (tx_req.amount + fee > balance) {
                     return #err(#InsufficientFunds { balance });
                 };
             };
