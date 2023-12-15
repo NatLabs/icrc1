@@ -10,10 +10,10 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import ActorSpec "../utils/ActorSpec";
 
-import ICRC1 "../../src/ICRC1";
-import T "../../src/ICRC1/Types";
+import ICRC1 "../../../src/ICRC1";
+import T "../../../src/ICRC1/Types";
 
-import U "../../src/ICRC1/Utils";
+import U "../../../src/ICRC1/Utils";
 
 module {
     public func test() : async ActorSpec.Group {
@@ -530,15 +530,14 @@ module {
                                 
                                 let burn_args : T.BurnArgs = {
                                     from_subaccount = user1.subaccount;
-                                    amount = 5 * (10 ** Nat8.toNat(args.decimals));
+                                    amount = args.min_burn_amount - 10; 
                                     memo = null;
                                     created_at_time = null;
                                 };
 
-                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
-                                
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner);                                
                                 assertAllTrue([
-                                    res == #Err(#GenericError({error_code = 0; message = "Amount must be greater than fee"}))
+                                    res == #Err(#BadBurn({min_burn_amount = args.min_burn_amount}))
                                 ]);
                             },
                         ),

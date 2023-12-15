@@ -26,22 +26,20 @@ TESTPRINCIPAL=empty
 TESTPRINCIPALMINTINGOWNER=empty
 CANISTERID=empty
 
-.PHONY: blub test docs actor-test
+.PHONY: test docs actor-test
 
 AddIdentities:
 ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem))    
 	@dfx identity new $(TESTIDENTITY)	
-	$(shell sleep 1)	
+	@sleep 1	
 	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
 endif
 
 ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITYMINTINGOWNER)/identity.pem))    
 	@dfx identity new $(TESTIDENTITYMINTINGOWNER)	
-	$(shell sleep 1)	
+	@sleep 1	
 	@dfx identity export $(TESTIDENTITYMINTINGOWNER) > ~/.config/dfx/identity/$(TESTIDENTITYMINTINGOWNER)/identity.pem
 endif
-
-
 
 dfx-cache-install: 
 	dfx cache install
@@ -56,24 +54,31 @@ docs:
 	$(shell mocv bin current)/mo-doc
 	$(shell mocv bin current)/mo-doc --format plain
 
-actor-test: dfx-cache-install
+internal-tests: dfx-cache-install
 	-dfx start --background
 	dfx deploy test
 	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
 
-ref-test: AddIdentities
+ref-test: AddIdentities ref-test-before ref-test-execution ref-test-after
+	
+ref-test-before:
 	@$(eval TESTPRINCIPAL=$(shell dfx identity get-principal --identity $(TESTIDENTITY)))
 	@$(eval TESTPRINCIPALMINTINGOWNER=$(shell dfx identity get-principal --identity $(TESTIDENTITYMINTINGOWNER)))
 	dfx stop
 	dfx start --background --clean
-	$(shell sleep 5)	
 	@echo identity for testing $(TESTIDENTITY)
 	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)
 	dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)
+
+
+ref-test-execution:
 	@$(eval CANISTERID=$(shell dfx canister id icrc1))
-	echo CanisterId: $(CANISTERID)
-	
-	cd Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
+	@echo CanisterId set to: $(CANISTERID)
+	cd tests/Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
+
+ref-test-after:
+	dfx stop >NUL
+	dfx start --background --clean >NUL
 
 
