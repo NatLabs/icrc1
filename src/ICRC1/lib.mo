@@ -73,7 +73,7 @@ module {
         
        
         //With this we map the fields of 'args' to direct variables.
-        //So for example we do not need to use 'args.advanced_settings' and we can use 'advanced_settings' directly.
+        //So for example we do not need to use 'args.minting_account' and we can use 'minting_account' directly.
         let {
             name;
             symbol;
@@ -88,8 +88,8 @@ module {
         } = args;
 
         var _burned_tokens = 0;        
-        var permitted_drift = 60_000_000_000;
-        var transaction_window = 86_400_000_000_000;
+        var permitted_drift = 60_000_000_000; // 1 minute
+        var transaction_window = 86_400_000_000_000; //24 hours
            
         if (not Account.validate(minting_account)) {
             Debug.trap("minting_account is invalid");

@@ -55,7 +55,9 @@ docs:
 	$(shell mocv bin current)/mo-doc --format plain
 
 internal-tests: dfx-cache-install
-	-dfx start --background
+	dfx stop
+	dfx start --background
+	@sleep 5
 	dfx deploy test
 	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
@@ -67,6 +69,7 @@ ref-test-before:
 	@$(eval TESTPRINCIPALMINTINGOWNER=$(shell dfx identity get-principal --identity $(TESTIDENTITYMINTINGOWNER)))
 	dfx stop
 	dfx start --background --clean
+	@sleep 5
 	@echo identity for testing $(TESTIDENTITY)
 	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)
 	dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)

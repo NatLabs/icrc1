@@ -9,7 +9,7 @@ import SB "mo:StableBuffer/StableBuffer";
 import ICRC1 ".."; // This is lib.mo
 import Archive "Archive";
 import Principal "mo:base/Principal";
-import T "../Types";
+//import T "../Types";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
 import Itertools "mo:itertools/Iter";
@@ -68,10 +68,6 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
                     };
                 }
             };
-
-
-
-
              
             wasInitializedWithArguments := true;            
             return Option.make(icrc1_args);               

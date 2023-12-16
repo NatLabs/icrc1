@@ -12,7 +12,7 @@ import Itertools "mo:itertools/Iter";
 import Account "../../../src/ICRC1/Account";
 import ActorSpec "../utils/ActorSpec";
 import Archive "../../../src/ICRC1/Canisters/Archive";
-import T "../../../src/ICRC1/Types";
+import T "../../../src/ICRC1/Types/Types.Common";
 module {
     let {
         assertAllEqualWithDescription;

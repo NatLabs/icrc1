@@ -19,7 +19,7 @@ import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
-import T "Types";
+import T "Types/Types.Common";
 
 module {
     type Iter<A> = Iter.Iter<A>;
