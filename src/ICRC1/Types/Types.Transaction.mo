@@ -16,9 +16,9 @@ module {
     private type Subaccount = AccountTypes.Subaccount;
     private type Account = AccountTypes.Account;
     private type EncodedAccount = AccountTypes.EncodedAccount;    
-
-    public type StableBuffer<T> = StableBuffer.StableBuffer<T>;
-    public type StableTrieMap<K, V> = STMap.StableTrieMap<K, V>;
+    private type StableBuffer<T> = StableBuffer.StableBuffer<T>;
+    private type StableTrieMap<K, V> = STMap.StableTrieMap<K, V>;
+    
     public type BlockIndex = Nat;    
     public type Memo = Blob;
     public type Timestamp = Nat64;

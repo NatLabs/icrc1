@@ -196,4 +196,8 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
         let accepted = ExperimentalCycles.accept(amount);
         assert (accepted == amount);
     };
+
+    public shared query func cycles_available(): async Nat {
+        ExperimentalCycles.available();
+    };
 };
