@@ -24,11 +24,11 @@ import Utils "Utils";
 module {
     let { SB } = Utils;
     
-    public type Balance = CommonTypes.Balance;
-    public type Memo = TransactionTypes.Memo;
-    public type TokenData = TokenTypes.TokenData;
-    public type TransactionRequest = TransactionTypes.TransactionRequest;
-    public type TransferError = TransactionTypes.TransferError;
+    private type Balance = CommonTypes.Balance;
+    private type Memo = TransactionTypes.Memo;
+    private type TokenData = TokenTypes.TokenData;
+    private type TransactionRequest = TransactionTypes.TransactionRequest;
+    private type TransferError = TransactionTypes.TransferError;
         
     /// Checks if a transaction memo is valid
     private func validate_memo(memo : ?Memo) : Bool {

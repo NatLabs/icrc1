@@ -27,7 +27,7 @@ module {
     private type Subaccount = T.AccountTypes.Subaccount;
     private type ParseError = T.AccountTypes.ParseError;
     
-    type Iter<A> = Iter.Iter<A>;
+    private type Iter<A> = Iter.Iter<A>;
     let crc32Seed : Nat32 = 0xffffffff;
     
     // prettier-ignore
@@ -82,7 +82,7 @@ module {
 
 
     // prettier-ignore
-    let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
+    private let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
 
 
         /// Implementation of ICRC1's Textual representation of accounts [Encoding Standard](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1#encoding)

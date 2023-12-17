@@ -22,11 +22,11 @@ import TransactionTypes "../Types/Types.Transaction";
 
 shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTypes.ArchiveInterface {
 
-    public type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
-    public type TransactionRange = TransactionTypes.TransactionRange;
-    public type TxIndex = TransactionTypes.TxIndex;
-    type Transaction = TransactionTypes.Transaction;
-    type MemoryBlock = {
+    private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
+    private type TransactionRange = TransactionTypes.TransactionRange;
+    private type TxIndex = TransactionTypes.TxIndex;
+    private type Transaction = TransactionTypes.Transaction;
+    private type MemoryBlock = {
         offset : Nat64;
         size : Nat;
     };

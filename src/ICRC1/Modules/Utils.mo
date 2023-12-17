@@ -27,24 +27,24 @@ import TransactionTypes "../Types/Types.Transaction";
 module {
 
     //Common types
-    public type Balance = CommonTypes.Balance;
+    private type Balance = CommonTypes.Balance;
 
     //Token types
-    public type InitArgs = TokenTypes.InitArgs;
-    public type MetaDatum = TokenTypes.MetaDatum;    
-    public type SupportedStandard = TokenTypes.SupportedStandard;
-    public type TokenData = TokenTypes.TokenData;
+    private type InitArgs = TokenTypes.InitArgs;
+    private type MetaDatum = TokenTypes.MetaDatum;    
+    private type SupportedStandard = TokenTypes.SupportedStandard;
+    private type TokenData = TokenTypes.TokenData;
 
     //Account types
-    public type Subaccount = AccountTypes.Subaccount;
-    public type AccountBalances = AccountTypes.AccountBalances;
-    public type EncodedAccount = AccountTypes.EncodedAccount;
+    private type Subaccount = AccountTypes.Subaccount;
+    private type AccountBalances = AccountTypes.AccountBalances;
+    private type EncodedAccount = AccountTypes.EncodedAccount;
 
     //Transaction types
-    public type TransferArgs = TransactionTypes.TransferArgs;
-    public type TxKind = TransactionTypes.TxKind;
-    public type TransactionRequest = TransactionTypes.TransactionRequest;
-    public type Transaction = TransactionTypes.Transaction;
+    private type TransferArgs = TransactionTypes.TransferArgs;
+    private type TxKind = TransactionTypes.TxKind;
+    private type TransactionRequest = TransactionTypes.TransactionRequest;
+    private type Transaction = TransactionTypes.Transaction;
 
     
 
