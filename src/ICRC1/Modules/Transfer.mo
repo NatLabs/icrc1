@@ -16,15 +16,22 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
 
 import Account "Account";
-
-import T "Types";
+import TransactionTypes = "../Types/Types.Transaction";
+import TokenTypes "../Types/Types.Token";
+import CommonTypes "../Types/Types.Common" ;
 import Utils "Utils";
 
 module {
     let { SB } = Utils;
-
+    
+    private type Balance = CommonTypes.Balance;
+    private type Memo = TransactionTypes.Memo;
+    private type TokenData = TokenTypes.TokenData;
+    private type TransactionRequest = TransactionTypes.TransactionRequest;
+    private type TransferError = TransactionTypes.TransferError;
+        
     /// Checks if a transaction memo is valid
-    private func validate_memo(memo : ?T.Memo) : Bool {
+    private func validate_memo(memo : ?Memo) : Bool {
         switch (memo) {
             case (?bytes) {
                 bytes.size() <= 32;
@@ -34,7 +41,7 @@ module {
     };
 
     /// Checks if the `created_at_time` of a transfer request is before the accepted time range
-    private func is_too_old(token : T.TokenData, created_at_time : Nat64) : Bool {
+    private func is_too_old(token : TokenData, created_at_time : Nat64) : Bool {
         let { permitted_drift; transaction_window } = token;
 
         let lower_bound = Time.now() - transaction_window - permitted_drift;
@@ -42,7 +49,7 @@ module {
     };
 
     /// Checks if the `created_at_time` of a transfer request has not been reached yet relative to the canister's time.
-    private func is_in_future(token : T.TokenData, created_at_time : Nat64) : Bool {
+    private func is_in_future(token : TokenData, created_at_time : Nat64) : Bool {
         let upper_bound = Time.now() + token.permitted_drift;
         Nat64.toNat(created_at_time) > upper_bound;
     };
@@ -50,7 +57,7 @@ module {
     /// Checks if there is a duplicate transaction that matches the transfer request in the main canister.
     ///
     /// If a duplicate is found, the function returns an error (`#err`) with the duplicate transaction's index.
-    private func deduplicate(token : T.TokenData, tx_req : T.TransactionRequest) : Result.Result<(), Nat> {
+    private func deduplicate(token : TokenData, tx_req : TransactionRequest) : Result.Result<(), Nat> {
         // only deduplicates if created_at_time is set
         if (tx_req.created_at_time == null) {
             return #ok();
@@ -81,7 +88,7 @@ module {
                                 };
                             };
 
-                            let mint_req : T.Mint = tx_req;
+                            let mint_req : TransactionTypes.Mint = tx_req;
 
                             mint_req == mint;
                         };
@@ -96,7 +103,7 @@ module {
                                     break for_loop;
                                 };
                             };
-                            let burn_req : T.Burn = tx_req;
+                            let burn_req : TransactionTypes.Burn = tx_req;
 
                             burn_req == burn;
                         };
@@ -112,7 +119,7 @@ module {
                                 };
                             };
 
-                            let transfer_req : T.Transfer = tx_req;
+                            let transfer_req : TransactionTypes.Transfer = tx_req;
 
                             transfer_req == transfer;
                         };
@@ -129,8 +136,8 @@ module {
 
     /// Checks if a transfer fee is valid
     private func validate_fee(
-        token : T.TokenData,
-        opt_fee : ?T.Balance,
+        token : TokenData,
+        opt_fee : ?Balance,
     ) : Bool {
         switch (opt_fee) {
             case (?tx_fee) {
@@ -148,9 +155,9 @@ module {
 
     /// Checks if a transfer request is valid
     public func validate_request(
-        token : T.TokenData,
-        tx_req : T.TransactionRequest,
-    ) : Result.Result<(), T.TransferError> {
+        token : TokenData,
+        tx_req : TransactionRequest,
+    ) : Result.Result<(), TransferError> {
 
         if (tx_req.from == tx_req.to) {
             return #err(
@@ -220,7 +227,7 @@ module {
                     );
                 };
 
-                let balance : T.Balance = Utils.get_balance(
+                let balance : Balance = Utils.get_balance(
                     token.accounts,
                     tx_req.encoded.from,
                 );
@@ -249,7 +256,7 @@ module {
                     );
                 };
 
-                let balance : T.Balance = Utils.get_balance(
+                let balance : Balance = Utils.get_balance(
                     token.accounts,
                     tx_req.encoded.from,
                 );

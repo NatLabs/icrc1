@@ -21,9 +21,11 @@ TOKENINITFORTEST='( opt record { \
 })' \
 
 TESTIDENTITY=IdentityForTests
-TESTIDENTITYMINTINGOWNER=IdentityForTestsMintingOwner
 TESTPRINCIPAL=empty
+
+TESTIDENTITYMINTINGOWNER=empty
 TESTPRINCIPALMINTINGOWNER=empty
+
 CANISTERID=empty
 
 .PHONY: test docs actor-test
@@ -33,12 +35,6 @@ ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem))
 	@dfx identity new $(TESTIDENTITY)	
 	@sleep 1	
 	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
-endif
-
-ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITYMINTINGOWNER)/identity.pem))    
-	@dfx identity new $(TESTIDENTITYMINTINGOWNER)	
-	@sleep 1	
-	@dfx identity export $(TESTIDENTITYMINTINGOWNER) > ~/.config/dfx/identity/$(TESTIDENTITYMINTINGOWNER)/identity.pem
 endif
 
 dfx-cache-install: 
@@ -55,18 +51,22 @@ docs:
 	$(shell mocv bin current)/mo-doc --format plain
 
 internal-tests: dfx-cache-install
-	-dfx start --background
+	dfx stop
+	dfx start --background
+	@sleep 5
 	dfx deploy test
 	dfx ledger fabricate-cycles --canister test
 	dfx canister call test run_tests
 
 ref-test: AddIdentities ref-test-before ref-test-execution ref-test-after
 	
-ref-test-before:
-	@$(eval TESTPRINCIPAL=$(shell dfx identity get-principal --identity $(TESTIDENTITY)))
-	@$(eval TESTPRINCIPALMINTINGOWNER=$(shell dfx identity get-principal --identity $(TESTIDENTITYMINTINGOWNER)))
+ref-test-before:    
+	@$(eval TESTIDENTITYMINTINGOWNER=$(shell dfx identity whoami))
+	@$(eval TESTPRINCIPALMINTINGOWNER=$(shell dfx identity get-principal --identity $(TESTIDENTITYMINTINGOWNER)))	
+	@$(eval TESTPRINCIPAL=$(shell dfx identity get-principal --identity $(TESTIDENTITY)))	
 	dfx stop
 	dfx start --background --clean
+	@sleep 5
 	@echo identity for testing $(TESTIDENTITY)
 	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)
 	dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)

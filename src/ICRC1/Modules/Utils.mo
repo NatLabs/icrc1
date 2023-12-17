@@ -19,12 +19,38 @@ import STMap "mo:StableTrieMap";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import Account "Account";
-import T "Types";
+import CommonTypes "../Types/Types.Common";
+import TokenTypes "../Types/Types.Token";
+import AccountTypes "../Types/Types.Account";
+import TransactionTypes "../Types/Types.Transaction";
 
 module {
+
+    //Common types
+    private type Balance = CommonTypes.Balance;
+
+    //Token types
+    private type InitArgs = TokenTypes.InitArgs;
+    private type MetaDatum = TokenTypes.MetaDatum;    
+    private type SupportedStandard = TokenTypes.SupportedStandard;
+    private type TokenData = TokenTypes.TokenData;
+
+    //Account types
+    private type Subaccount = AccountTypes.Subaccount;
+    private type AccountBalances = AccountTypes.AccountBalances;
+    private type EncodedAccount = AccountTypes.EncodedAccount;
+
+    //Transaction types
+    private type TransferArgs = TransactionTypes.TransferArgs;
+    private type TxKind = TransactionTypes.TxKind;
+    private type TransactionRequest = TransactionTypes.TransactionRequest;
+    private type Transaction = TransactionTypes.Transaction;
+
+    
+
     // Creates a Stable Buffer with the default metadata and returns it.
-    public func init_metadata(args : T.InitArgs) : StableBuffer.StableBuffer<T.MetaDatum> {
-        let metadata = SB.initPresized<T.MetaDatum>(4);
+    public func init_metadata(args : InitArgs) : StableBuffer.StableBuffer<MetaDatum> {
+        let metadata = SB.initPresized<MetaDatum>(4);
         SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
         SB.add(metadata, ("icrc1:name", #Text(args.name)));
         SB.add(metadata, ("icrc1:symbol", #Text(args.symbol)));
@@ -33,14 +59,14 @@ module {
         metadata;
     };
 
-    public let default_standard : T.SupportedStandard = {
+    public let default_standard : SupportedStandard = {
         name = "ICRC-1";
         url = "https://github.com/dfinity/ICRC-1";
     };
 
     // Creates a Stable Buffer with the default supported standards and returns it.
-    public func init_standards() : StableBuffer.StableBuffer<T.SupportedStandard> {
-        let standards = SB.initPresized<T.SupportedStandard>(4);
+    public func init_standards() : StableBuffer.StableBuffer<SupportedStandard> {
+        let standards = SB.initPresized<SupportedStandard>(4);
         SB.add(standards, default_standard);
 
         standards;
@@ -48,7 +74,7 @@ module {
 
     // Returns the default subaccount for cases where a user does
     // not specify it.
-    public func default_subaccount() : T.Subaccount {
+    public func default_subaccount() : Subaccount {
         Blob.fromArray(
             Array.tabulate(32, func(_ : Nat) : Nat8 { 0 }),
         );
@@ -82,10 +108,10 @@ module {
     // Formats the different operation arguements into
     // a `TransactionRequest`, an internal type to access fields easier.
     public func create_transfer_req(
-        args : T.TransferArgs,
+        args : TransferArgs,
         owner : Principal,
-        tx_kind: T.TxKind,
-    ) : T.TransactionRequest {
+        tx_kind: TxKind,
+    ) : TransactionRequest {
         
         let from = {
             owner;
@@ -125,7 +151,7 @@ module {
     };
 
     // Transforms the transaction kind from `variant` to `Text`
-    public func kind_to_text(kind : T.TxKind) : Text {
+    public func kind_to_text(kind : TxKind) : Text {
         switch (kind) {
             case (#mint) "MINT";
             case (#burn) "BURN";
@@ -134,7 +160,7 @@ module {
     };
 
     // Formats the tx request into a finalised transaction
-    public func req_to_tx(tx_req : T.TransactionRequest, index: Nat) : T.Transaction {
+    public func req_to_tx(tx_req : TransactionRequest, index: Nat) : Transaction {
 
         {
             kind = kind_to_text(tx_req.kind);
@@ -163,7 +189,7 @@ module {
     };
 
     /// Retrieves the balance of an account
-    public func get_balance(accounts : T.AccountBalances, encoded_account : T.EncodedAccount) : T.Balance {
+    public func get_balance(accounts : AccountBalances, encoded_account : EncodedAccount) : Balance {
         let res = STMap.get(
             accounts,
             Blob.equal,
@@ -182,9 +208,9 @@ module {
     /// Updates the balance of an account
     // Set to private, so that it can only be called from within this module
     private func update_balance(
-        accounts : T.AccountBalances,
-        encoded_account : T.EncodedAccount,
-        update : (T.Balance) -> T.Balance,
+        accounts : AccountBalances,
+        encoded_account : EncodedAccount,
+        update : (Balance) -> Balance,
     ) {
         let prev_balance = get_balance(accounts, encoded_account);
         let updated_balance = update(prev_balance);
@@ -203,8 +229,8 @@ module {
     // Transfers tokens from the sender to the
     // recipient in the tx request
     public func transfer_balance(
-        token : T.TokenData,
-        tx_req : T.TransactionRequest,
+        token : TokenData,
+        tx_req : TransactionRequest,
     ) { 
         let { encoded; amount } = tx_req;
 		let tx_fee = token.fee;						
@@ -227,9 +253,9 @@ module {
     };
 
     public func mint_balance(
-        token : T.TokenData,
-        encoded_account : T.EncodedAccount,
-        amount : T.Balance,
+        token : TokenData,
+        encoded_account : EncodedAccount,
+        amount : Balance,
     ) {
         update_balance(
             token.accounts,
@@ -243,9 +269,9 @@ module {
     };
 
     public func burn_balance(
-        token : T.TokenData,
-        encoded_account : T.EncodedAccount,
-        amount : T.Balance,
+        token : TokenData,
+        encoded_account : EncodedAccount,
+        amount : Balance,
     ) {
         update_balance(
             token.accounts,
@@ -260,7 +286,7 @@ module {
 
     // Stable Buffer Module with some additional functions
     public let SB = {
-        StableBuffer with slice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : [A] {
+        StableBuffer with slice = func<A>(buffer : StableBuffer.StableBuffer<A>, start : Nat, end : Nat) : [A] {
             let size = SB.size(buffer);
             if (start >= size) {
                 return [];
@@ -276,7 +302,7 @@ module {
             );
         };
 
-        toIterFromSlice = func<A>(buffer : T.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
+        toIterFromSlice = func<A>(buffer : StableBuffer.StableBuffer<A>, start : Nat, end : Nat) : Iter.Iter<A> {
             if (start >= SB.size(buffer)) {
                 return Itertools.empty();
             };
@@ -289,13 +315,13 @@ module {
             );
         };
 
-        appendArray = func<A>(buffer : T.StableBuffer<A>, array : [A]) {
+        appendArray = func<A>(buffer : StableBuffer.StableBuffer<A>, array : [A]) {
             for (elem in array.vals()) {
                 SB.add(buffer, elem);
             };
         };
 
-        getLast = func<A>(buffer : T.StableBuffer<A>) : ?A {
+        getLast = func<A>(buffer : StableBuffer.StableBuffer<A>) : ?A {
             let size = SB.size(buffer);
 
             if (size > 0) {
@@ -305,11 +331,11 @@ module {
             };
         };
 
-        capacity = func<A>(buffer : T.StableBuffer<A>) : Nat {
+        capacity = func<A>(buffer : StableBuffer.StableBuffer<A>) : Nat {
             buffer.elems.size();
         };
 
-        _clearedElemsToIter = func<A>(buffer : T.StableBuffer<A>) : Iter.Iter<A> {
+        _clearedElemsToIter = func<A>(buffer : StableBuffer.StableBuffer<A>) : Iter.Iter<A> {
             Iter.map(
                 Itertools.range(buffer.count, buffer.elems.size()),
                 func(i : Nat) : A {

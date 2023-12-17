@@ -9,10 +9,11 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Itertools "mo:itertools/Iter";
-import Account "../../../src/ICRC1/Account";
+import Account "../../../src/ICRC1/Modules/Account";
 import ActorSpec "../utils/ActorSpec";
 import Archive "../../../src/ICRC1/Canisters/Archive";
-import T "../../../src/ICRC1/Types";
+import T "../../../src/ICRC1/Types/Types.All";
+
 module {
     let {
         assertAllEqualWithDescription;
@@ -317,11 +318,11 @@ module {
 
     };     
 
-    func defAccount(owner : Text) : T.Account {
+    func defAccount(owner : Text) : T.AccountTypes.Account {
     { owner = Principal.fromText(owner); subaccount = null };
     };
 
-    func account(owner : Text, subaccount : [Nat8]) : T.Account {
+    func account(owner : Text, subaccount : [Nat8]) : T.AccountTypes.Account {
     {
         owner = Principal.fromText(owner);
         subaccount = ?Blob.fromArray(subaccount);
@@ -342,13 +343,15 @@ module {
     };
 
 
-    func GetAssertParamForDecodeCheck(accountText:Text, expectedResult: Result.Result<T.Account, T.ParseError>, 
+    func GetAssertParamForDecodeCheck(accountText:Text, expectedResult: Result.Result<T.AccountTypes.Account, T.AccountTypes.ParseError>, 
     description:Text)
-    : ActorSpec.AssertParam<Result.Result<T.Account, T.ParseError>,Result.Result<T.Account, T.ParseError>>{ 
+    : ActorSpec.AssertParam<Result.Result<T.AccountTypes.Account, T.AccountTypes.ParseError>,Result.Result<T.AccountTypes.Account, 
+    T.AccountTypes.ParseError>>{ 
 
         let account = Account.fromText(accountText);
         
-        let returnValue :ActorSpec.AssertParam<Result.Result<T.Account, T.ParseError>, Result.Result<T.Account, T.ParseError>> =                 
+        let returnValue :ActorSpec.AssertParam<Result.Result<T.AccountTypes.Account, T.AccountTypes.ParseError>, 
+        Result.Result<T.AccountTypes.Account, T.AccountTypes.ParseError>> =                 
         {                                                            
             actual = ?account;
             expected = ?expectedResult;

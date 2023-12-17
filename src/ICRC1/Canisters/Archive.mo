@@ -16,13 +16,17 @@ import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
 
 import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
-import U "../Utils";
-import T "../Types";
+import U "../Modules/Utils";
+import ArchiveTypes "../Types/Types.Archive";
+import TransactionTypes "../Types/Types.Transaction";
 
-shared ({ caller = ledger_canister_id }) actor class Archive() : async T.ArchiveInterface {
+shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTypes.ArchiveInterface {
 
-    type Transaction = T.Transaction;
-    type MemoryBlock = {
+    private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
+    private type TransactionRange = TransactionTypes.TransactionRange;
+    private type TxIndex = TransactionTypes.TxIndex;
+    private type Transaction = TransactionTypes.Transaction;
+    private type MemoryBlock = {
         offset : Nat64;
         size : Nat;
     };
@@ -50,17 +54,17 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
     stable let txStore = StableTrieMap.new<Nat, [MemoryBlock]>();
 
-    stable var prevArchive : T.ArchiveInterface = actor ("aaaaa-aa");
-    stable var nextArchive : T.ArchiveInterface = actor ("aaaaa-aa");
+    stable var prevArchive : ArchiveTypes.ArchiveInterface = actor ("aaaaa-aa");
+    stable var nextArchive : ArchiveTypes.ArchiveInterface = actor ("aaaaa-aa");
     stable var first_tx : Nat = 0;
     stable var last_tx : Nat = 0;
 
 
-    public shared query func get_prev_archive() : async T.ArchiveInterface {
+    public shared query func get_prev_archive() : async ArchiveTypes.ArchiveInterface {
         prevArchive;
     };
 
-    public shared query func get_next_archive() : async T.ArchiveInterface {
+    public shared query func get_next_archive() : async ArchiveTypes.ArchiveInterface {
         nextArchive;
     };
 
@@ -94,7 +98,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         #ok();
     };
 
-    public shared ({ caller }) func set_prev_archive(prev_archive : T.ArchiveInterface) : async Result.Result<(), Text> {
+    public shared ({ caller }) func set_prev_archive(prev_archive : ArchiveTypes.ArchiveInterface) : async Result.Result<(), Text> {
 
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
@@ -105,7 +109,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         #ok();
     };
 
-    public shared ({ caller }) func set_next_archive(next_archive : T.ArchiveInterface) : async Result.Result<(), Text> {
+    public shared ({ caller }) func set_next_archive(next_archive : ArchiveTypes.ArchiveInterface) : async Result.Result<(), Text> {
 
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
@@ -198,7 +202,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         total_txs();
     };
 
-    public shared query func get_transaction(tx_index : T.TxIndex) : async ?Transaction {
+    public shared query func get_transaction(tx_index : TxIndex) : async ?Transaction {
         
         //Absolute index ==> global transaction index
         let tx_absolute_index = Nat.max(tx_index, first_tx);
@@ -230,7 +234,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         };
     };
 
-    public shared query func get_transactions(req : T.GetTransactionsRequest) : async T.TransactionRange {
+    public shared query func get_transactions(req : GetTransactionsRequest) : async TransactionRange {
         let { start; length } = req;
         var iter = Itertools.empty<MemoryBlock>();
            

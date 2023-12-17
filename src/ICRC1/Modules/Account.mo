@@ -18,11 +18,16 @@ import ArrayModule "mo:array/Array";
 import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
 import STMap "mo:StableTrieMap";
-
-import T "Types";
+import T "../Types/Types.All";
 
 module {
-    type Iter<A> = Iter.Iter<A>;
+
+    private type Account = T.AccountTypes.Account;
+    private type EncodedAccount = T.AccountTypes.EncodedAccount;
+    private type Subaccount = T.AccountTypes.Subaccount;
+    private type ParseError = T.AccountTypes.ParseError;
+    
+    private type Iter<A> = Iter.Iter<A>;
     let crc32Seed : Nat32 = 0xffffffff;
     
     // prettier-ignore
@@ -77,11 +82,11 @@ module {
 
 
     // prettier-ignore
-    let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
+    private let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
 
 
         /// Implementation of ICRC1's Textual representation of accounts [Encoding Standard](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1#encoding)
-    public func encode({ owner; subaccount } : T.Account) : T.EncodedAccount {
+    public func encode({ owner; subaccount } : Account) : EncodedAccount {
         let owner_blob = Principal.toBlob(owner);
 
         switch (subaccount) {
@@ -102,7 +107,7 @@ module {
     };
 
     /// Implementation of ICRC1's Textual representation of accounts [Decoding Standard](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1#decoding)
-    public func decode(encoded : T.EncodedAccount) : ?T.Account {
+    public func decode(encoded : EncodedAccount) : ?Account {
         let bytes = Blob.toArray(encoded);
         var size = bytes.size();
 
@@ -151,7 +156,7 @@ module {
     };
 
     /// Checks if a subaccount is valid
-    public func validate_subaccount(subaccount : ?T.Subaccount) : Bool {
+    public func validate_subaccount(subaccount : ?Subaccount) : Bool {
         switch (subaccount) {
             case (?bytes) {
                 bytes.size() == 32;
@@ -161,7 +166,7 @@ module {
     };
 
     /// Checks if an account is valid
-    public func validate(account : T.Account) : Bool {
+    public func validate(account : Account) : Bool {
         let is_anonymous = Principal.isAnonymous(account.owner);
         let invalid_size = Principal.toBlob(account.owner).size() > 29;
 
@@ -211,7 +216,7 @@ module {
     //TODO: Examine this function. it might be wrong
     /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
     /// Parses account from its textual representation.
-    public func fromText(text : Text) : Result.Result<T.Account, T.ParseError> {
+    public func fromText(text : Text) : Result.Result<Account, ParseError> {
         let n = text.size();
 
         if (n == 0) {
@@ -299,7 +304,7 @@ module {
   };
       
     /// Converts an ICRC-1 `Account` to its Textual representation
-    public func toText(account : T.Account) : Text {
+    public func toText(account : Account) : Text {
         let ownerText:Text = Principal.toText(account.owner);
 
         switch (account.subaccount) {
