@@ -10,14 +10,31 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 
 import ActorSpec "../utils/ActorSpec";
 
-import ICRC1 "../../../src/ICRC1";
-import T "../../../src/ICRC1/Types";
+import ICRC1 "../../../src/ICRC1/Modules/ICRC1Token";
+import T "../../../src/ICRC1/Types/Types.All";
 
-import U "../../../src/ICRC1/Utils";
+import U "../../../src/ICRC1/Modules/Utils";
 
 module {
-    public func test() : async ActorSpec.Group {
 
+    private type Balance = T.Balance;
+
+    private type Account = T.AccountTypes.Account;
+
+    private type TokenData = T.TokenTypes.TokenData;
+    private type InitArgs = T.TokenTypes.InitArgs;
+
+    private type Transaction = T.TransactionTypes.Transaction;
+    private type GetTransactionsRequest = T.TransactionTypes.GetTransactionsRequest;
+    private type GetTransactionsResponse = T.TransactionTypes.GetTransactionsResponse;
+    private type ArchivedTransaction = T.TransactionTypes.ArchivedTransaction;
+    private type Mint = T.TransactionTypes.Mint;
+    private type BurnArgs = T.TransactionTypes.BurnArgs;
+    private type TransferArgs = T.TransactionTypes.TransferArgs;
+
+            
+    public func test() : async ActorSpec.Group {
+ 
         let {
             assertTrue;
             assertFalse;
@@ -35,7 +52,7 @@ module {
             n * (10 ** decimals);
         };
 
-        func mock_tx(to : T.Account, index : Nat, fee:Nat) : T.Transaction {
+        func mock_tx(to : Account, index : Nat, fee:Nat) : Transaction {
             {
                 burn = null;
                 transfer = null;
@@ -51,35 +68,35 @@ module {
             };
         };
 
-        let canister : T.Account = {
+        let canister : Account = {
             owner = Principal.fromText("x4ocp-k7ot7-oiqws-rg7if-j4q2v-ewcel-2x6we-l2eqz-rfz3e-6di6e-jae");
             subaccount = null;
         };
 
-        let user1 : T.Account = {
+        let user1 : Account = {
             owner = Principal.fromText("prb4z-5pc7u-zdfqi-cgv7o-fdyqf-n6afm-xh6hz-v4bk4-kpg3y-rvgxf-iae");
             subaccount = null;
         };
 
-        let user2 : T.Account = {
+        let user2 : Account = {
             owner = Principal.fromText("ygyq4-mf2rf-qmcou-h24oc-qwqvv-gt6lp-ifvxd-zaw3i-celt7-blnoc-5ae");
             subaccount = null;
         };
 
-        func txs_range(start : Nat, end : Nat, fee:Nat) : [T.Transaction] {
+        func txs_range(start : Nat, end : Nat, fee:Nat) : [Transaction] {
             Array.tabulate(
                 (end - start) : Nat,
-                func(i : Nat) : T.Transaction {
+                func(i : Nat) : Transaction {
                     mock_tx(user1, start + i, fee);
                 },
             );
         };
 
-        func is_tx_equal(t1 : T.Transaction, t2 : T.Transaction) : Bool {
+        func is_tx_equal(t1 : Transaction, t2 : Transaction) : Bool {
             { t1 with timestamp = 0 } == { t2 with timestamp = 0 };
         };
 
-        func is_opt_tx_equal(t1 : ?T.Transaction, t2 : ?T.Transaction) : Bool {
+        func is_opt_tx_equal(t1 : ?Transaction, t2 : ?Transaction) : Bool {
             switch (t1, t2) {
                 case (?t1, ?t2) {
                     is_tx_equal(t1, t2);
@@ -91,9 +108,9 @@ module {
         };
 
         func validate_get_transactions(
-            token : T.TokenData, 
-            tx_req : T.GetTransactionsRequest, 
-            tx_res : T.GetTransactionsResponse
+            token : TokenData, 
+            tx_req : GetTransactionsRequest, 
+            tx_res : GetTransactionsResponse
         ) : Bool {
             let { archive } = token;
 
@@ -152,7 +169,7 @@ module {
             true;
         };
 
-        func validate_archived_range(request : [T.GetTransactionsRequest], response : [T.ArchivedTransaction], fee:Nat) : async Bool {
+        func validate_archived_range(request : [GetTransactionsRequest], response : [ArchivedTransaction], fee:Nat) : async Bool {
 
             if (request.size() != response.size()) {
                 return false;
@@ -187,11 +204,11 @@ module {
             true;
         };
 
-        func are_txs_equal(t1 : [T.Transaction], t2 : [T.Transaction]) : Bool {
-            Itertools.equal<T.Transaction>(t1.vals(), t2.vals(), is_tx_equal);
+        func are_txs_equal(t1 : [Transaction], t2 : [Transaction]) : Bool {
+            Itertools.equal<Transaction>(t1.vals(), t2.vals(), is_tx_equal);
         };
 
-        func create_mints(token : T.TokenData, minting_principal : Principal, n : Nat) : async () {
+        func create_mints(token : TokenData, minting_principal : Principal, n : Nat) : async () {
             for (i in Itertools.range(0, n)) {
                 var res = await* ICRC1.mint(
                     token,
@@ -206,7 +223,7 @@ module {
             };
         };
 
-        let default_token_args : T.InitArgs = {
+        let default_token_args : InitArgs = {
             name = "Under-Collaterised Lending Tokens";
             symbol = "UCLTs";
             decimals = 8;
@@ -384,7 +401,7 @@ module {
 
                         let token = ICRC1.init(args);
 
-                        let mint_args : T.Mint = {
+                        let mint_args : Mint = {
                             to = user1;
                             amount = 200 * (10 ** Nat8.toNat(args.decimals));
                             memo = null;
@@ -409,11 +426,11 @@ module {
                     "mint() with minting not allowed",
                     do {
 
-                        let args:T.InitArgs = {default_token_args with minting_allowed = false};
+                        let args:InitArgs = {default_token_args with minting_allowed = false};
                                                 
                         let token = ICRC1.init(args);
 
-                        let mint_args : T.Mint = {
+                        let mint_args : Mint = {
                             to = user1;                            
                             amount = 200 * (10 ** Nat8.toNat(args.decimals));
                             memo = null;
@@ -449,7 +466,7 @@ module {
 
                                 let token = ICRC1.init(args);
 
-                                let mint_args : T.Mint = {
+                                let mint_args : Mint = {
                                     to = user1;
                                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -462,7 +479,7 @@ module {
                                     args.minting_account.owner,
                                 );
 
-                                let burn_args : T.BurnArgs = {
+                                let burn_args : BurnArgs = {
                                     from_subaccount = user1.subaccount;
                                     amount = 50 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -488,7 +505,7 @@ module {
 
                                 let token = ICRC1.init(args);
 
-                                let burn_args : T.BurnArgs = {
+                                let burn_args : BurnArgs = {
                                     from_subaccount = user1.subaccount;
                                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -515,7 +532,7 @@ module {
 
                                 let token = ICRC1.init(args);
 
-                                let mint_args : T.Mint = {
+                                let mint_args : Mint = {
                                     to = user1;
                                     amount = 200 * (10 ** Nat8.toNat(args.decimals));
                                     memo = null;
@@ -528,7 +545,7 @@ module {
                                     args.minting_account.owner,
                                 );
                                 
-                                let burn_args : T.BurnArgs = {
+                                let burn_args : BurnArgs = {
                                     from_subaccount = user1.subaccount;
                                     amount = args.min_burn_amount - 10; 
                                     memo = null;
@@ -566,7 +583,7 @@ module {
                                 );
 
 
-                                let transfer_args : T.TransferArgs = {
+                                let transfer_args : TransferArgs = {
                                     from_subaccount = user1.subaccount;
                                     to = user2;
                                     amount = 50 * (10 ** Nat8.toNat(token.decimals));

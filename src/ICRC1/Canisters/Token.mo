@@ -6,20 +6,20 @@ import Nat "mo:base/Nat";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Text "mo:base/Text";
 import SB "mo:StableBuffer/StableBuffer";
-import ICRC1 ".."; // This is lib.mo
+import ICRC1 "../Modules/ICRC1Token";
 import Archive "Archive";
 import Principal "mo:base/Principal";
-//import T "../Types";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
 import Itertools "mo:itertools/Iter";
+import T "../Types/Types.All";
 
-shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs) : async ICRC1.FullInterface {
+shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenInitArgs) : async T.TokenTypes.FullInterface {
 
     //The value of this variable should only be changed by the function 'ConvertArgs'
     stable var wasInitializedWithArguments:Bool = false;
     
-    private func ConvertArgs(init_arguments : ?ICRC1.TokenInitArgs): ?T.InitArgs
+    private func ConvertArgs(init_arguments : ?T.TokenTypes.TokenInitArgs): ?T.TokenTypes.InitArgs
     {   
         if (init_arguments == null){
 
@@ -40,12 +40,12 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
         }
         else{
             
-            var argsToUse:ICRC1.TokenInitArgs = switch(init_arguments){
+            var argsToUse:T.TokenTypes.TokenInitArgs = switch(init_arguments){
                 case null return null; // should never happen
                 case (?tokenArgs) tokenArgs;                   
             };                     
 
-            let icrc1_args : ICRC1.InitArgs = {
+            let icrc1_args : T.TokenTypes.InitArgs = {
                         argsToUse with minting_account = Option.get( argsToUse.minting_account,{owner = _owner;subaccount = null;});
             };
 
@@ -76,9 +76,9 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
 
     
     //Convert argument, because 'init_args' can now be null, in case of upgrade scenarios. ('dfx deploy')
-    let init_arguments:?T.InitArgs =  ConvertArgs(init_args);
+    let init_arguments:?T.TokenTypes.InitArgs =  ConvertArgs(init_args);
 
-    stable let token:T.TokenData = switch (init_arguments){
+    stable let token:T.TokenTypes.TokenData = switch (init_arguments){
         case null {
             Debug.trap("Initialize token with no arguments not allowed.");   
         };
@@ -99,75 +99,75 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
         ICRC1.decimals(token);
     };
 
-    public shared query func icrc1_fee() : async ICRC1.Balance {
+    public shared query func icrc1_fee() : async T.Balance {
         ICRC1.fee(token);
     };
 
-    public shared query func icrc1_metadata() : async [ICRC1.MetaDatum] {
+    public shared query func icrc1_metadata() : async [T.TokenTypes.MetaDatum] {
         ICRC1.metadata(token);
     };
 
-    public shared query func icrc1_total_supply() : async ICRC1.Balance {
+    public shared query func icrc1_total_supply() : async T.Balance {
         ICRC1.total_supply(token);
     };
 
-    public shared query func icrc1_minting_account() : async ?ICRC1.Account {
+    public shared query func icrc1_minting_account() : async ?T.AccountTypes.Account {
         ?ICRC1.minting_account(token);
     };
 
-    public shared query func icrc1_balance_of(args : ICRC1.Account) : async ICRC1.Balance {
+    public shared query func icrc1_balance_of(args : T.AccountTypes.Account) : async T.Balance {
         ICRC1.balance_of(token, args);
     };
 
-    public shared query func icrc1_supported_standards() : async [ICRC1.SupportedStandard] {
+    public shared query func icrc1_supported_standards() : async [T.TokenTypes.SupportedStandard] {
         ICRC1.supported_standards(token);
     };
 
-    public shared ({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async ICRC1.TransferResult {
+    public shared ({ caller }) func icrc1_transfer(args : T.TransactionTypes.TransferArgs) : async T.TransactionTypes.TransferResult {
         await* ICRC1.transfer(token, args, caller);
     };
 
-    public shared ({ caller }) func mint(args : ICRC1.Mint) : async ICRC1.TransferResult {                
+    public shared ({ caller }) func mint(args : T.TransactionTypes.Mint) : async T.TransactionTypes.TransferResult {                
         await* ICRC1.mint(token, args, caller);        
     };
 
-    public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async ICRC1.TransferResult {
+    public shared ({ caller }) func burn(args : T.TransactionTypes.BurnArgs) : async T.TransactionTypes.TransferResult {
         await* ICRC1.burn(token, args, caller);
     };
 
-    public shared ({ caller }) func set_name(name : Text) : async ICRC1.SetTextParameterResult {
+    public shared ({ caller }) func set_name(name : Text) : async T.TokenTypes.SetTextParameterResult {
         await* ICRC1.set_name(token, name, caller);
     };
 
-    public shared ({ caller }) func set_symbol(symbol : Text) : async ICRC1.SetTextParameterResult {
+    public shared ({ caller }) func set_symbol(symbol : Text) : async T.TokenTypes.SetTextParameterResult {
         await* ICRC1.set_symbol(token, symbol, caller);
     };
 
-    public shared ({ caller }) func set_logo(logo : Text) : async ICRC1.SetTextParameterResult {
+    public shared ({ caller }) func set_logo(logo : Text) : async T.TokenTypes.SetTextParameterResult {
         await* ICRC1.set_logo(token, logo, caller);
     };
 
-    public shared ({ caller }) func set_fee(fee : ICRC1.Balance) : async ICRC1.SetBalanceParameterResult {
+    public shared ({ caller }) func set_fee(fee : T.Balance) : async T.TokenTypes.SetBalanceParameterResult {
         await* ICRC1.set_fee(token, fee, caller);
     };
 
-    public shared ({ caller }) func set_decimals(decimals : Nat8) : async ICRC1.SetNat8ParameterResult {
+    public shared ({ caller }) func set_decimals(decimals : Nat8) : async T.TokenTypes.SetNat8ParameterResult {
         await* ICRC1.set_decimals(token, decimals, caller);
     };
 
-    public shared ({ caller }) func set_min_burn_amount(min_burn_amount : ICRC1.Balance) : async ICRC1.SetBalanceParameterResult {
+    public shared ({ caller }) func set_min_burn_amount(min_burn_amount : T.Balance) : async T.TokenTypes.SetBalanceParameterResult {
         await* ICRC1.set_min_burn_amount(token, min_burn_amount, caller);
     };
 
-    public shared ({ caller }) func set_minting_account(minting_account : Text) : async ICRC1.SetAccountParameterResult {
+    public shared ({ caller }) func set_minting_account(minting_account : Text) : async T.TokenTypes.SetAccountParameterResult {
         await* ICRC1.set_minting_account(token, minting_account, caller);
     };
 
-    public shared query func min_burn_amount() : async ICRC1.Balance {
+    public shared query func min_burn_amount() : async T.Balance {
         ICRC1.min_burn_amount(token);
     };
 
-    public shared query func get_archive() : async ICRC1.ArchiveInterface {
+    public shared query func get_archive() : async T.ArchiveTypes.ArchiveInterface {
         ICRC1.get_archive(token);
     };
 
@@ -180,12 +180,13 @@ shared ({ caller = _owner }) actor class Token(init_args : ?ICRC1.TokenInitArgs)
     };
 
     // Functions for integration with the rosetta standard
-    public shared query func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
+    public shared query func get_transactions(req : T.TransactionTypes.GetTransactionsRequest) 
+    : async T.TransactionTypes.GetTransactionsResponse {
         ICRC1.get_transactions(token, req);
     };
 
     // Additional functions not included in the ICRC1 standard
-    public shared func get_transaction(i : ICRC1.TxIndex) : async ?ICRC1.Transaction {
+    public shared func get_transaction(i : T.TransactionTypes.TxIndex) : async ?T.TransactionTypes.Transaction {
         await* ICRC1.get_transaction(token, i);
     };
 

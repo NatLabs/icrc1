@@ -1,47 +1,64 @@
 import Result "mo:base/Result";
-
+import TransactionTypes "Types.Transaction";
 
 module {    
-    public type ArchiveApiInterface = actor {
-        // /// Appends the given transactions to the archive.
-        // /// > Only the Ledger canister is allowed to call this method
-        // append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
+  
+   private type Transaction = TransactionTypes.Transaction;
+   private type TxIndex = TransactionTypes.TxIndex;
+   private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
+   private type TransactionRange = TransactionTypes.TransactionRange;
 
-        // /// Returns the total number of transactions stored in the archive
-        // total_transactions : shared query () -> async Nat;
+    /// The Interface for the Archive canister
+    public type ArchiveInterface = actor {
+        /// Appends the given transactions to the archive.
+        /// > Only the Ledger canister is allowed to call this method
+        append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
 
-        // /// Returns the transaction at the given index
-        // get_transaction : shared query (TxIndex) -> async ?Transaction;
+        /// Returns the total number of transactions stored in the archive
+        total_transactions : shared query () -> async Nat;
 
-        // /// Returns the transactions in the given range
-        // get_transactions : shared query (GetTransactionsRequest) -> async TransactionRange;
+        /// Returns the transaction at the given index
+        get_transaction : shared query (TxIndex) -> async ?Transaction;
 
-        // /// Returns the number of bytes left in the archive before it is full
-        // /// > The capacity of the archive canister is 32GB
-        // remaining_capacity : shared query () -> async Nat;
+        /// Returns the transactions in the given range
+        get_transactions : shared query (GetTransactionsRequest) -> async TransactionRange;
 
-        // total_used : shared query () -> async Nat;
+        /// Returns the number of bytes left in the archive before it is full
+        /// > The capacity of the archive canister is 32GB
+        remaining_capacity : shared query () -> async Nat;
 
-        // max_memory : shared query () -> async Nat;
+        total_used : shared query () -> async Nat;
 
-        // get_first_tx : shared query () -> async Nat;
+        max_memory : shared query () -> async Nat;
 
-        // get_last_tx : shared query () -> async Nat;
+        get_first_tx : shared query () -> async Nat;
 
-        // get_prev_archive : shared query () -> async ArchiveInterface;
+        get_last_tx : shared query () -> async Nat;
 
-        // get_next_archive : shared query () -> async ArchiveInterface;
+        get_prev_archive : shared query () -> async ArchiveInterface;
 
-        // set_first_tx : shared (Nat) -> async Result.Result<(), Text>;
+        get_next_archive : shared query () -> async ArchiveInterface;
 
-        // set_last_tx : shared (Nat) -> async Result.Result<(), Text>;
+        set_first_tx : shared (Nat) -> async Result.Result<(), Text>;
 
-        // set_prev_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
+        set_last_tx : shared (Nat) -> async Result.Result<(), Text>;
 
-        // set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
+        set_prev_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
 
-        // set_previous_archive_count: shared(Nat) -> async Result.Result<(), Text>;
+        set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
 
-        // get_previous_archive_count: shared query () -> async Nat;
+        set_previous_archive_count: shared(Nat) -> async Result.Result<(), Text>;
+
+        get_previous_archive_count: shared query () -> async Nat;
+    };
+
+
+    /// The details of the archive canister
+    public type ArchiveData = {
+        /// The reference to the archive canister
+        var canister : ArchiveInterface;
+
+        /// The number of transactions stored in the archive
+        var stored_txs : Nat;
     };
 };

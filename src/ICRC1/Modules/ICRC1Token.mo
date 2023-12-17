@@ -15,61 +15,58 @@ import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 
 import Account "Account";
-import T "Types";
+
 import Utils "Utils";
 import Transfer "Transfer";
-import Archive "Canisters/Archive";
+import Archive "../Canisters/Archive";
+import T "../Types/Types.All";
 
 /// The ICRC1 class with all the functions for creating an
 /// ICRC1 token on the Internet Computer
 module {
     let { SB } = Utils;
 
-    public type Account = T.Account;
-    public type Subaccount = T.Subaccount;
-    public type AccountBalances = T.AccountBalances;
+    private type Balance = T.Balance;
 
-    public type Transaction = T.Transaction;
-    public type Balance = T.Balance;
-    public type TransferArgs = T.TransferArgs;
-    public type Mint = T.Mint;
-    public type BurnArgs = T.BurnArgs;
-    public type TransactionRequest = T.TransactionRequest;
-    public type TransferError = T.TransferError;
+    private type Account = T.AccountTypes.Account;
+    private type Subaccount = T.AccountTypes.Subaccount;
+    private type AccountBalances = T.AccountTypes.AccountBalances;
 
-    public type SupportedStandard = T.SupportedStandard;
+    private type Transaction = T.TransactionTypes.Transaction;    
+    private type TransferArgs = T.TransactionTypes.TransferArgs;
+    private type Mint = T.TransactionTypes.Mint;
+    private type BurnArgs = T.TransactionTypes.BurnArgs;
+    private type TransactionRequest = T.TransactionTypes.TransactionRequest;
+    private type TransferError = T.TransactionTypes.TransferError;
+    private type TxIndex = T.TransactionTypes.TxIndex;
+    private type GetTransactionsRequest = T.TransactionTypes.GetTransactionsRequest;
+    private type GetTransactionsResponse = T.TransactionTypes.GetTransactionsResponse;
+    private type QueryArchiveFn = T.TransactionTypes.QueryArchiveFn;
+    private type TransactionRange = T.TransactionTypes.TransactionRange;
+    private type ArchivedTransaction = T.TransactionTypes.ArchivedTransaction;
+    private type TransferResult = T.TransactionTypes.TransferResult;
 
-    public type InitArgs = T.InitArgs;
-    public type TokenInitArgs = T.TokenInitArgs;
-    public type TokenData = T.TokenData;
-    public type MetaDatum = T.MetaDatum;
-    public type TxLog = T.TxLog;
-    public type TxIndex = T.TxIndex;
-
-    public type TokenInterface = T.TokenInterface;
-    public type RosettaInterface = T.RosettaInterface;        
-    public type FullInterface = T.FullInterface;
-
-    public type ArchiveInterface = T.ArchiveInterface;
-
-    public type GetTransactionsRequest = T.GetTransactionsRequest;
-    public type GetTransactionsResponse = T.GetTransactionsResponse;
-    public type QueryArchiveFn = T.QueryArchiveFn;
-    public type TransactionRange = T.TransactionRange;
-    public type ArchivedTransaction = T.ArchivedTransaction;
-
-    public type TransferResult = T.TransferResult;
-    public type SetTextParameterResult = T.SetTextParameterResult;
-    public type SetBalanceParameterResult = T.SetBalanceParameterResult;
-    public type SetNat8ParameterResult = T.SetNat8ParameterResult;
-    public type SetAccountParameterResult = T.SetAccountParameterResult;
-
+    private type SupportedStandard = T.TokenTypes.SupportedStandard;
+    private type InitArgs = T.TokenTypes.InitArgs;
+    private type TokenInitArgs = T.TokenTypes.TokenInitArgs;
+    private type TokenData = T.TokenTypes.TokenData;
+    private type MetaDatum = T.TokenTypes.MetaDatum;
+    private type TokenInterface = T.TokenTypes.TokenInterface;
+    private type RosettaInterface = T.TokenTypes.RosettaInterface;        
+    private type FullInterface = T.TokenTypes.FullInterface;
+    private type SetTextParameterResult = T.TokenTypes.SetTextParameterResult;
+    private type SetBalanceParameterResult = T.TokenTypes.SetBalanceParameterResult;
+    private type SetNat8ParameterResult = T.TokenTypes.SetNat8ParameterResult;
+    private type SetAccountParameterResult = T.TokenTypes.SetAccountParameterResult;
+    
+    private type ArchiveInterface = T.ArchiveTypes.ArchiveInterface;
+    
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
     public let MAX_TRANSACTION_BYTES : Nat64 = 196;
     public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
 
     /// Initialize a new ICRC-1 token
-    public func init(args : T.InitArgs) : T.TokenData {
+    public func init(args : T.TokenTypes.InitArgs) : T.TokenTypes.TokenData {
         
        
         //With this we map the fields of 'args' to direct variables.
@@ -95,7 +92,7 @@ module {
             Debug.trap("minting_account is invalid");
         };
 
-        let accounts : T.AccountBalances = StableTrieMap.new();
+        let accounts : AccountBalances = StableTrieMap.new();
 
         var _minted_tokens = _burned_tokens;
 
@@ -146,32 +143,32 @@ module {
     };
 
     /// Retrieve the name of the token
-    public func name(token : T.TokenData) : Text {
+    public func name(token : TokenData) : Text {
         token.name;
     };
 
     /// Retrieve the symbol of the token
-    public func symbol(token : T.TokenData) : Text {
+    public func symbol(token : TokenData) : Text {
         token.symbol;
     };
 
     /// Retrieve the number of decimals specified for the token
-    public func decimals(token : T.TokenData) : Nat8 {
+    public func decimals(token : TokenData) : Nat8 {
         token.decimals;
     };
 
     /// Retrieve the fee for each transfer
-    public func fee(token : T.TokenData) : T.Balance {
+    public func fee(token : TokenData) : Balance {
         token.fee;
     };
 
     /// Retrieve the minimum burn amount for the token
-    public func min_burn_amount(token : T.TokenData) : T.Balance {
+    public func min_burn_amount(token : TokenData) : Balance {
         token.min_burn_amount;
     };
 
     /// Set the name of the token
-    public func set_name(token : T.TokenData, name : Text, caller : Principal) : async* T.SetTextParameterResult {
+    public func set_name(token : TokenData, name : Text, caller : Principal) : async* SetTextParameterResult {
         if (caller == token.minting_account.owner) {
             token.name := name;
         } else {
@@ -186,7 +183,7 @@ module {
     };
 
     /// Set the symbol of the token
-    public func set_symbol(token : T.TokenData, symbol : Text, caller : Principal) : async* T.SetTextParameterResult {
+    public func set_symbol(token : TokenData, symbol : Text, caller : Principal) : async* SetTextParameterResult {
         if (caller == token.minting_account.owner) {
             token.symbol := symbol;
         } else {
@@ -201,7 +198,7 @@ module {
     };
 
     /// Set the logo for the token
-    public func set_logo(token : T.TokenData, logo : Text, caller : Principal) : async* T.SetTextParameterResult {
+    public func set_logo(token : TokenData, logo : Text, caller : Principal) : async* SetTextParameterResult {
         if (caller == token.minting_account.owner) {
             token.logo := logo;
         } else {
@@ -216,7 +213,7 @@ module {
     };
 
     /// Set the fee for each transfer
-    public func set_fee(token : T.TokenData, fee : Nat, caller : Principal) : async* T.SetBalanceParameterResult {
+    public func set_fee(token : TokenData, fee : Nat, caller : Principal) : async* SetBalanceParameterResult {
         if (caller == token.minting_account.owner) {
             if (fee >= 10_000 and fee <= 1_000_000_000) {
                 token.fee := fee;
@@ -240,7 +237,7 @@ module {
     };
 
     /// Set the number of decimals specified for the token
-    public func set_decimals(token : T.TokenData, decimals : Nat8, caller : Principal) : async* T.SetNat8ParameterResult {
+    public func set_decimals(token : TokenData, decimals : Nat8, caller : Principal) : async* SetNat8ParameterResult {
         if (caller == token.minting_account.owner) {
             if (decimals >= 2 and decimals <= 12) {
                 token.decimals := decimals;
@@ -264,7 +261,7 @@ module {
     };
 
     /// Set the minimum burn amount
-    public func set_min_burn_amount(token : T.TokenData, min_burn_amount : Nat, caller : Principal) : async* T.SetBalanceParameterResult {
+    public func set_min_burn_amount(token : TokenData, min_burn_amount : Nat, caller : Principal) : async* SetBalanceParameterResult {
         if (caller == token.minting_account.owner) {
             if (min_burn_amount >= 10_000 and min_burn_amount <= 1_000_000_000_000) {
                 token.min_burn_amount := min_burn_amount;
@@ -288,7 +285,7 @@ module {
     };
 
     /// Set the minting account
-    public func set_minting_account(token : T.TokenData, minting_account : Text, caller : Principal) : async*  T.SetAccountParameterResult {
+    public func set_minting_account(token : TokenData, minting_account : Text, caller : Principal) : async*  SetAccountParameterResult {
         if (caller == token.minting_account.owner) {
             token.minting_account := {
                 owner = Principal.fromText(minting_account);
@@ -306,7 +303,7 @@ module {
     };
 
     /// Retrieve all the metadata of the token
-    public func metadata(token : T.TokenData) : [T.MetaDatum] {
+    public func metadata(token : TokenData) : [MetaDatum] {
         [
             ("icrc1:fee", #Nat(token.fee)),
             ("icrc1:name", #Text(token.name)),
@@ -317,32 +314,32 @@ module {
     };
 
     /// Returns the current archive canister
-    public func get_archive(token : T.TokenData) : T.ArchiveInterface {
+    public func get_archive(token : TokenData) : ArchiveInterface {
         token.archive.canister;
     };    
 
     /// Returns the total number of transactions in the archive
-    public func get_archive_stored_txs(token : T.TokenData) : Nat {
+    public func get_archive_stored_txs(token : TokenData) : Nat {
         token.archive.stored_txs;
     };    
 
     /// Returns the total supply of circulating tokens
-    public func total_supply(token : T.TokenData) : T.Balance {
+    public func total_supply(token : TokenData) : Balance {
         token.minted_tokens - token.burned_tokens;
     };
 
     /// Returns the total supply of minted tokens
-    public func minted_supply(token : T.TokenData) : T.Balance {
+    public func minted_supply(token : TokenData) : Balance {
         token.minted_tokens;
     };
 
     /// Returns the total supply of burned tokens
-    public func burned_supply(token : T.TokenData) : T.Balance {
+    public func burned_supply(token : TokenData) : Balance {
         token.burned_tokens;
     };
 
     /// Returns the maximum supply of tokens
-    public func max_supply(token : T.TokenData) : T.Balance {
+    public func max_supply(token : TokenData) : Balance {
         token.max_supply;
     };
 
@@ -352,23 +349,23 @@ module {
     /// and burning transactions, so any tokens sent to it will be
     /// considered burned.**
 
-    public func minting_account(token : T.TokenData) : T.Account {
+    public func minting_account(token : TokenData) : Account {
         token.minting_account;
     };
 
     /// Retrieve the balance of a given account
-    public func balance_of({ accounts } : T.TokenData, account : T.Account) : T.Balance {
+    public func balance_of({ accounts } : TokenData, account : Account) : Balance {
         let encoded_account = Account.encode(account);
         Utils.get_balance(accounts, encoded_account);
     };
 
     /// Returns an array of standards supported by this token
-    public func supported_standards(token : T.TokenData) : [T.SupportedStandard] {
+    public func supported_standards(token : TokenData) : [SupportedStandard] {
         SB.toArray(token.supported_standards);
     };
 
     /// Formats a float to a nat balance and applies the correct number of decimal places
-    public func balance_from_float(token : T.TokenData, float : Float) : T.Balance {
+    public func balance_from_float(token : TokenData, float : Float) : Balance {
         if (float <= 0) {
             return 0;
         };
@@ -380,10 +377,10 @@ module {
 
     /// Transfers tokens from one account to another account (minting and burning included)
     public func transfer(
-        token : T.TokenData,
-        args : T.TransferArgs,
+        token : TokenData,
+        args : TransferArgs,
         caller : Principal,
-    ) : async* T.TransferResult {
+    ) : async* TransferResult {
 
         let from = {
             owner = caller;
@@ -460,13 +457,13 @@ module {
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : T.TokenData, args : T.Mint, caller : Principal) : async* T.TransferResult {
+    public func mint(token : TokenData, args : Mint, caller : Principal) : async* TransferResult {
 
         if (token.minting_allowed == false){            
             return #Err(#GenericError {error_code = 401;message = "Error: Minting not allowed for this token.";});
         };
         if (caller == token.minting_account.owner) {            
-            let transfer_args : T.TransferArgs = {
+            let transfer_args : TransferArgs = {
                 args with from = token.minting_account;
                 from_subaccount = null;
                 fee = null;
@@ -480,9 +477,9 @@ module {
     };
 
     /// Helper function to burn tokens with minimum args
-    public func burn(token : T.TokenData, args : T.BurnArgs, caller : Principal) : async* T.TransferResult {
+    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async* TransferResult {
 
-        let transfer_args : T.TransferArgs = {
+        let transfer_args : TransferArgs = {
             args with to = token.minting_account;
             fee = null;
         };
@@ -491,13 +488,13 @@ module {
     };
 
     /// Returns the total number of transactions that have been processed by the given token.
-    public func total_transactions(token : T.TokenData) : Nat {
+    public func total_transactions(token : TokenData) : Nat {
         let { archive; transactions } = token;
         archive.stored_txs + SB.size(transactions);
     };
 
     /// Retrieves the transaction specified by the given `tx_index`
-    public func get_transaction(token : T.TokenData, tx_index : T.TxIndex) : async* ?T.Transaction {
+    public func get_transaction(token : TokenData, tx_index : TxIndex) : async* ?Transaction {
         let { archive; transactions } = token;
 
         let archived_txs = archive.stored_txs;
@@ -511,7 +508,7 @@ module {
     };
 
     /// Retrieves the transactions specified by the given range
-    public func get_transactions(token : T.TokenData, req : T.GetTransactionsRequest) : T.GetTransactionsResponse {
+    public func get_transactions(token : TokenData, req : GetTransactionsRequest) : GetTransactionsResponse {
         let { archive; transactions } = token;
 
         var first_index = 0xFFFF_FFFF_FFFF_FFFF; // returned if no transactions are found
@@ -519,7 +516,7 @@ module {
         let req_end = req.start + req.length;
         let tx_end = archive.stored_txs + SB.size(transactions);
 
-        var txs_in_canister: [T.Transaction] = [];
+        var txs_in_canister: [Transaction] = [];
         
         if (req.start < tx_end and req_end >= archive.stored_txs) {
             first_index := Nat.max(req.start, archive.stored_txs);
@@ -546,7 +543,7 @@ module {
 
         let archived_transactions = Array.tabulate(
             size,
-            func(i : Nat) : T.ArchivedTransaction {
+            func(i : Nat) : ArchivedTransaction {
                 let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
                 let start = offset + archived_range.start;
                 let length = Nat.min(
@@ -571,7 +568,7 @@ module {
     // Updates the token's data and manages the transactions
     //
     // **added at the end of any function that creates a new transaction**
-    func update_canister(token : T.TokenData) : async* () {
+    func update_canister(token : TokenData) : async* () {
         let txs_size = SB.size(token.transactions);
 
         if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
@@ -581,7 +578,7 @@ module {
 
     // Moves the transactions from the ICRC1 canister to the archive canister
     // and returns a boolean that indicates the success of the data transfer
-    func append_transactions(token : T.TokenData) : async* () {
+    func append_transactions(token : TokenData) : async* () {
         let { archive; transactions } = token;
 
         if (archive.stored_txs == 0) {
@@ -607,7 +604,7 @@ module {
         };
     };
 
-    func should_add_archive(token : T.TokenData) : async* Nat {
+    func should_add_archive(token : TokenData) : async* Nat {
         let { archive } = token;
         let total_used = await archive.canister.total_used();
         let remaining_capacity = await archive.canister.remaining_capacity();
@@ -620,7 +617,7 @@ module {
     };    
 
     // Creates a new archive canister
-    func add_archive(token : T.TokenData) : async* () {
+    func add_archive(token : TokenData) : async* () {
         let { archive; transactions } = token;
 
         let oldCanister = archive.canister;

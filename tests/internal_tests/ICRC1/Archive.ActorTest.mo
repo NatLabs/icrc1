@@ -12,11 +12,14 @@ import Text "mo:base/Text";
 import Bool "mo:base/Bool";
 
 import Archive "../../../src/ICRC1/Canisters/Archive";
-import T "../../../src/ICRC1/Types";
+import T "../../../src/ICRC1/Types/Types.All";
 
 import ActorSpec "../utils/ActorSpec";
 
 module {
+
+    private type Transaction = T.TransactionTypes.Transaction;
+
     let {                    
         assertAllEqualWithDescription;
         assertTrue;
@@ -29,7 +32,7 @@ module {
         run;
     } = ActorSpec;
 
-    func new_tx(i : Nat) : T.Transaction {
+    func new_tx(i : Nat) : Transaction {
         {
             kind = "";
             mint = null;
@@ -41,20 +44,20 @@ module {
     };
 
     // [start, end)
-    func txs_range(start : Nat, end : Nat) : [T.Transaction] {
+    func txs_range(start : Nat, end : Nat) : [Transaction] {
         Array.tabulate(
             (end - start) : Nat,
-            func(i : Nat) : T.Transaction {
+            func(i : Nat) : Transaction {
                 new_tx(start + i);
             },
         );
     };
 
-    func new_txs(length : Nat) : [T.Transaction] {
+    func new_txs(length : Nat) : [Transaction] {
         txs_range(0, length);
     };
 
-    func new_txs_range(from:Nat, length : Nat) : [T.Transaction] {
+    func new_txs_range(from:Nat, length : Nat) : [Transaction] {
         txs_range(from, length);
     };
 
@@ -68,10 +71,10 @@ module {
     };
  
 
-    func GetAssertParamForTransactionCheck(actualTransaction:?T.Transaction, index:?Nat, description:Text)
-    : ActorSpec.AssertParam<T.Transaction,T.Transaction>{ 
+    func GetAssertParamForTransactionCheck(actualTransaction:?Transaction, index:?Nat, description:Text)
+    : ActorSpec.AssertParam<Transaction,Transaction>{ 
 
-        let returnValue :ActorSpec.AssertParam<T.Transaction,T.Transaction> =                 
+        let returnValue :ActorSpec.AssertParam<Transaction,Transaction> =                 
         {                                                            
             actual = actualTransaction;
             expected = switch(index){
@@ -84,10 +87,10 @@ module {
         return returnValue;
     };
 
-        func GetAssertParamForTransactionsCheck(actualTransactions:[T.Transaction], fromTo:?(fromIndex:Nat, toIndex:Nat), description:Text)
-    : ActorSpec.AssertParam<[T.Transaction],[T.Transaction]>{ 
+        func GetAssertParamForTransactionsCheck(actualTransactions:[Transaction], fromTo:?(fromIndex:Nat, toIndex:Nat), description:Text)
+    : ActorSpec.AssertParam<[Transaction],[Transaction]>{ 
 
-        let returnValue :ActorSpec.AssertParam<[T.Transaction],[T.Transaction]> =                 
+        let returnValue :ActorSpec.AssertParam<[Transaction],[Transaction]> =                 
         {                                                            
             actual = ?actualTransactions;
             expected = switch(fromTo){
