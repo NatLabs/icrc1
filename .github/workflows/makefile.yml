@@ -69,9 +69,9 @@ jobs:
 
       - name: Run reference tests
         run: |          
-          dfx identity new icrc-ref-test
-          dfx identity use icrc-ref-test
-          dfx identity export icrc-ref-test > ~/.config/dfx/identity/icrc-ref-test/identity.pem
+          #dfx identity new icrc-ref-test
+          dfx identity use default
+          dfx identity export default > ~/.config/dfx/identity/default/identity.pem
           dfx identity whoami
           make ref-test
           
