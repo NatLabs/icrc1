@@ -10,6 +10,7 @@ module {
    private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
    private type TransactionRange = TransactionTypes.TransactionRange;
     
+   ///For holding all the canister-id's for the dynamically created archive-canisters
    public type ArchiveCanisterIds ={
         var canisterIds: List.List<Principal>;
    };

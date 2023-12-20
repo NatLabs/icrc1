@@ -22,7 +22,11 @@ module{
     private type AccountBalances = AccountTypes.AccountBalances;
     private type StableBuffer<T> = StableBuffer.StableBuffer<T>;
 
+    
+    ///Single Metadata item-type
     public type MetaDatum = (Text, Value);
+    
+    ///This information is used by the token
     public type MetaData = [MetaDatum];
         
     /// Initial arguments for the setting up the icrc1 token canister

@@ -22,6 +22,7 @@ import T "../Types/Types.All";
 import Constants "../Types/Types.Constants";
 import Account "../Modules/Account";
 
+/// The actor class for the main token
 shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenInitArgs) : async T.TokenTypes.FullInterface = this{
 
     //The value of this variable should only be changed by the function 'ConvertArgs'
@@ -118,7 +119,6 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
         case (?initArgsNotNull) ICRC1.init(initArgsNotNull);
     }; 
     
-    /// Functions for the ICRC1 token standard
     public shared query func icrc1_name() : async Text {
         ICRC1.name(token);
     };
@@ -231,6 +231,9 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
         Cycles.balance();        
     };
 
+    /// Retrieve information for the main token and all dynamically added archive canisters:
+    /// - The balance for each canister is shown
+    /// - The canister-id for each canister is shown when this function is called by the minting-owner 
     public shared ({ caller }) func all_canister_stats(): async [T.CanisterTypes.CanisterStatsResponse]{
           if (tokenCanisterId == Principal.fromText("aaaaa-aa")){
              tokenCanisterId := Principal.fromActor(this);
@@ -240,14 +243,20 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
        await* ICRC1.all_canister_stats(hidePrincipals, tokenCanisterId, balance, archive_canisterIds);      
     };
 
+    /// Show the token holders
     public shared query func get_holders_count(): async Nat{
         token.accounts._size;
     };
 
+    /// Get list of the holders
+    /// The list can contain maximum 5000 entries. Therefore the additional 'index' and 'count' parameter in case
+    /// there are more than 5000 entries available.
     public shared query func get_holders(index:?Nat, count:?Nat): async [T.AccountTypes.AccountBalanceInfo]{           
         ICRC1.get_holders(token, index, count);                    
     };
 
+
+    ///This function enables the timer to auto fill the dynamically created archive canisters 
     public shared ({ caller }) func auto_topup_cycles_enable(minutes:?Nat) : async Result.Result<Text,Text> {
 
         if (caller != token.minting_account.owner) {                        
@@ -274,6 +283,7 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
             
     };
 
+    /// This functions disables the auto fill up timer
     public shared({ caller }) func auto_topup_cycles_disable() : async Result.Result<Text,Text> {
         
         if (caller != token.minting_account.owner) {                        
@@ -285,6 +295,7 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
         #ok("Automatic cycles topUp for archive canisters is now disabled");
     };
 
+    /// Show the status of the auto fill up timer settings
     public shared func auto_topup_cycles_status() : async T.CanisterTypes.CanisterAutoTopUpDataResponse {
                
         let response:T.CanisterTypes.CanisterAutoTopUpDataResponse = {

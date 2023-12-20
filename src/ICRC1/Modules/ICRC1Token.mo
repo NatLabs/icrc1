@@ -355,7 +355,7 @@ module {
         Int.abs(Float.toInt(float_with_decimals));
     };
 
-    /// Transfers tokens from one account to another account (minting and burning included)
+    /// Transfers tokens from one account to another account (minting and burning included)    
     public func transfer(
         token : TokenData,
         args : TransferArgs,
@@ -547,7 +547,7 @@ module {
         };
     };
 
-
+    /// Returns the list of the token-holders - with their balances included
     public func get_holders(token : TokenData, index:?Nat, count:?Nat): [T.AccountTypes.AccountBalanceInfo]{
            
         let size:Nat = token.accounts._size;    
@@ -591,6 +591,8 @@ module {
     };
 
 
+    /// Get the canister's cycle balance information for all the created archive canisters.
+    /// If this method was called from minting-owner account then also the canister-id's are included.
     public func all_canister_stats(hidePrincipal:Bool, 
         mainTokenPrincipal:Principal,mainTokenBalance:Balance, archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds )
         : async* [T.CanisterTypes.CanisterStatsResponse]{
@@ -684,6 +686,7 @@ module {
         return (canisterWasAdded, newArchiveCanisterId);
     };
 
+    /// Here it is decided if additional archive canister should be created
     func should_add_archive(token : TokenData) : async* Nat {
         
         let { archive } = token;
@@ -697,7 +700,7 @@ module {
         0;
     };    
 
-    // Creates a new archive canister
+    /// Creates a new archive canister
     func add_additional_archive(token : TokenData) : async* Principal {
         let { archive; transactions } = token;
 

@@ -53,13 +53,15 @@ module {
         #GenericError : { error_code : Nat; message : Text };
     };
 
+    ///Mint-Type
     public type Mint = {
         to : Account;
         amount : Balance;
         memo : ?Blob;
         created_at_time : ?Nat64;
     };
-
+    
+    ///Burn arguments type
     public type BurnArgs = {
         from_subaccount : ?Subaccount;
         amount : Balance;
@@ -67,6 +69,7 @@ module {
         created_at_time : ?Nat64;
     };
 
+    ///Burn type
     public type Burn = {
         from : Account;
         amount : Balance;
@@ -74,7 +77,7 @@ module {
         created_at_time : ?Nat64;
     };
 
-        /// Arguments for a transfer operation
+    /// Arguments for a transfer operation
     public type TransferArgs = {
         from_subaccount : ?Subaccount;
         to : Account;
@@ -87,6 +90,7 @@ module {
         created_at_time : ?Nat64;
     };
 
+    ///Transfer type
     public type Transfer = {
         from : Account;
         to : Account;
@@ -111,6 +115,7 @@ module {
         };
     };
 
+    ///Transaction information.
     public type Transaction = {
         kind : Text;
         mint : ?Mint;
@@ -128,14 +133,16 @@ module {
         length : Nat;
     };
 
+    ///If multiple transactions are requested
     public type TransactionRange = {
         transactions: [Transaction];
     };
 
-
+    ///callback function
     public type QueryArchiveFn = shared query (GetTransactionsRequest) 
     -> async TransactionRange;
 
+    ///This is included in the response type 'GetTransactionsResponse'
     public type ArchivedTransaction = {
         /// The index of the first transaction to be queried in the archive canister
         start : TxIndex;
@@ -146,6 +153,7 @@ module {
         callback: QueryArchiveFn;
     };
 
+    ///The actual response-type for getting multiple transactions
     public type GetTransactionsResponse = {
         /// The number of valid transactions in the ledger and archived canisters that are in the given range
         log_length : Nat;
@@ -159,7 +167,4 @@ module {
         /// Pagination request for archived transactions in the given range
         archived_transactions : [ArchivedTransaction];
     };
-
-
-
 };
