@@ -35,6 +35,7 @@ ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem))
 	@dfx identity new $(TESTIDENTITY) --force --storage-mode plaintext	
 	@sleep 1	
 	@dfx identity export $(TESTIDENTITY) > ./identityfortests.pem
+	
 #	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
 endif
 
