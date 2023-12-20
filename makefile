@@ -27,6 +27,7 @@ TESTIDENTITYMINTINGOWNER=empty
 TESTPRINCIPALMINTINGOWNER=empty
 
 CANISTERID=empty
+PEMDIR=~/.config/dfx/identity/$(TESTIDENTITY)
 
 .PHONY: test docs actor-test
 
@@ -34,7 +35,7 @@ AddIdentities:
 ifeq (,$(wildcard ./identityfortests.pem))    
 	@dfx identity new $(TESTIDENTITY) --force --storage-mode plaintext	
 	@sleep 1	
-	@dfx identity export $(TESTIDENTITY) > ./tests/identityfortests.pem
+	@dfx identity export $(TESTIDENTITY) > $(PEMDIR)/identityfortests.pem
 	
 #	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
 endif
@@ -60,7 +61,7 @@ internal-tests: dfx-cache-install
 	@dfx ledger fabricate-cycles --canister test --cycles 100000000000000
 	@dfx canister call test run_tests
 
-ref-test: AddIdentities ref-test-before ref-test-execution ref-test-after
+ref-test: update-pemdir AddIdentities ref-test-before ref-test-execution ref-test-after
 	
 ref-test-before:    
 	@$(eval TESTIDENTITYMINTINGOWNER=$(shell dfx identity whoami))
@@ -78,10 +79,21 @@ ref-test-before:
 ref-test-execution:
 	@$(eval CANISTERID=$(shell dfx canister id icrc1))
 	@echo CanisterId set to: $(CANISTERID)
-	cd tests/Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s ./../../../../identityfortests.pem
+	cd tests/Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s $(PEMDIR)/identityfortests.pem
 
 ref-test-after:
 	dfx stop >NUL
 	dfx start --background --clean >NUL
+
+
+update-pemdir:
+ifeq ($(origin GITHUB_WORKSPACE),undefined)	
+	@echo using PEM-file-directory: $(PEMDIR)
+else
+	@$(eval PEMDIR=$(GITHUB_WORKSPACE))
+	@echo using PEM-file-directory: $(PEMDIR)	
+endif 
+
+ 
 
 
