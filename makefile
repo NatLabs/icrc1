@@ -31,10 +31,10 @@ CANISTERID=empty
 .PHONY: test docs actor-test
 
 AddIdentities:
-ifeq (,$(wildcard ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem))    
+ifeq (,$(wildcard ./identityfortests.pem))    
 	@dfx identity new $(TESTIDENTITY) --force --storage-mode plaintext	
 	@sleep 1	
-	@dfx identity export $(TESTIDENTITY) > ./identityfortests.pem
+	@dfx identity export $(TESTIDENTITY) > ./tests/identityfortests.pem
 	
 #	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
 endif
@@ -78,7 +78,7 @@ ref-test-before:
 ref-test-execution:
 	@$(eval CANISTERID=$(shell dfx canister id icrc1))
 	@echo CanisterId set to: $(CANISTERID)
-	cd tests/Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s ./identityfortests.pem
+    cd tests/Dfnity-ICRC1-Reference && cargo run --bin runner -- -u http://127.0.0.1:4943 -c $(CANISTERID) -s ./identityfortests.pem
 
 ref-test-after:
 	dfx stop >NUL
