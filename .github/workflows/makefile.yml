@@ -69,8 +69,7 @@ jobs:
 
       - name: Run reference tests
         run: |
-          echo "${{ secrets.IDENTITY_SSH }}" > ./identity.pem
-          dfx identity import icrc-ref-test ./identity.pem --storage-mode plaintext
+          dfx identity new icrc-ref-test
           dfx identity use icrc-ref-test
           dfx identity whoami
           make ref-test
