@@ -51,12 +51,12 @@ docs:
 	$(shell mocv bin current)/mo-doc --format plain
 
 internal-tests: dfx-cache-install
-	dfx stop
-	dfx start --background
+	@dfx stop
+	@dfx start --background
 	@sleep 5
-	dfx deploy test
-	dfx ledger fabricate-cycles --canister test
-	dfx canister call test run_tests
+	@dfx deploy test
+	@dfx ledger fabricate-cycles --canister test --cycles 100000000000000
+	@dfx canister call test run_tests
 
 ref-test: AddIdentities ref-test-before ref-test-execution ref-test-after
 	
@@ -68,8 +68,9 @@ ref-test-before:
 	dfx start --background --clean
 	@sleep 5
 	@echo identity for testing $(TESTIDENTITY)
-	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)
-	dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)
+	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)	
+	@dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)
+	@dfx ledger fabricate-cycles --canister icrc1 --cycles 10000000
 
 
 ref-test-execution:

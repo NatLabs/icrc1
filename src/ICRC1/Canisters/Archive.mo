@@ -9,18 +9,17 @@ import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Hash "mo:base/Hash";
 import Result "mo:base/Result";
-
-import ExperimentalCycles "mo:base/ExperimentalCycles";
+import Cycles "mo:base/ExperimentalCycles";
 import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
-
-
+import Principal "mo:base/Principal";
 import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
 import U "../Modules/Utils";
 import ArchiveTypes "../Types/Types.Archive";
 import TransactionTypes "../Types/Types.Transaction";
+import {ConstantTypes} = "../Types/Types.All";
 
-shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTypes.ArchiveInterface {
+shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTypes.ArchiveInterface = this{
 
     private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
     private type TransactionRange = TransactionTypes.TransactionRange;
@@ -30,25 +29,9 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
         offset : Nat64;
         size : Nat;
     };
-
-    stable let KiB = 1024;
-    stable let GiB = KiB ** 3;
-    stable let MEMORY_PER_PAGE : Nat64 = Nat64.fromNat(64 * KiB);
-    stable let MIN_PAGES : Nat64 = 32; // 2MiB == 32 * 64KiB
-    stable var PAGES_TO_GROW : Nat64 = 2048; // 64MiB
-    stable let MAX_MEMORY = 32 * GiB;
-
-    stable let BUCKET_SIZE = 1000;
-
-    //The maximum number of transactions returned by request of 'get_transactions'
-    stable let MAX_TRANSACTIONS_PER_REQUEST = 5000;
-
-    //stable let MAX_TXS_LENGTH = 100;
-
+    
     stable var memory_pages : Nat64 = ExperimentalStableMemory.size();
     stable var total_memory_used : Nat64 = 0;
-    stable var total_previous_archives_count:Nat = 0;
-    stable var next_archive_was_set: Bool = false;
     stable var filled_buckets = 0;
     stable var trailing_txs = 0;
 
@@ -58,7 +41,30 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
     stable var nextArchive : ArchiveTypes.ArchiveInterface = actor ("aaaaa-aa");
     stable var first_tx : Nat = 0;
     stable var last_tx : Nat = 0;
+    
+    //initialize with default principal. (Else this needs to be nullable)
+    stable var canisterId : Principal = Principal.fromText("aaaaa-aa");
+    stable var wasInitialized = false;
 
+    //These fields are defined here (as stable),  and not inside 'Types.Constants.mo', because these values must not change for the canister.    
+    stable let KiB = 1024;
+    stable let GiB = KiB ** 3;
+    stable let MEMORY_PER_PAGE : Nat64 = Nat64.fromNat(64 * KiB);
+    stable let MIN_PAGES : Nat64 = 32; // 2MiB == 32 * 64KiB
+    stable let PAGES_TO_GROW : Nat64 = 2048; // 64MiB
+    stable let MAX_MEMORY = 32 * GiB;
+    stable let BUCKET_SIZE = 1000;
+
+    public shared ({ caller }) func init() : async Principal {
+                        
+        if (wasInitialized){
+            return canisterId;
+        };
+
+        canisterId := Principal.fromActor(this);                
+        wasInitialized := true;         
+        canisterId;            
+    };
 
     public shared query func get_prev_archive() : async ArchiveTypes.ArchiveInterface {
         prevArchive;
@@ -76,28 +82,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
         last_tx;
     };
 
-    
-    public shared query func get_previous_archive_count() : async Nat {
-                  
-         return total_previous_archives_count;      
-    };
-
-    public shared ({ caller }) func set_previous_archive_count(count : Nat) : async Result.Result<(), Text> {
-
-        if (caller != ledger_canister_id) {
-            return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
-        };
-
         
-        //Can only be set one time:
-        if (next_archive_was_set == false){
-            total_previous_archives_count:=count;
-            next_archive_was_set:=true;
-        };
-
-        #ok();
-    };
-
     public shared ({ caller }) func set_prev_archive(prev_archive : ArchiveTypes.ArchiveInterface) : async Result.Result<(), Text> {
 
         if (caller != ledger_canister_id) {
@@ -114,11 +99,8 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
-
-        ignore await next_archive.set_previous_archive_count(total_previous_archives_count + 1);
-        
+                
         nextArchive := next_archive;
-
 
         #ok();
     };
@@ -238,7 +220,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
         let { start; length } = req;
         var iter = Itertools.empty<MemoryBlock>();
            
-        let numberOfTransactionsToReturn = Nat.min(Nat.max(0, length), MAX_TRANSACTIONS_PER_REQUEST);
+        let numberOfTransactionsToReturn = Nat.min(Nat.max(0, length), ConstantTypes.MAX_TRANSACTIONS_PER_REQUEST);
         let startTransactionNumber:Nat = Nat.max(start, first_tx);
         let startTransactionRelativeIndex:Nat = startTransactionNumber - first_tx;
         let start_bucket_index:Nat = startTransactionRelativeIndex / BUCKET_SIZE;        
@@ -301,10 +283,15 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async ArchiveTy
 
     /// Deposit cycles into this archive canister.
     public shared func deposit_cycles() : async () {
-        let amount = ExperimentalCycles.available();
-        let accepted = ExperimentalCycles.accept(amount);
+        let amount = Cycles.available();
+        let accepted = Cycles.accept(amount);
         assert (accepted == amount);
     };
+
+    public shared query func cycles_available() : async Nat {
+      Cycles.balance();      
+    };
+
 
     func to_blob(tx : Transaction) : Blob {
         to_candid (tx);

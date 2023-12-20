@@ -141,15 +141,23 @@ module {
     ) : Bool {
         switch (opt_fee) {
             case (?tx_fee) {
-                if (tx_fee != token.fee) { // ensure that the transaction was not sent assuming different current fee 
+                if (tx_fee < token.fee) { 
                     return false;
                 };
+
+                //make sure that not enormous fee is used by bad actor
+                if (tx_fee > (token.fee * 10)) { 
+                    return false;
+                };
+
             };
             case (null) {
-                return true; // if fee is not passed as arg, the transaction is assumed ok with current fee.
+                //null is ok, becasue for real transaction the fee-value will be taken from 'token.fee', and not from 'tx_fee'
+                return true;
             };
         };
 
+        
         true;
     };
 
@@ -205,9 +213,7 @@ module {
         };
 
         if (tx_req.kind == #transfer or tx_req.kind ==#mint){
-            if (tx_req.amount <= token.fee) {
-                Debug.print("req amount: " #debug_show(tx_req.amount) #" , fee: " # debug_show(token.fee));
-                Debug.print("type: " #debug_show(tx_req.kind));
+            if (tx_req.amount <= token.fee) {                
                 return #err(
                     #GenericError({
                         error_code = 0;
@@ -227,13 +233,14 @@ module {
                     );
                 };
 
-                let balance : Balance = Utils.get_balance(
+                var balance : Balance = Utils.get_balance(
                     token.accounts,
                     tx_req.encoded.from,
                 );
-
-                if (tx_req.amount + token.fee > balance) { 
-                    return #err(#InsufficientFunds { balance });
+                                                
+                if (tx_req.amount + token.fee > balance) {                     
+                    return #err(#InsufficientFunds { balance  });
+                    
                 };
             };
 

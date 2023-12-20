@@ -17,4 +17,9 @@ module{
         owner : Principal;
         subaccount : ?Subaccount;
     };
+
+    public type AccountBalanceInfo = {
+        account: Account;
+        balance: CommonTypes.Balance;
+    };
 };

@@ -50,12 +50,12 @@ module {
 
     // Creates a Stable Buffer with the default metadata and returns it.
     public func init_metadata(args : InitArgs) : StableBuffer.StableBuffer<MetaDatum> {
-        let metadata = SB.initPresized<MetaDatum>(4);
+        let metadata = SB.initPresized<MetaDatum>(5);
         SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
         SB.add(metadata, ("icrc1:name", #Text(args.name)));
         SB.add(metadata, ("icrc1:symbol", #Text(args.symbol)));
-        SB.add(metadata, ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))));
-        SB.add(metadata, ("icrc1:logo", #Text(args.logo)));        
+        SB.add(metadata, ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))));        
+        SB.add(metadata, ("icrc1:minting_allowed", #Text(debug_show(args.minting_allowed))));   
         metadata;
     };
 
@@ -233,13 +233,12 @@ module {
         tx_req : TransactionRequest,
     ) { 
         let { encoded; amount } = tx_req;
-		let tx_fee = token.fee;						
-
+							
         update_balance(
             token.accounts,
             encoded.from,
             func(balance) {
-                balance - amount; // - tx_fee;
+                balance - amount;
             },
         );
 

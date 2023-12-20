@@ -9,17 +9,19 @@ import Nat64 "mo:base/Nat64";
 import Nat8 "mo:base/Nat8";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
-import EC "mo:base/ExperimentalCycles";
-
 import Itertools "mo:itertools/Iter";
 import StableTrieMap "mo:StableTrieMap";
-
+import Cycles "mo:base/ExperimentalCycles";
+import Bool "mo:base/Bool";
 import Account "Account";
+import Trie "mo:base/Trie";
+import List "mo:base/List";
 
 import Utils "Utils";
 import Transfer "Transfer";
 import Archive "../Canisters/Archive";
 import T "../Types/Types.All";
+import {ConstantTypes} = "../Types/Types.All";
 
 /// The ICRC1 class with all the functions for creating an
 /// ICRC1 token on the Internet Computer
@@ -60,11 +62,7 @@ module {
     private type SetAccountParameterResult = T.TokenTypes.SetAccountParameterResult;
     
     private type ArchiveInterface = T.ArchiveTypes.ArchiveInterface;
-    
-    public let MAX_TRANSACTIONS_IN_LEDGER = 2000;
-    public let MAX_TRANSACTION_BYTES : Nat64 = 196;
-    public let MAX_TRANSACTIONS_PER_REQUEST = 5000;
-
+        
     /// Initialize a new ICRC-1 token
     public func init(args : T.TokenTypes.InitArgs) : T.TokenTypes.TokenData {
         
@@ -132,7 +130,7 @@ module {
             accounts;
             metadata = Utils.init_metadata(args);
             supported_standards = Utils.init_standards();
-            transactions = SB.initPresized(MAX_TRANSACTIONS_IN_LEDGER);
+            transactions = SB.initPresized(ConstantTypes.MAX_TRANSACTIONS_IN_LEDGER);
             permitted_drift;
             transaction_window;
             archive = {
@@ -284,24 +282,6 @@ module {
         #Ok(token.min_burn_amount);
     };
 
-    /// Set the minting account
-    public func set_minting_account(token : TokenData, minting_account : Text, caller : Principal) : async*  SetAccountParameterResult {
-        if (caller == token.minting_account.owner) {
-            token.minting_account := {
-                owner = Principal.fromText(minting_account);
-                subaccount = null;
-            };
-        } else {
-            return #Err(
-                #GenericError {
-                    error_code = 401;
-                    message = "Unauthorized: Setting new minting account only allowed via current minting account.";
-                },
-            );
-        };
-        #Ok(token.minting_account);
-    };
-
     /// Retrieve all the metadata of the token
     public func metadata(token : TokenData) : [MetaDatum] {
         [
@@ -309,7 +289,7 @@ module {
             ("icrc1:name", #Text(token.name)),
             ("icrc1:symbol", #Text(token.symbol)),
             ("icrc1:decimals", #Nat(Nat8.toNat(token.decimals))),
-            ("icrc1:logo", #Text(token.logo))
+            ("icrc1:minting_allowed", #Text(debug_show(token.minting_allowed)))
         ]
     };
 
@@ -380,17 +360,16 @@ module {
         token : TokenData,
         args : TransferArgs,
         caller : Principal,
+        archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds
     ) : async* TransferResult {
 
+       
         let from = {
             owner = caller;
             subaccount = args.from_subaccount;
         };
-
-    
-        var argsToUse = args;
-
-        let tx_kind = if (from == token.minting_account) {
+        
+        let tx_kind:T.TransactionTypes.TxKind = if (from == token.minting_account) {
            
             if (token.minting_allowed == false){                            
                 return #Err(#GenericError {error_code = 401;message = "Error: Minting not allowed for this token.";});
@@ -404,21 +383,15 @@ module {
                     message = "Unauthorized: Minting not allowed.";
                 },);
             };
-
+            
             #mint
         } else if (args.to == token.minting_account) {
             #burn
-        } else {                       
-            argsToUse := {args with fee:?Balance = 
-                            switch(args.fee){
-                                case (null) ?token.fee;
-                                case (?feeValue) ?Nat.max(token.fee, feeValue);                                                
-                            }    
-                         };                         
+        } else {                              
             #transfer
         };
 
-        let tx_req = Utils.create_transfer_req(argsToUse, caller, tx_kind);
+        let tx_req = Utils.create_transfer_req(args, caller, tx_kind);
 
         switch (Transfer.validate_request(token, tx_req)) {
             case (#err(errorType)) {                
@@ -438,6 +411,7 @@ module {
                 Utils.burn_balance(token, encoded.from, amount);
             };
             case(#transfer){
+                                                  
                 Utils.transfer_balance(token, tx_req);
 
                 // burn fee
@@ -451,13 +425,20 @@ module {
         SB.add(token.transactions, tx);
 
         // transfer transaction to archive if necessary
-        await* update_canister(token);
-
+        let result:(Bool,?Principal) = await* update_canister(token);
+        if (result.0 == true){
+            switch(result.1){
+                case (?principal) ignore updateCanisterIdList(principal,archive_canisterIds );
+                case (null) {};
+            }
+        };
+                
         #Ok(tx.index);
     };
 
     /// Helper function to mint tokens with minimum args
-    public func mint(token : TokenData, args : Mint, caller : Principal) : async* TransferResult {
+    public func mint(token : TokenData, args : Mint, caller : Principal,  
+                    archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds) : async* TransferResult {
 
         if (token.minting_allowed == false){            
             return #Err(#GenericError {error_code = 401;message = "Error: Minting not allowed for this token.";});
@@ -469,7 +450,7 @@ module {
                 fee = null;
             };
             
-            await* transfer(token, transfer_args, caller);
+            await* transfer(token, transfer_args, caller, archive_canisterIds);            
             
         } else {            
             return #Err(#GenericError {error_code = 401;message = "Unauthorized: Minting not allowed.";},);
@@ -477,14 +458,15 @@ module {
     };
 
     /// Helper function to burn tokens with minimum args
-    public func burn(token : TokenData, args : BurnArgs, caller : Principal) : async* TransferResult {
+    public func burn(token : TokenData, args : BurnArgs, caller : Principal,
+                archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds) : async* TransferResult {
 
         let transfer_args : TransferArgs = {
             args with to = token.minting_account;
             fee = null;
         };
 
-        await* transfer(token, transfer_args, caller);
+        await* transfer(token, transfer_args, caller, archive_canisterIds);
     };
 
     /// Returns the total number of transactions that have been processed by the given token.
@@ -539,15 +521,15 @@ module {
 
         let txs_in_archive = (archived_range.end - archived_range.start) : Nat;
 
-        let size = Utils.div_ceil(txs_in_archive, MAX_TRANSACTIONS_PER_REQUEST);
+        let size = Utils.div_ceil(txs_in_archive, ConstantTypes.MAX_TRANSACTIONS_PER_REQUEST);
 
         let archived_transactions = Array.tabulate(
             size,
             func(i : Nat) : ArchivedTransaction {
-                let offset = i * MAX_TRANSACTIONS_PER_REQUEST;
+                let offset = i * ConstantTypes.MAX_TRANSACTIONS_PER_REQUEST;
                 let start = offset + archived_range.start;
                 let length = Nat.min(
-                    MAX_TRANSACTIONS_PER_REQUEST,
+                    ConstantTypes.MAX_TRANSACTIONS_PER_REQUEST,
                     archived_range.end - start,
                 );
 
@@ -565,29 +547,125 @@ module {
         };
     };
 
+
+    public func get_holders(token : TokenData, index:?Nat, count:?Nat): [T.AccountTypes.AccountBalanceInfo]{
+           
+        let size:Nat = token.accounts._size;    
+        let indexValue:Nat = switch(index)    {
+            case (?index) index;
+            case (null) 0;
+        };
+
+        let countValue:Nat = switch(count)    {
+            case (?count) count;
+            case (null) size;
+        };
+
+        if (indexValue >= size){
+            return [];
+        };
+        let maxNumbersOfHoldersToReturn:Nat = 5000;
+        var countToUse:Nat = Nat.min(Nat.min(countValue,size-indexValue), maxNumbersOfHoldersToReturn);
+        let defaultAccount:T.AccountTypes.Account = {owner = Principal.fromText("aaaaa-aa"); subaccount = null };
+        var iter = Trie.iter(token.accounts.trie);
+        
+        //Because of reverse order:
+        let revIndex:Nat = size - (indexValue + countToUse);
+
+        iter := Itertools.skip(iter, revIndex);
+        iter := Itertools.take(iter, countToUse);
+        
+
+        var resultList: List.List<T.AccountTypes.AccountBalanceInfo> = List.nil<T.AccountTypes.AccountBalanceInfo>();
+        var resultIter = Iter.fromList<T.AccountTypes.AccountBalanceInfo>(resultList);
+
+               
+        for ((k:Blob,v:T.CommonTypes.Balance) in iter) {                                    
+            let account:?T.AccountTypes.Account = Account.decode(k);            
+            let balance:Nat = v;            
+            let newItem:T.AccountTypes.AccountBalanceInfo = { account = Option.get(account, defaultAccount); balance = balance};
+            resultIter := Itertools.prepend<T.AccountTypes.AccountBalanceInfo>(newItem,resultIter);            
+        };
+        
+        return Iter.toArray<T.AccountTypes.AccountBalanceInfo>(resultIter);        
+    };
+
+
+    public func all_canister_stats(hidePrincipal:Bool, 
+        mainTokenPrincipal:Principal,mainTokenBalance:Balance, archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds )
+        : async* [T.CanisterTypes.CanisterStatsResponse]{
+      
+       var showFullInfo = false;
+       if (hidePrincipal == false) {  
+        showFullInfo :=true;
+       };
+
+       var returnList:List.List<T.CanisterTypes.CanisterStatsResponse> = List.nil<T.CanisterTypes.CanisterStatsResponse>();
+       
+       let itemForMainToken:T.CanisterTypes.CanisterStatsResponse = {
+            name = "Main token";
+            principal = Principal.toText(mainTokenPrincipal);
+            balance = mainTokenBalance;
+       };
+       returnList := List.push(itemForMainToken, returnList);
+       
+       
+       let iter = List.toIter<Principal>(archive_canisterIds.canisterIds);
+       var counter = 1;
+       for (item:Principal in iter){            
+            let principalText:Text = Principal.toText(item);
+            let archive:T.ArchiveTypes.ArchiveInterface = actor(principalText);
+            let archiveCyclesBalance =  await archive.cycles_available();
+
+            let newItem:T.CanisterTypes.CanisterStatsResponse = {
+                name = "Archive canister No:" #debug_show(counter);
+                principal =  switch (showFullInfo) {
+                    case (true) Principal.toText(item);
+                    case (false) "<Hidden>";
+                };
+                balance = archiveCyclesBalance;
+            };
+            returnList := List.push(newItem, returnList);
+            counter :=counter + 1;            
+       };
+       returnList :=List.reverse(returnList);
+
+       return List.toArray<T.CanisterTypes.CanisterStatsResponse>(returnList);
+    };
+
     // Updates the token's data and manages the transactions
     //
     // **added at the end of any function that creates a new transaction**
-    func update_canister(token : TokenData) : async* () {
+    func update_canister(token : TokenData) : async* (Bool,?Principal) {
         let txs_size = SB.size(token.transactions);
-
-        if (txs_size >= MAX_TRANSACTIONS_IN_LEDGER) {
-            await* append_transactions(token);
+        
+        if (txs_size >= ConstantTypes.MAX_TRANSACTIONS_IN_LEDGER) {
+            return  await* append_transactions(token);
         };
+
+        return (false, null);
     };
 
     // Moves the transactions from the ICRC1 canister to the archive canister
     // and returns a boolean that indicates the success of the data transfer
-    func append_transactions(token : TokenData) : async* () {
+    func append_transactions(token : TokenData) : async* (Bool,?Principal) {
         let { archive; transactions } = token;
 
+        var newArchiveCanisterId : ?Principal = null;
+        var canisterWasAdded = false;
+
         if (archive.stored_txs == 0) {
-            EC.add(200_000_000_000);
+            
+            Cycles.add(ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);
             archive.canister := await Archive.Archive();
+            newArchiveCanisterId := Option.make(await archive.canister.init());
+            canisterWasAdded :=true;
+
         } else { 
             let add = await* should_add_archive(token);
             if (add == 1) {
-                await* add_archive(token);
+                newArchiveCanisterId := Option.make(await* add_additional_archive(token));
+                canisterWasAdded :=true;
             };
         };
 
@@ -602,9 +680,12 @@ module {
             };
             case (#err(_)) {};
         };
+
+        return (canisterWasAdded, newArchiveCanisterId);
     };
 
     func should_add_archive(token : TokenData) : async* Nat {
+        
         let { archive } = token;
         let total_used = await archive.canister.total_used();
         let remaining_capacity = await archive.canister.remaining_capacity();
@@ -617,18 +698,18 @@ module {
     };    
 
     // Creates a new archive canister
-    func add_archive(token : TokenData) : async* () {
+    func add_additional_archive(token : TokenData) : async* Principal {
         let { archive; transactions } = token;
 
         let oldCanister = archive.canister;
         let old_total_tx : Nat = await oldCanister.total_transactions();
         let old_first_tx : Nat = await oldCanister.get_first_tx();
         let old_last_tx : Nat = old_first_tx + old_total_tx - 1;
-                // last_tx == SB.size(token.transactions) + token.archive.stored_txs
-
+                
         //Add cycles, because we are creating new canister
-        EC.add(200_000_000_000);                
+        Cycles.add(T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);                
         let newCanister = await Archive.Archive();
+        let canisterId = await newCanister.init();
         
         let res1 = await oldCanister.set_last_tx(old_last_tx);        
         let res2 = await oldCanister.set_next_archive(newCanister);
@@ -637,5 +718,27 @@ module {
         let res4 = await newCanister.set_first_tx(old_last_tx + 1);
 
         archive.canister := newCanister;
+        return canisterId;
+    };
+
+    private func updateCanisterIdList(principal: Principal, archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds): async (){
+
+        if (ArchivePrincipalIdsInList(principal,archive_canisterIds) == false){
+            archive_canisterIds.canisterIds := List.push<Principal>(principal, archive_canisterIds.canisterIds);                    
+        };
+    
+    };
+
+    private func ArchivePrincipalIdsInList(principal : Principal, archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds): Bool{
+  
+        if (List.size(archive_canisterIds.canisterIds) <=0){
+            return false;
+        };
+
+        func listFindFunc(x : Principal) : Bool {
+            x  == principal;
+        };
+
+        return List.some<Principal>(archive_canisterIds.canisterIds, listFindFunc);
     };
 };

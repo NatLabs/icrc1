@@ -210,10 +210,7 @@ module {
             suffix.vals(),
         );
     };
-
-
-
-    //TODO: Examine this function. it might be wrong
+    
     /// Converts an ICRC-1 Account from its Textual representation to the `Account` type
     /// Parses account from its textual representation.
     public func fromText(text : Text) : Result.Result<Account, ParseError> {

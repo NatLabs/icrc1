@@ -2,8 +2,10 @@ import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Option "mo:base/Option";
 import Time "mo:base/Time";
+import List "mo:base/List";
+import { setTimer; recurringTimer;cancelTimer } = "mo:base/Timer";
 import Nat "mo:base/Nat";
-import ExperimentalCycles "mo:base/ExperimentalCycles";
+import Cycles "mo:base/ExperimentalCycles";
 import Text "mo:base/Text";
 import SB "mo:StableBuffer/StableBuffer";
 import ICRC1 "../Modules/ICRC1Token";
@@ -12,12 +14,28 @@ import Principal "mo:base/Principal";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
 import Itertools "mo:itertools/Iter";
+import Trie "mo:base/Trie";
+import Blob "mo:base/Blob";
+import Result "mo:base/Result";
+import Bool "mo:base/Bool";
 import T "../Types/Types.All";
+import Constants "../Types/Types.Constants";
+import Account "../Modules/Account";
 
-shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenInitArgs) : async T.TokenTypes.FullInterface {
+shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenInitArgs) : async T.TokenTypes.FullInterface = this{
 
     //The value of this variable should only be changed by the function 'ConvertArgs'
-    stable var wasInitializedWithArguments:Bool = false;
+    private stable var wasInitializedWithArguments:Bool = false;
+    private stable var archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds = {var canisterIds = List.nil<Principal>()};
+    private stable var tokenCanisterId:Principal = Principal.fromText("aaaaa-aa");
+
+    private stable var autoTopupData:T.CanisterTypes.CanisterAutoTopUpData = {
+        var autoCyclesTopUpEnabled = false;
+        var autoCyclesTopUpMinutes:Nat = 60 * 12; //12 hours
+        var autoCyclesTopUpTimerId:Nat = 0;
+        var autoCyclesTopUpOccuredNumberOfTimes:Nat = 0;
+    };
+   
     
     private func ConvertArgs(init_arguments : ?T.TokenTypes.TokenInitArgs): ?T.TokenTypes.InitArgs
     {   
@@ -69,7 +87,22 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
                 }
             };
              
-            wasInitializedWithArguments := true;            
+            //Now check the balance of cycles available:
+            let amount = Cycles.balance();            
+            if (amount < Constants.TOKEN_INITIAL_CYCLES_REQUIRED){
+                        let missingBalance:Nat = Constants.TOKEN_INITIAL_CYCLES_REQUIRED - amount;
+                        let infoText:Text="\r\nERROR! At least "  #debug_show(Constants.TOKEN_INITIAL_DEPLOYMENT_CYCLES_REQUIRED) 
+                        #" cycles are needed for deployment. \r\n "
+                        #"- Available cycles: " #debug_show(amount)#"\r\n" 
+                        #"- Missing cycles: " #debug_show(missingBalance)#"\r\n" 
+                        #" -> You can use the '--with-cycles' command in dfx deploy. \r\n"
+                        #"    For example: \r\n"
+                        #"    'dfx deploy icrc1 --with-cycles 3000000000000'";                         
+                        Debug.print(infoText);
+                        Debug.trap(infoText);
+            };
+
+            wasInitializedWithArguments := true;                    
             return Option.make(icrc1_args);               
         };                                                     
     };
@@ -85,7 +118,6 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
         case (?initArgsNotNull) ICRC1.init(initArgsNotNull);
     }; 
     
-
     /// Functions for the ICRC1 token standard
     public shared query func icrc1_name() : async Text {
         ICRC1.name(token);
@@ -124,15 +156,17 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
     };
 
     public shared ({ caller }) func icrc1_transfer(args : T.TransactionTypes.TransferArgs) : async T.TransactionTypes.TransferResult {
-        await* ICRC1.transfer(token, args, caller);
+        
+        await* ICRC1.transfer(token, args, caller, archive_canisterIds);       
     };
 
-    public shared ({ caller }) func mint(args : T.TransactionTypes.Mint) : async T.TransactionTypes.TransferResult {                
-        await* ICRC1.mint(token, args, caller);        
+    public shared ({ caller }) func mint(args : T.TransactionTypes.Mint) : async T.TransactionTypes.TransferResult {                        
+        await* ICRC1.mint(token, args, caller, archive_canisterIds);                          
     };
 
     public shared ({ caller }) func burn(args : T.TransactionTypes.BurnArgs) : async T.TransactionTypes.TransferResult {
-        await* ICRC1.burn(token, args, caller);
+        
+        await* ICRC1.burn(token, args, caller, archive_canisterIds);        
     };
 
     public shared ({ caller }) func set_name(name : Text) : async T.TokenTypes.SetTextParameterResult {
@@ -158,11 +192,7 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
     public shared ({ caller }) func set_min_burn_amount(min_burn_amount : T.Balance) : async T.TokenTypes.SetBalanceParameterResult {
         await* ICRC1.set_min_burn_amount(token, min_burn_amount, caller);
     };
-
-    public shared ({ caller }) func set_minting_account(minting_account : Text) : async T.TokenTypes.SetAccountParameterResult {
-        await* ICRC1.set_minting_account(token, minting_account, caller);
-    };
-
+  
     public shared query func min_burn_amount() : async T.Balance {
         ICRC1.min_burn_amount(token);
     };
@@ -192,12 +222,133 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
 
     // Deposit cycles into this canister.
     public shared func deposit_cycles() : async () {
-        let amount = ExperimentalCycles.available();
-        let accepted = ExperimentalCycles.accept(amount);
+        let amount = Cycles.available();
+        let accepted = Cycles.accept(amount);
         assert (accepted == amount);
     };
 
-    public shared query func cycles_available(): async Nat {
-        ExperimentalCycles.available();
+    public shared query func cycles_balance(): async Nat {
+        Cycles.balance();        
     };
+
+    public shared ({ caller }) func all_canister_stats(): async [T.CanisterTypes.CanisterStatsResponse]{
+          if (tokenCanisterId == Principal.fromText("aaaaa-aa")){
+             tokenCanisterId := Principal.fromActor(this);
+       };
+       let balance = Cycles.balance();
+       let hidePrincipals:Bool = caller != token.minting_account.owner;
+       await* ICRC1.all_canister_stats(hidePrincipals, tokenCanisterId, balance, archive_canisterIds);      
+    };
+
+    public shared query func get_holders_count(): async Nat{
+        token.accounts._size;
+    };
+
+    public shared query func get_holders(index:?Nat, count:?Nat): async [T.AccountTypes.AccountBalanceInfo]{           
+        ICRC1.get_holders(token, index, count);                    
+    };
+
+    public shared ({ caller }) func auto_topup_cycles_enable(minutes:?Nat) : async Result.Result<Text,Text> {
+
+        if (caller != token.minting_account.owner) {                        
+            return #err("Unauthorized: Only minting account can call this function..");
+        }; 
+
+        let minutesToUse:Nat = switch(minutes){
+            case (?minutes) minutes;
+            case (null) 60 * 12; //12 hours
+        };
+
+        if (minutesToUse < 15){
+            return #err("Error. At least 15 minutes timer is required.");
+        };
+
+        if (autoTopupData.autoCyclesTopUpEnabled == false or minutesToUse != autoTopupData.autoCyclesTopUpMinutes)  {
+                autoTopupData.autoCyclesTopUpMinutes:=minutesToUse;
+                auto_topup_cycles_enable_internal();
+                #ok("Automatic cycles topUp for archive canisters is now enabled. Check every " # debug_show(autoTopupData.autoCyclesTopUpMinutes) #" minutes.");
+        }
+        else{
+                #ok("Automatic cycles topUp for archive canisters was already enabled. Check every " # debug_show(autoTopupData.autoCyclesTopUpMinutes) #" minutes.");
+        };
+            
+    };
+
+    public shared({ caller }) func auto_topup_cycles_disable() : async Result.Result<Text,Text> {
+        
+        if (caller != token.minting_account.owner) {                        
+            return #err("Unauthorized: Only minting account can call this function..");
+        }; 
+        
+        cancelTimer(autoTopupData.autoCyclesTopUpTimerId);
+        autoTopupData.autoCyclesTopUpEnabled :=false;
+        #ok("Automatic cycles topUp for archive canisters is now disabled");
+    };
+
+    public shared func auto_topup_cycles_status() : async T.CanisterTypes.CanisterAutoTopUpDataResponse {
+               
+        let response:T.CanisterTypes.CanisterAutoTopUpDataResponse = {
+            autoCyclesTopUpEnabled = autoTopupData.autoCyclesTopUpEnabled;
+            autoCyclesTopUpMinutes = autoTopupData.autoCyclesTopUpMinutes;
+            autoCyclesTopUpTimerId = autoTopupData.autoCyclesTopUpTimerId;
+            autoCyclesTopUpOccuredNumberOfTimes = autoTopupData.autoCyclesTopUpOccuredNumberOfTimes;
+        };
+
+        response;
+    };
+    
+    private func auto_topup_cycles_enable_internal(){
+        cancelTimer(autoTopupData.autoCyclesTopUpTimerId);
+                
+
+        let timerSeconds:Nat = autoTopupData.autoCyclesTopUpMinutes * 60;
+        autoTopupData.autoCyclesTopUpTimerId:= recurringTimer(#seconds timerSeconds,
+         func () : async () {                     
+                     await auto_topup_cycles_timer_tick();                     
+                 }
+        );
+
+        autoTopupData.autoCyclesTopUpEnabled :=true;
+    };
+
+    private func auto_topup_cycles_timer_tick(): async (){
+        
+        let totalDynamicCanisters = List.size(archive_canisterIds.canisterIds);
+        if (totalDynamicCanisters <= 0){
+            return;
+        };
+
+        
+        var balance = Cycles.balance();        
+        let cyclesRequired = T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED;        
+        if (balance < T.ConstantTypes.TOKEN_CANISTERS_MINIMUM_CYCLES_TO_KEEP + (cyclesRequired*2)) {            
+            return;
+        };
+        
+
+        let iter = List.toIter<Principal>(archive_canisterIds.canisterIds);
+        
+        for (item:Principal in iter){            
+            let principalText:Text = Principal.toText(item);
+            let archive:T.ArchiveTypes.ArchiveInterface = actor(principalText);
+            let archiveCyclesBalance =  await archive.cycles_available();
+            if (archiveCyclesBalance < cyclesRequired){
+                let diff:Nat = cyclesRequired-archiveCyclesBalance;
+                if (balance > diff + T.ConstantTypes.TOKEN_CANISTERS_MINIMUM_CYCLES_TO_KEEP){
+                    Cycles.add(T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);
+                    await archive.deposit_cycles();
+                    balance := Cycles.balance();   
+                    autoTopupData.autoCyclesTopUpOccuredNumberOfTimes:= autoTopupData.autoCyclesTopUpOccuredNumberOfTimes + 1;
+                };
+            }
+                            
+        };
+                
+    };
+
+    if (autoTopupData.autoCyclesTopUpEnabled == true){
+        auto_topup_cycles_enable_internal();
+    };
+
+  
 };

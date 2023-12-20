@@ -24,7 +24,7 @@ module{
 
     public type MetaDatum = (Text, Value);
     public type MetaData = [MetaDatum];
-    
+        
     /// Initial arguments for the setting up the icrc1 token canister
     public type InitArgs = {
         name : Text;
@@ -116,6 +116,7 @@ module{
 
         /// The record that stores the details to the archive canister and number of transactions stored in it
         archive : ArchiveData;
+        
     };
 
     public type SupportedStandard = {

@@ -1,5 +1,7 @@
 import Result "mo:base/Result";
+import Principal "mo:base/Principal";
 import TransactionTypes "Types.Transaction";
+import List "mo:base/List";
 
 module {    
   
@@ -7,9 +9,17 @@ module {
    private type TxIndex = TransactionTypes.TxIndex;
    private type GetTransactionsRequest = TransactionTypes.GetTransactionsRequest;
    private type TransactionRange = TransactionTypes.TransactionRange;
+    
+   public type ArchiveCanisterIds ={
+        var canisterIds: List.List<Principal>;
+   };
 
     /// The Interface for the Archive canister
     public type ArchiveInterface = actor {
+
+        //Initialize method
+        init: shared () -> async Principal;
+
         /// Appends the given transactions to the archive.
         /// > Only the Ledger canister is allowed to call this method
         append_transactions : shared ([Transaction]) -> async Result.Result<(), Text>;
@@ -47,9 +57,9 @@ module {
 
         set_next_archive : shared (ArchiveInterface) -> async Result.Result<(), Text>;
 
-        set_previous_archive_count: shared(Nat) -> async Result.Result<(), Text>;
+        cycles_available:shared query() -> async Nat;
 
-        get_previous_archive_count: shared query () -> async Nat;
+        deposit_cycles:shared () -> async ();
     };
 
 

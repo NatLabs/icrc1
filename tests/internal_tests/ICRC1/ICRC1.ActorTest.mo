@@ -4,6 +4,7 @@ import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Principal "mo:base/Principal";
+import List "mo:base/List";
 
 import Itertools "mo:itertools/Iter";
 import StableBuffer "mo:StableBuffer/StableBuffer";
@@ -31,8 +32,7 @@ module {
     private type Mint = T.TransactionTypes.Mint;
     private type BurnArgs = T.TransactionTypes.BurnArgs;
     private type TransferArgs = T.TransactionTypes.TransferArgs;
-
-            
+                
     public func test() : async ActorSpec.Group {
  
         let {
@@ -45,6 +45,8 @@ module {
             pending;
             run;
         } = ActorSpec;
+        
+        var archive_canisterIds: T.ArchiveTypes.ArchiveCanisterIds = {var canisterIds = List.nil<Principal>()};
 
         let { SB } = U;
 
@@ -219,6 +221,7 @@ module {
                         created_at_time = null;
                     },
                     minting_principal,
+                    archive_canisterIds
                 );                
             };
         };
@@ -371,8 +374,8 @@ module {
                                 ("icrc1:fee", #Nat(args.fee)),
                                 ("icrc1:name", #Text(args.name)),
                                 ("icrc1:symbol", #Text(args.symbol)),
-                                ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))),
-                                ("icrc1:logo", #Text(token.logo))
+                                ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))),                                
+                                ("icrc1:minting_allowed", #Text(debug_show(args.minting_allowed)))
                             ],
                         );
                     },
@@ -412,6 +415,7 @@ module {
                             token,
                             mint_args,
                             args.minting_account.owner,
+                            archive_canisterIds
                         );
                         
                         assertAllTrue([
@@ -441,6 +445,7 @@ module {
                             token,
                             mint_args,
                             args.minting_account.owner,
+                            archive_canisterIds
                         );
                         
                         assertAllTrue([
@@ -477,6 +482,7 @@ module {
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
+                                    archive_canisterIds
                                 );
 
                                 let burn_args : BurnArgs = {
@@ -489,7 +495,7 @@ module {
                                 let prev_balance = ICRC1.balance_of(token, user1);
                                 let prev_total_supply = ICRC1.total_supply(token);
 
-                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner, archive_canisterIds);
 
                                 assertAllTrue([
                                     res == #Ok(1),
@@ -514,7 +520,7 @@ module {
 
                                 let prev_balance = ICRC1.balance_of(token, user1);
                                 let prev_total_supply = ICRC1.total_supply(token);
-                                let res = await* ICRC1.burn(token, burn_args, user1.owner);
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner,archive_canisterIds);
 
                                 assertAllTrue([
                                     res == #Err(
@@ -543,6 +549,7 @@ module {
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
+                                    archive_canisterIds
                                 );
                                 
                                 let burn_args : BurnArgs = {
@@ -552,7 +559,7 @@ module {
                                     created_at_time = null;
                                 };
 
-                                let res = await* ICRC1.burn(token, burn_args, user1.owner);                                
+                                let res = await* ICRC1.burn(token, burn_args, user1.owner, archive_canisterIds);                                
                                 assertAllTrue([
                                     res == #Err(#BadBurn({min_burn_amount = args.min_burn_amount}))
                                 ]);
@@ -580,6 +587,7 @@ module {
                                     token,
                                     mint_args,
                                     args.minting_account.owner,
+                                    archive_canisterIds
                                 );
 
 
@@ -596,6 +604,7 @@ module {
                                     token,
                                     transfer_args,
                                     user1.owner,
+                                    archive_canisterIds
                                 );
                                 
                                 assertAllTrue([
@@ -628,7 +637,7 @@ module {
                                             assertAllTrue([
                                                 token.archive.stored_txs == 4000,
                                                 SB.size(token.transactions) == 123,
-                                                SB.capacity(token.transactions) == ICRC1.MAX_TRANSACTIONS_IN_LEDGER,
+                                                SB.capacity(token.transactions) == T.ConstantTypes.MAX_TRANSACTIONS_IN_LEDGER,
                                             ]);
                                         },
                                     ),
