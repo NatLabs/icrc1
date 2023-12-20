@@ -70,6 +70,8 @@ jobs:
       - name: Run reference tests
         run: |          
           
+          echo printenv
+          printenv 
           echo ---dfx identity use default
           dfx identity use default
 
