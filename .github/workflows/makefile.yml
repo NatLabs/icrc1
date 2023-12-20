@@ -72,7 +72,9 @@ jobs:
           dfx identity new default
           dfx identity new icrc-ref-test
           dfx identity use icrc-ref-test
+          dfx identity export icrc-ref-test > ~/.config/dfx/identity/icrc-ref-test/identity.pem
           dfx identity whoami
+          make ref-test
           
           
 
