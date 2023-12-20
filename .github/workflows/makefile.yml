@@ -69,6 +69,7 @@ jobs:
 
       - name: Run reference tests
         run: |
+          dfx identity new default
           dfx identity new icrc-ref-test
           dfx identity use icrc-ref-test
           dfx identity whoami
