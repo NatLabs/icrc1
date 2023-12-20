@@ -68,8 +68,7 @@ jobs:
             mops i
 
       - name: Run reference tests
-        run: |
-          dfx identity new default
+        run: |          
           dfx identity new icrc-ref-test
           dfx identity use icrc-ref-test
           dfx identity export icrc-ref-test > ~/.config/dfx/identity/icrc-ref-test/identity.pem
