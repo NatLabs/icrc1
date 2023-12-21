@@ -48,14 +48,14 @@ module {
 
     
 
-    // Creates a Stable Buffer with the default metadata and returns it.
+    /// Creates a Stable Buffer with the default metadata and returns it.
     public func init_metadata(args : InitArgs) : StableBuffer.StableBuffer<MetaDatum> {
-        let metadata = SB.initPresized<MetaDatum>(4);
+        let metadata = SB.initPresized<MetaDatum>(5);
         SB.add(metadata, ("icrc1:fee", #Nat(args.fee)));
         SB.add(metadata, ("icrc1:name", #Text(args.name)));
         SB.add(metadata, ("icrc1:symbol", #Text(args.symbol)));
-        SB.add(metadata, ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))));
-        SB.add(metadata, ("icrc1:logo", #Text(args.logo)));        
+        SB.add(metadata, ("icrc1:decimals", #Nat(Nat8.toNat(args.decimals))));        
+        SB.add(metadata, ("icrc1:minting_allowed", #Text(debug_show(args.minting_allowed))));   
         metadata;
     };
 
@@ -64,7 +64,7 @@ module {
         url = "https://github.com/dfinity/ICRC-1";
     };
 
-    // Creates a Stable Buffer with the default supported standards and returns it.
+    /// Creates a Stable Buffer with the default supported standards and returns it.
     public func init_standards() : StableBuffer.StableBuffer<SupportedStandard> {
         let standards = SB.initPresized<SupportedStandard>(4);
         SB.add(standards, default_standard);
@@ -72,15 +72,15 @@ module {
         standards;
     };
 
-    // Returns the default subaccount for cases where a user does
-    // not specify it.
+    /// Returns the default subaccount for cases where a user does
+    /// not specify it.
     public func default_subaccount() : Subaccount {
         Blob.fromArray(
             Array.tabulate(32, func(_ : Nat) : Nat8 { 0 }),
         );
     };
 
-    // this is a local copy of deprecated Hash.hashNat8 (redefined to suppress the warning)
+    /// this is a local copy of deprecated Hash.hashNat8 (redefined to suppress the warning)
     func hashNat8(key : [Nat32]) : Hash.Hash {
         var hash : Nat32 = 0;
         for (natOfKey in key.vals()) {
@@ -94,7 +94,7 @@ module {
         return hash;
     };
 
-    // Computes a hash from the least significant 32-bits of `n`, ignoring other bits.
+    /// Computes a hash from the least significant 32-bits of `n`, ignoring other bits.
     public func hash(n : Nat) : Hash.Hash {
         let j = Nat32.fromNat(n);
         hashNat8([
@@ -105,8 +105,8 @@ module {
         ]);
     };
 
-    // Formats the different operation arguements into
-    // a `TransactionRequest`, an internal type to access fields easier.
+    /// Formats the different operation arguments into
+    /// a `TransactionRequest`, an internal type to access fields easier.
     public func create_transfer_req(
         args : TransferArgs,
         owner : Principal,
@@ -150,7 +150,7 @@ module {
         };
     };
 
-    // Transforms the transaction kind from `variant` to `Text`
+    /// Transforms the transaction kind from `variant` to `Text`
     public func kind_to_text(kind : TxKind) : Text {
         switch (kind) {
             case (#mint) "MINT";
@@ -159,7 +159,7 @@ module {
         };
     };
 
-    // Formats the tx request into a finalised transaction
+    /// Formats the tx request into a finalised transaction
     public func req_to_tx(tx_req : TransactionRequest, index: Nat) : Transaction {
 
         {
@@ -206,7 +206,7 @@ module {
     };
 
     /// Updates the balance of an account
-    // Set to private, so that it can only be called from within this module
+    /// Set to private, so that it can only be called from within this module
     private func update_balance(
         accounts : AccountBalances,
         encoded_account : EncodedAccount,
@@ -226,20 +226,19 @@ module {
         };
     };
 
-    // Transfers tokens from the sender to the
-    // recipient in the tx request
+    /// Transfers tokens from the sender to the
+    /// recipient in the tx request
     public func transfer_balance(
         token : TokenData,
         tx_req : TransactionRequest,
     ) { 
         let { encoded; amount } = tx_req;
-		let tx_fee = token.fee;						
-
+							
         update_balance(
             token.accounts,
             encoded.from,
             func(balance) {
-                balance - amount; // - tx_fee;
+                balance - amount;
             },
         );
 
@@ -252,6 +251,7 @@ module {
         );
     };
 
+    /// Function to mint tokens
     public func mint_balance(
         token : TokenData,
         encoded_account : EncodedAccount,
@@ -268,6 +268,7 @@ module {
         token.minted_tokens += amount;
     };
 
+    /// Function to burn tokens
     public func burn_balance(
         token : TokenData,
         encoded_account : EncodedAccount,
@@ -284,7 +285,7 @@ module {
         token.burned_tokens += amount;
     };
 
-    // Stable Buffer Module with some additional functions
+    /// Stable Buffer Module with some additional functions
     public let SB = {
         StableBuffer with slice = func<A>(buffer : StableBuffer.StableBuffer<A>, start : Nat, end : Nat) : [A] {
             let size = SB.size(buffer);

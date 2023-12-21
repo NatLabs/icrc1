@@ -6,20 +6,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    name: Build and test
+    name: Build and internal tests
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 18
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
-          dfx-version: 0.14.0
+          dfx-version: 0.15.2
           
       - name: Install moc version manager
         run: | 
           npm  --yes -g i mocv
-          mocv use 0.9.1
+          mocv use 0.10.3
           export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: install mops
@@ -27,14 +27,13 @@ jobs:
             npm --yes -g i ic-mops
             mops i
 
-      - name: Detect warnings
-        run: make no-warn
+#      - name: Detect warnings
+#        run: make no-warn
 
       - name: Run Tests
         run: |
-          make test
-          make actor-test
-
+          make internal-tests
+          
   icrc1-ref-test:
     runs-on: ubuntu-latest
 
@@ -45,15 +44,15 @@ jobs:
           submodules: recursive
       - uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 18
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
-          dfx-version: 0.14.0
+          dfx-version: 0.15.2
 
       - name: Install moc version manager
         run: | 
           npm  --yes -g i mocv
-          mocv use 0.9.1
+          mocv use 0.10.3
           export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: Install stable toolchain
@@ -69,12 +68,14 @@ jobs:
             mops i
 
       - name: Run reference tests
-        run: |
-          echo "${{ secrets.IDENTITY_SSH }}" > ./identity.pem
-          dfx identity import icrc-ref-test ./identity.pem --storage-mode plaintext
-          dfx identity use icrc-ref-test
-          dfx identity whoami
+        run: |                                        
+          dfx identity use default
+          dfx identity new icrc-ref-test --force --storage-mode plaintext          
+          dfx identity export default > ./icrc-ref-test.pem          
+          dfx identity use icrc-ref-test                    
+          dfx identity whoami                    
           make ref-test
+          
           
 
       

@@ -18,8 +18,8 @@ node_modules/
 dist/
 
 #other files
-deploy*.sh
 *.sh
+**/*.pem
 NUL
 
 Cargo.lock

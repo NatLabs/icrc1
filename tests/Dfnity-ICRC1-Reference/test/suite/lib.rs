@@ -699,23 +699,34 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000u64);
     let initial_balance: Nat = transfer_amount.clone() * 7u8 + fee.clone() * 7u8;
+    
     // Create two test accounts and transfer some tokens to the first account. Also charge them with enough tokens so they can pay the transfer fees
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = p1_env.fork();
+    
 
     // Deduplication should not happen if the created_at_time field is unset.
-    let transfer_args = Transfer::amount_to(transfer_amount.clone(), p2_env.principal());
+    
+    let transfer_args = Transfer::amount_to(transfer_amount.clone(), p2_env.principal());    
+    
     transfer(&p1_env, transfer_args.clone())
         .await?
         .context("failed to execute the first no-dedup transfer")?;
 
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*1u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()).await?;
 
+  
     transfer(&p1_env, transfer_args.clone())
         .await?
         .context("failed to execute the second no-dedup transfer")?;
 
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*2u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 2u8).await?;
+
+
 
     // Setting the created_at_time field changes the transaction
     // identity, so the transfer should succeed.
@@ -731,8 +742,9 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         Err(e) => return Err(e).context("failed to execute the first dedup transfer"),
     };
 
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*3u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 3u8).await?;
-
+    
     // Sending the same transfer again should trigger deduplication.
     assert_equal(
         Err(TransferError::Duplicate {
@@ -741,16 +753,19 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
 
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*3u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 3u8).await?;
 
     // Explicitly setting the fee field changes the transaction
-    // identity, so the transfer should succeed.
+    // identity, so the transfer should succeed.    
     let transfer_args = transfer_args.fee(fee.clone());
 
     let txid_2 = transfer(&p1_env, transfer_args.clone())
         .await?
         .context("failed to execute the transfer with an explicitly set fee field")?;
 
+
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*4u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 4u8).await?;
 
     assert_not_equal(&txid, &txid_2).context("duplicate txid")?;
@@ -762,7 +777,8 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         }),
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
-
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*4u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 4u8).await?;
 
     // A custom memo changes the transaction identity, so the transfer
@@ -772,7 +788,8 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     let txid_3 = transfer(&p1_env, transfer_args.clone())
         .await?
         .context("failed to execute the transfer with an explicitly set memo field")?;
-
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*5u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5u8).await?;
 
     assert_not_equal(&txid, &txid_3).context("duplicate txid")?;
@@ -785,7 +802,8 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         }),
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
-
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*5u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5u8).await?;
 
     let now = time_nanos(&ledger_env);
@@ -807,7 +825,8 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     )
     .await?
     .context("failed to execute the transfer with an empty subaccount")?;
-
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*6u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 6u8).await?;
 
     transfer(
@@ -824,7 +843,8 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     )
     .await?
     .context("failed to execute the transfer with the default subaccount")?;
-
+    
+    assert_balance(&p1_env, p1_env.principal(), initial_balance.clone() - (transfer_amount.clone() + fee.clone())*7u8).await?;
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 7u8).await?;
 
     Ok(Outcome::Passed)
@@ -841,9 +861,10 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
 
     let mut transfer_args = Transfer::amount_to(transfer_amount.clone(), p2_env.principal());
     // Set incorrect fee
-    transfer_args = transfer_args.fee(fee.clone() + Nat::from(1u8));
+    transfer_args = transfer_args.fee(fee.clone() - Nat::from(1u8));
     match transfer(&ledger_env, transfer_args.clone()).await? {
-        Ok(_) => return Err(anyhow::Error::msg("Expected Bad Fee Error")),
+        Ok(_) =>                     
+            return Err(anyhow::Error::msg("Expected Bad Fee Error")),
         Err(err) => match err {
             TransferError::BadFee { expected_fee } => {
                 if expected_fee != transfer_fee(&ledger_env).await? {
