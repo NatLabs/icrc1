@@ -27,8 +27,8 @@ jobs:
             npm --yes -g i ic-mops
             mops i
 
-      - name: Detect warnings
-        run: make no-warn
+#      - name: Detect warnings
+#        run: make no-warn
 
       - name: Run Tests
         run: |

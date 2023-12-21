@@ -43,12 +43,11 @@ endif
 dfx-cache-install: 
 	dfx cache install -q
 
-#test: dfx-cache-install
-#	$(shell mocv bin current)/moc -r $(shell mops sources) -wasi-system-api ./tests/**/**.Test.mo
+test: dfx-cache-install
+	$(shell mocv bin current)/moc -r $(shell mops sources) -wasi-system-api ./tests/**/**.Test.mo
 
-#no-warn: dfx-cache-install
-#	find src -type f -name '*.mo' -print0 | xargs -0 $(shell mocv bin current)/moc -r $(shell mops sources) -Werror -wasi-system-api
-#	find src -type f -name '*.mo' -print0 | xargs -0 $(shell mocv bin current)/moc -r $(shell mops sources) -Werror -wasi-system-api
+no-warn: dfx-cache-install
+	find src -type f -name '*.mo' -print0 | xargs -0 $(shell mocv bin current)/moc -r $(shell mops sources) -Werror -wasi-system-api
 
 docs:
 	$(shell mocv bin current)/mo-doc
