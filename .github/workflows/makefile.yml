@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    name: Build and test
+    name: Build and internal tests
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -68,26 +68,12 @@ jobs:
             mops i
 
       - name: Run reference tests
-        run: |          
-          
-          echo printenv
-          printenv 
-          echo ---dfx identity use default
+        run: |                                        
           dfx identity use default
-
-          echo ---dfx identity new icrc-ref-test --force --storage-mode plaintext
-          dfx identity new icrc-ref-test --force --storage-mode plaintext
-
-          echo ---dfx identity export default > ./icrc-ref-test.pem
-          dfx identity export default > ./icrc-ref-test.pem
-
-          echo dfx identity use icrc-ref-test
-          dfx identity use icrc-ref-test
-          
-          echo ---dfx identity whoami
-          dfx identity whoami
-          
-          echo ---make ref-test
+          dfx identity new icrc-ref-test --force --storage-mode plaintext          
+          dfx identity export default > ./icrc-ref-test.pem          
+          dfx identity use icrc-ref-test                    
+          dfx identity whoami                    
           make ref-test
           
           
