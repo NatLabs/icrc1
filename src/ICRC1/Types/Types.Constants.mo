@@ -9,10 +9,13 @@ module{
     public let TOKEN_INITIAL_CYCLES_REQUIRED = 2_000_000_000_000;
 
     ///The main token will only auto top-up to archive canister if main token holds at least this amount
-    public let TOKEN_CANISTERS_MINIMUM_CYCLES_TO_KEEP = 500_000_000_000;
+    public let TOKEN_CYCLES_TO_KEEP = 500_000_000_000;
 
     ///If the archive canister holds less cycles than this amount, then it will be auto filled if auto-topup timer is enabled in token.mo
-    public let ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED = 100_000_000_000;
+    public let ARCHIVE_CYCLES_REQUIRED = 100_000_000_000;
+
+    //Amount of cycles to fill up
+    public let ARCHIVE_CYCLES_AUTOREFILL = 400_000_000_000;
                     
     ///Number of transactions to keep in token-cache until they are transfered into archive-canister
     public let MAX_TRANSACTIONS_IN_LEDGER = 2000;

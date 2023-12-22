@@ -1,114 +1,112 @@
-# ICRC-1 Implementation - with changes made by SNEED ICRC1 token
-This repo contains the implementation of the 
-[ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
-Also the SNEED ICRC token was merged into this repository: https://github.com/icsneed/sneed
+# ICRC-1 Implementation 
+- This repo contains the implementation of the [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
+- Code of the SNEED ICRC token was merged into this repository: https://github.com/icsneed/sneed  
+- Two test packages are included. Internal tests and a copy of dfinity reference tests (https://github.com/dfinity/ICRC-1/tree/main/test).
+- Not only the ICRC1 specification is implemented, but also some additional features are included into this token.
 
-## References and other implementations
-- [demergent-labs/ICRC-1 (Typescript)](https://github.com/demergent-labs/ICRC-1)
-- [Ledger ref in Motoko](https://github.com/dfinity/ledger-ref/blob/main/src/Ledger.mo)
-- [ICRC1 Rosetta API](https://github.com/dfinity/ic/blob/master/rs/rosetta-api/icrc1/ledger)
 
-## Documentation 
-- [markdown](https://github.com/NatLabs/icrc1/blob/main/docs/ICRC1/lib.md#function-init)
-- [web](https://natlabs.github.io/icrc1/ICRC1/lib.html#init)
- 
+## Additional features
+
+- <b>Minting_allowed</b></br>
+  The init-argument has additional field 'minting_allowed'. If this is set to false then minting feature is disabled.
+
+- <b>Auto fill up archive canisters with cycles</b> <br/>
+  The transaction history is kept inside dynamically created archive canisters. So after every 2000 transactions, the
+  transactions are moved from the cache into the archive canister(s). And therefore it is important that the archive canisters are holding
+  enough cycles for these operations. Therefore the feature to auto-fill-up the archive canisters was added.
+  To enable this feature, please call this canister function:</br>
+  ```dfx canister call icrc1 auto_topup_cycles_enable```</br>
+  Then the feature is enabled with the default timer interval of 12 hours. (So every 12 hours the cycles of the archive canisters will be checked, and if they hold less than the specified threshold then the cycles are filled up from the main token canister.
+  The threshold value is defined in file 'Types\Types.Constants.mo' :</br>
+  ```public let ARCHIVE_CYCLES_REQUIRED = 100_000_000_000```
+
+
+  You can also specifiy the used timer interval, in which the archive canisters should be checked. In this example every 25 minutes:</br>
+  ```dfx canister call icrc1 auto_topup_cycles_enable 'opt(25)'```
+  </br></br>
+  To disable this feature:</br>
+  ```dfx canister call icrc1 auto_topup_cycles_disable```
+  </br></br>
+  To see the status for this feature:</br>
+  ```dfx canister call icrc1 auto_topup_cycles_status```
+- <b>Get transactions history</b> </br>
+   Get the total number of transactions:</br>
+
+   ```dfx canister call icrc1 get_total_tx```</br>
+
+   Get the first two transactions:</br>
+
+   ```dfx canister call icrc1 get_transactions 'record {start=0; length=2}'``` 
+
+- <b>Show available cycles for all canister's</b></br> 
+   ```dfx canister call icrc1 all_canister_stats```
+
+- <b>Get total number of token holders</b></br>
+```dfx canister call icrc1 get_holders_count```
+
+- <b>Get list of holders with their token balances</b></br>
+  Maximum 5000 entries are returned. Therefor you can specify the 'index' and 'count' in the argument.</br></br>
+  Get list of the first 5000 holders:</br>
+  ```dfx canister call icrc1 get_holders```</br></br>
+  Get specified holders-list. (argument is (index:?Nat, count:?Nat)) :</br>
+  ```dfx canister call icrc1 get_holders '(2,3)'```</br>
+
+
 ## Getting Started 
-    
-- Launch the basic token with all the standard functions for ICRC-1
-  - Install the [mops](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/#/docs/install) package manager
-  - Replace the values enclosed in `< >` with your desired values and run in the terminal 
 
-  ```motoko
-    git clone https://github.com/fGhost713/icrc1Ext.git
-    cd icrc1Ext
-    mops install
-    dfx start --background --clean
 
-  dfx deploy icrc1 --argument '( opt record {                     
-        name = "<Insert Token Name>";                         
-        symbol = "<Insert Symbol>";                           
-        decimals = 6;                                           
-        fee = 1_000_000;                                        
-        logo = "data:image/png;base64,iVBORw0...K5CYII=";                                        
-        max_supply = 1_000_000_000_000;                         
-        initial_balances = vec {                                
-            record {                                            
-                record {                                        
-                    owner = principal "<Insert Principal>";   
-                    subaccount = null;                          
-                };                                              
-                100_000_000                                 
-            }                                                   
-        };                                                      
-        min_burn_amount = 10_000;                         
-        minting_account = null;                                 
-        advanced_settings = null;                               
-    })'
+- <b>(1) Clone this repo</b></br>
+  ```git clone https://github.com/fGhost713/ICRC1-Implementation-with-tests.git```
+  </br></br>
+- <b>(2) Navigate into the repository-folder</b></br>
+   ```cd ICRC1-Implementation-with-tests```
+   </br></br>
+- <b>(3) Install all the prerequisities</b></br>
+```make install-check```</br></br>
+- <b>(4) Reboot your computer now</b></br></br>
+- <b>(5) Deploy your initial token on your local computer</b></br>
+   Example:</br>
+
+```
+   dfx deploy icrc1 --with-cycles 3000000000000 -m reinstall --argument '( opt record {
+
+      name = "MyCoolToken";
+      symbol = "SYMB";
+      decimals = 6;
+      fee = 1_000_000;
+      max_supply = 1_000_000_000_000;
+      logo = "";
+      initial_balances = vec {
+          record {
+              record {
+                  owner = principal "fel5r-65awt-mqpqr-mjxze-nqg72-x5q3v-tjrny-ykm5e-xmk6l-3f5ny-lae";
+                  subaccount = null;
+              };
+              300_000_000_000
+          }
+      };
+      min_burn_amount = 10_000;
+      minting_account = null;
+      advanced_settings = null;
+      minting_allowed = false;
+  })'
   ```
 
-- Create a token dynamically from a canister
-    ```motoko
-        import Nat8 "mo:base/Nat8";
-        import Token "mo:icrc1/ICRC1/Canisters/Token";
-
-        actor{
-            let decimals = 8; // replace with your chosen number of decimals
-
-            func add_decimals(n: Nat): Nat{
-                n * 10 ** decimals
-            };
-
-            let pre_mint_account = {
-                owner = Principal.fromText("<Insert Principal>");
-                subaccount = null;
-            };
-
-            let token_canister = Token.Token({
-                name = "<Insert Token Name>";
-                symbol = "<Insert Token Symbol>";
-                decimals = Nat8.fromNat(decimals);
-                fee = add_decimals(1);
-                max_supply = add_decimals(1_000_000);
-
-                // pre-mint 100,000 tokens for the account
-                initial_balances = [(pre_mint_account, add_decimals(100_000))]; 
-
-                min_burn_amount = add_decimals(10);
-                minting_account = null; // defaults to the canister id of the caller
-                advanced_settings = null; 
-            });
-        }
-    ```
-
-> The fields for the `advanced_settings` record are documented [here](./docs/ICRC1/Types.md#type-advancedsettings)
-
-## Textual Representation of the ICRC-1 Accounts
-This library implements the [Textual Representation](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-1/README.md#textual-representation-of-accounts) format for accounts defined by the standard. It utilizes this implementation to encode each account into a sequence of bytes for improved hashing and comparison.
-To help with this process, the library provides functions in the [ICRC1/Account](./src/ICRC1/Account.mo) module for [encoding](./docs/ICRC1/Account.md#encode), [decoding](./docs/ICRC1/Account.md#decode), [converting from text](./docs/ICRC1/Account.md#fromText), and [converting to text](./docs/ICRC1/Account.md#toText).
-
+- <b>(6) Update code changes</b></br>
+  If you made some code changes and you want to upgrade the token with your changes:</br>
+  ```dfx deploy icrc1```
+  
 
 ## Tests
 
-No working tests at the moment. Need to repair...
-
-Original message:
 #### Internal Tests
-- Download and Install [vessel](https://github.com/dfinity/vessel)
-- Run `make test` 
-- Run `make actor-test`
+- <b>Run the internal tests:</b></br>
+```make internal-tests```</br>
 
-#### [Dfinity's ICRC-1 Reference Tests](https://github.com/dfinity/ICRC-1/tree/main/test)
-- Install Rust and Cargo via [rustup](https://rustup.rs/)
-
-```
-    curl https://sh.rustup.rs -sSf | sh
-```
-- Then run the `ref-test` command
-
-```
-    make ref-test
-```
-
+#### Dfinity's ICRC-1 Reference Tests
+- <b>Run the icrc1-reference tests:</b></br>
+```make ref-test```</br></br>
+</br>
 ## Funding
 
-This library was initially incentivized by [ICDevs](https://icdevs.org/). You can view more about the bounty on the [forum](https://forum.dfinity.org/t/completed-icdevs-org-bounty-26-icrc-1-motoko-up-to-10k/14868/54) or [website](https://icdevs.org/bounties/2022/08/14/ICRC-1-Motoko.html). The bounty was funded by The ICDevs.org community and the DFINITY Foundation and the award was paid to [@NatLabs](https://github.com/NatLabs). If you use this library and gain value from it, please consider a [donation](https://icdevs.org/donations.html) to ICDevs.
+This original library was initially incentivized by [ICDevs](https://icdevs.org/). You can view more about the bounty on the [forum](https://forum.dfinity.org/t/completed-icdevs-org-bounty-26-icrc-1-motoko-up-to-10k/14868/54) or [website](https://icdevs.org/bounties/2022/08/14/ICRC-1-Motoko.html). The bounty was funded by The ICDevs.org community and the DFINITY Foundation and the award was paid to [@NatLabs](https://github.com/NatLabs). If you use this library and gain value from it, please consider a [donation](https://icdevs.org/donations.html) to ICDevs.

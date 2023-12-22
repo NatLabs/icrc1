@@ -642,6 +642,7 @@ module {
         let txs_size = SB.size(token.transactions);
         
         if (txs_size >= ConstantTypes.MAX_TRANSACTIONS_IN_LEDGER) {
+
             return  await* append_transactions(token);
         };
 
@@ -655,10 +656,13 @@ module {
 
         var newArchiveCanisterId : ?Principal = null;
         var canisterWasAdded = false;
-
+        let mainTokenCycleBalance:Nat = Cycles.balance();
         if (archive.stored_txs == 0) {
             
-            Cycles.add(ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);
+            if (mainTokenCycleBalance < ConstantTypes.TOKEN_CYCLES_TO_KEEP){
+                return (canisterWasAdded, newArchiveCanisterId);
+            };
+            Cycles.add(ConstantTypes.ARCHIVE_CYCLES_AUTOREFILL);
             archive.canister := await Archive.Archive();
             newArchiveCanisterId := Option.make(await archive.canister.init());
             canisterWasAdded :=true;
@@ -666,9 +670,18 @@ module {
         } else { 
             let add = await* should_add_archive(token);
             if (add == 1) {
+                
+                if (mainTokenCycleBalance < ConstantTypes.TOKEN_CYCLES_TO_KEEP){
+                    return (canisterWasAdded, newArchiveCanisterId);
+                };
                 newArchiveCanisterId := Option.make(await* add_additional_archive(token));
                 canisterWasAdded :=true;
             };
+        };
+
+        let cyclesBalance = await archive.canister.cycles_available();
+        if (cyclesBalance < ConstantTypes.ARCHIVE_CYCLES_REQUIRED){
+            return (canisterWasAdded, newArchiveCanisterId);
         };
 
         let res = await archive.canister.append_transactions(
@@ -704,16 +717,16 @@ module {
     func add_additional_archive(token : TokenData) : async* Principal {
         let { archive; transactions } = token;
 
+        //Add cycles, because we are creating new canister
+        Cycles.add(T.ConstantTypes.ARCHIVE_CYCLES_AUTOREFILL);                
+        let newCanister = await Archive.Archive();
+        let canisterId = await newCanister.init();
+
         let oldCanister = archive.canister;
         let old_total_tx : Nat = await oldCanister.total_transactions();
         let old_first_tx : Nat = await oldCanister.get_first_tx();
         let old_last_tx : Nat = old_first_tx + old_total_tx - 1;
-                
-        //Add cycles, because we are creating new canister
-        Cycles.add(T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);                
-        let newCanister = await Archive.Archive();
-        let canisterId = await newCanister.init();
-        
+                                
         let res1 = await oldCanister.set_last_tx(old_last_tx);        
         let res2 = await oldCanister.set_next_archive(newCanister);
         let res3 = await newCanister.set_prev_archive(oldCanister);
