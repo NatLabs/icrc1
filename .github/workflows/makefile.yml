@@ -6,7 +6,6 @@ on:
       - closed
     branches:
       - 'main'
-
   push:
         
 jobs:
