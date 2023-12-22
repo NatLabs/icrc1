@@ -1,11 +1,6 @@
 name: Makefile CI
 
 on:
-  pull_request_target:
-    types:
-      - closed
-    branches:
-      - 'main'
   push:
         
 jobs:
