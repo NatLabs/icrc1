@@ -1,10 +1,11 @@
-# Master branch build status
-[![Makefile CI](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml/badge.svg?branch=main)](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml)
+# Build-status
 
-# ICRC-1 Implementation details
+![example branch parameter](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=master)
+
+# ICRC-1 Implementation details 
 - This repo contains the implementation of the [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
-- Code of the SNEED ICRC token was merged into this repository: https://github.com/icsneed/sneed  
-- Two test packages are included. Internal tests and a copy of dfinity reference tests (https://github.com/dfinity/ICRC-1/tree/main/test).
+- Code of the [SNEED ICRC token](https://github.com/icsneed/sneed) was merged into this repository.  
+- Two executable test packages are included. Internal tests and a copy of [Dfinity reference tests](https://github.com/dfinity/ICRC-1/tree/main/test).
 - Not only the ICRC1 specification is implemented, but also some additional features are included into this token.
 
 
@@ -48,7 +49,7 @@
 ```dfx canister call icrc1 get_holders_count```
 
 - <b>Get list of holders with their token balances</b></br>
-  Maximum 5000 entries are returned. Therefor you can specify the 'index' and 'count' in the argument.</br></br>
+  Maximum 5000 entries are returned. Therefore you can specify the 'index' and 'count' in the argument.</br></br>
   Get list of the first 5000 holders:</br>
   ```dfx canister call icrc1 get_holders```</br></br>
   Get specified holders-list. (argument is (index:?Nat, count:?Nat)) :</br>

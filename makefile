@@ -50,7 +50,7 @@ docs:
 	$(shell mocv bin current)/mo-doc
 	$(shell mocv bin current)/mo-doc --format plain
 
-internal-tests: dfx-cache-install
+internal-tests: install-check dfx-cache-install
 	@dfx stop
 	@dfx start --background --clean
 	@sleep 5
@@ -58,7 +58,7 @@ internal-tests: dfx-cache-install
 	@dfx ledger fabricate-cycles --canister test --cycles 100000000000000
 	@dfx canister call test run_tests
 
-ref-test: update-variables AddIdentities ref-test-before ref-test-execution ref-test-after
+ref-test: install-check update-variables AddIdentities ref-test-before ref-test-execution ref-test-after
 	
 ref-test-before:    
 	@$(eval TESTIDENTITYMINTINGOWNER=$(shell dfx identity whoami))
