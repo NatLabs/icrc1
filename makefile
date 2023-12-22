@@ -58,7 +58,7 @@ internal-tests: install-check dfx-cache-install
 	@dfx ledger fabricate-cycles --canister test --cycles 100000000000000
 	@dfx canister call test run_tests
 
-ref-test: install-check update-variables AddIdentities ref-test-before ref-test-execution ref-test-after
+ref-test: update-variables install-check AddIdentities ref-test-before ref-test-execution ref-test-after
 	
 ref-test-before:    
 	@$(eval TESTIDENTITYMINTINGOWNER=$(shell dfx identity whoami))
@@ -85,7 +85,7 @@ ref-test-after:
 
 update-variables:
 ifeq ($(origin GITHUB_WORKSPACE),undefined)	
-#on local computer	
+#on local computer		
 	@echo using PEM-file-directory: $(PEMDIR)
 else
 #inside build execution on server		
@@ -94,7 +94,11 @@ else
 endif 
 
 
-install-check:
+install-check: update-variables	
+
+#on local computer only		
+ifeq ($(origin GITHUB_WORKSPACE),undefined)	
+
 ifeq (, $(shell which curl))
 	@echo No curl is installed, curl will be installed now.... 
 	@sudo apt-get install curl -y
@@ -139,5 +143,5 @@ endif
 ifeq (,$(wildcard $(HOME)/.rustup))  
 	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 endif	
-
+endif
 
