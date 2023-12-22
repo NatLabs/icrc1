@@ -64,12 +64,12 @@
 - <b>(3) Install all the prerequisities</b></br>
 ```make install-check```</br></br>
 - <b>(4) Reboot your computer now</b></br></br>
-- <b>(6) Stop dfx service (in case it is running)</b></br>
+- <b>(5) Stop dfx service (in case it is running)</b></br>
 ```dfx stop```</br></br>
-- <b>(7) Start dfx service</b></br>
+- <b>(6) Start dfx service</b></br>
 ```dfx start --background --clean```
     </br></br>
-- <b>(8) Deploy your initial token on your local computer</b></br>
+- <b>(7) Deploy your initial token on your local computer</b></br>
    Example:</br>
 
 ```
@@ -97,7 +97,7 @@
   })'
   ```
 
-- <b>(9) Update code changes</b></br>
+- <b>(8) Update code changes</b></br>
   If you made some code changes and you want to upgrade the token with your changes:</br>
   ```dfx deploy icrc1```
   
