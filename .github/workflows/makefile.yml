@@ -16,12 +16,6 @@ jobs:
         with:
           dfx-version: 0.15.2
           
-#      - name: Install moc version manager
-#        run: | 
-#          npm  --yes -g i mocv
-#          mocv use 0.10.3
-#          export DFX_MOC_PATH=$(mocv bin current)/moc
-
       - name: install mops
         run: |
             npm --yes -g i ic-mops
@@ -48,12 +42,6 @@ jobs:
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
           dfx-version: 0.15.2
-
-#      - name: Install moc version manager
-#        run: | 
-#          npm  --yes -g i mocv
-#          mocv use 0.10.3
-#          export DFX_MOC_PATH=$(mocv bin current)/moc
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
