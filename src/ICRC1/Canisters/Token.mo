@@ -331,8 +331,8 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
 
         
         var balance = Cycles.balance();        
-        let cyclesRequired = T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED;        
-        if (balance < T.ConstantTypes.TOKEN_CANISTERS_MINIMUM_CYCLES_TO_KEEP + (cyclesRequired*2)) {            
+        let cyclesRequired = T.ConstantTypes.ARCHIVE_CYCLES_REQUIRED;        
+        if (balance < T.ConstantTypes.TOKEN_CYCLES_TO_KEEP + (T.ConstantTypes.ARCHIVE_CYCLES_AUTOREFILL)) {            
             return;
         };
         
@@ -344,9 +344,9 @@ shared ({ caller = _owner }) actor class Token(init_args : ?T.TokenTypes.TokenIn
             let archive:T.ArchiveTypes.ArchiveInterface = actor(principalText);
             let archiveCyclesBalance =  await archive.cycles_available();
             if (archiveCyclesBalance < cyclesRequired){
-                let diff:Nat = cyclesRequired-archiveCyclesBalance;
-                if (balance > diff + T.ConstantTypes.TOKEN_CANISTERS_MINIMUM_CYCLES_TO_KEEP){
-                    Cycles.add(T.ConstantTypes.ARCHIVE_CANISTERS_MINIMUM_CYCLES_REQUIRED);
+                let diff:Nat = T.ConstantTypes.ARCHIVE_CYCLES_AUTOREFILL-archiveCyclesBalance;
+                if (balance > diff + T.ConstantTypes.TOKEN_CYCLES_TO_KEEP){
+                    Cycles.add(T.ConstantTypes.ARCHIVE_CYCLES_AUTOREFILL);
                     await archive.deposit_cycles();
                     balance := Cycles.balance();   
                     autoTopupData.autoCyclesTopUpOccuredNumberOfTimes:= autoTopupData.autoCyclesTopUpOccuredNumberOfTimes + 1;

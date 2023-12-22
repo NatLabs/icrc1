@@ -16,8 +16,7 @@ TOKENINITFORTEST='( opt record { \
 	}; \
 	min_burn_amount = 10_000; \
 	minting_account = null; \
-	advanced_settings = null; \
-	minting_allowed=false; \
+	minting_allowed=true; \
 })' \
 
 TESTIDENTITY=IdentityForTests
@@ -32,12 +31,10 @@ PEMDIR=~/.config/dfx/identity/$(TESTIDENTITY)
 .PHONY: test docs actor-test
 
 AddIdentities:
-ifeq (,$(wildcard ./identityfortests.pem))    
+ifeq (,$(wildcard $(PEMDIR)/identityfortests.pem))   
 	@dfx identity new $(TESTIDENTITY) --force --storage-mode plaintext	
 	@sleep 1	
-	@dfx identity export $(TESTIDENTITY) > $(PEMDIR)/identityfortests.pem
-	
-#	@dfx identity export $(TESTIDENTITY) > ~/.config/dfx/identity/$(TESTIDENTITY)/identity.pem
+	@dfx identity export $(TESTIDENTITY) > $(PEMDIR)/identityfortests.pem	
 endif
 
 dfx-cache-install: 
@@ -55,13 +52,13 @@ docs:
 
 internal-tests: dfx-cache-install
 	@dfx stop
-	@dfx start --background
+	@dfx start --background --clean
 	@sleep 5
 	@dfx deploy test
 	@dfx ledger fabricate-cycles --canister test --cycles 100000000000000
 	@dfx canister call test run_tests
 
-ref-test: update-pemdir AddIdentities ref-test-before ref-test-execution ref-test-after
+ref-test: update-variables AddIdentities ref-test-before ref-test-execution ref-test-after
 	
 ref-test-before:    
 	@$(eval TESTIDENTITYMINTINGOWNER=$(shell dfx identity whoami))
@@ -72,6 +69,7 @@ ref-test-before:
 	@sleep 5
 	@echo identity for testing $(TESTIDENTITY)
 	@echo identity as token owner $(TESTIDENTITYMINTINGOWNER)	
+	@echo dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)
 	@dfx deploy icrc1 --identity $(TESTIDENTITYMINTINGOWNER) --no-wallet --argument $(TOKENINITFORTEST)
 	@dfx ledger fabricate-cycles --canister icrc1 --cycles 10000000
 
@@ -85,15 +83,61 @@ ref-test-after:
 	dfx stop >NUL
 	dfx start --background --clean >NUL
 
-
-update-pemdir:
+update-variables:
 ifeq ($(origin GITHUB_WORKSPACE),undefined)	
+#on local computer	
 	@echo using PEM-file-directory: $(PEMDIR)
 else
+#inside build execution on server		
 	@$(eval PEMDIR=$(GITHUB_WORKSPACE))
 	@echo using PEM-file-directory: $(PEMDIR)	
 endif 
 
- 
+
+install-check:
+ifeq (, $(shell which curl))
+	@echo No curl is installed, curl will be installed now.... 
+	@sudo apt-get install curl -y
+endif
+
+ifeq (,$(shell which $(HOME)/bin/dfx))	
+	@echo No dfx is installed, dfx will be installed now....
+	curl -fsSL https://internetcomputer.org/install.sh -o install_dfx.sh
+	chmod +x install_dfx.sh
+	./install_dfx.sh
+	rm install_dfx.sh		
+endif
+
+ifeq (, $(shell which nodejs))
+	sudo apt install nodejs -y
+endif
+
+ifeq (, $(shell which npm))
+	sudo apt install npm -y
+endif
+
+ifeq (, $(shell which mops))
+	sudo npm i -g ic-mops
+endif
+
+ifeq (, $(shell which $(HOME)/bin/vessel))	
+	rm installvessel.sh -f
+	echo '#install vessel'>installvessel.sh
+	echo cd $(HOME)/bin>>installvessel.sh
+	echo wget https://github.com/dfinity/vessel/releases/download/v0.7.0/vessel-linux64 >> installvessel.sh
+	echo mv vessel-linux64 vessel >>installvessel.sh
+	echo chmod +x vessel>>installvessel.sh
+	chmod +x installvessel.sh
+	./installvessel.sh
+	rm installvessel.sh -f
+endif	
+	
+ifeq (, $(shell which pkg-config))
+	sudo apt install pkg-config -y
+endif
+	
+ifeq (,$(wildcard $(HOME)/.rustup))  
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+endif	
 
 
