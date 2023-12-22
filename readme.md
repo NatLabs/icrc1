@@ -1,6 +1,6 @@
 # Build-status
 
-![example branch parameter](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=main&kill_cache=1&event=push)
+[![Makefile CI](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml/badge.svg?branch=main)](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml)
 
 # ICRC-1 Implementation details 
 - This repo contains the implementation of the [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
