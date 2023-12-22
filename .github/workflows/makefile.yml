@@ -1,6 +1,12 @@
 name: Makefile CI
 
-on: [push, pull_request_target]
+on: 
+  pull_request_target:
+    types:
+      - closed
+  push:
+        
+#  [push, pull_request_target]
 
 jobs:
   build:
