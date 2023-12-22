@@ -304,8 +304,15 @@ module {
     };    
 
     /// Returns the total supply of circulating tokens
-    public func total_supply(token : TokenData) : Balance {
-        token.minted_tokens - token.burned_tokens;
+    public func total_supply(token : TokenData) : Balance {                
+        var iter = Trie.iter(token.accounts.trie);        
+        var totalBalances:Nat = 0;
+               
+        for ((k:Blob,v:T.CommonTypes.Balance) in iter) {                                                
+            totalBalances:=totalBalances + v;                        
+        };
+
+        return totalBalances;
     };
 
     /// Returns the total supply of minted tokens
