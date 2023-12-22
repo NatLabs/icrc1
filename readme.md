@@ -1,4 +1,7 @@
-# ICRC-1 Implementation 
+# Master branch build status
+[![Makefile CI](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml/badge.svg?branch=main)](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml)
+
+# ICRC-1 Implementation details
 - This repo contains the implementation of the [ICRC-1](https://github.com/dfinity/ICRC-1) token standard. 
 - Code of the SNEED ICRC token was merged into this repository: https://github.com/icsneed/sneed  
 - Two test packages are included. Internal tests and a copy of dfinity reference tests (https://github.com/dfinity/ICRC-1/tree/main/test).
