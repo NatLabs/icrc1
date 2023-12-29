@@ -7,6 +7,7 @@ import Float "mo:base/Float";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
 import EC "mo:base/ExperimentalCycles";
+import Buffer "mo:base/Buffer";
 
 import Archive "../../src/ICRC1/Canisters/Archive";
 import T "../../src/ICRC1/Types";
@@ -55,7 +56,7 @@ module {
 
     func create_canister_and_add_cycles(n : Float) {
         EC.add(
-            CREATE_CANISTER + Int.abs(Float.toInt(n * 1_000_000_000_000)),
+            CREATE_CANISTER + Int.abs(Float.toInt(n * 1_000_000_000_000))
         );
     };
 
@@ -75,6 +76,25 @@ module {
                             (await archive.total_transactions()) == 0,
                             (await archive.append_transactions(txs)) == #ok(),
                             (await archive.total_transactions()) == 500,
+                        ]);
+                    },
+                ),
+                it(
+                    "append_transactions() doesn't duplicate",
+                    do {
+                        create_canister_and_add_cycles(0.1);
+                        let archive = await Archive.Archive();
+
+                        let txs = new_txs(500);
+                        ignore await archive.append_transactions(txs);
+
+                        // added 1 extra transaction that is not duplicated, and should be appended
+                        let duplicated_txs = new_txs(501);
+
+                        assertAllTrue([
+                            (await archive.total_transactions()) == 500,
+                            (await archive.append_transactions(duplicated_txs)) == #ok(),
+                            (await archive.total_transactions()) == 501,
                         ]);
                     },
                 ),

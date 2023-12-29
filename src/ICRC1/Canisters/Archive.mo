@@ -44,7 +44,6 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     stable let txStore = StableTrieMap.new<Nat, [MemoryBlock]>();
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
-
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
@@ -61,20 +60,24 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
             switch (last_bucket) {
                 case (?last_bucket) {
+                    // Ensure no pre-registered transaction is stored
+                    let last_tx_index = get_tx(last_bucket[last_bucket.size() - 1]).index;
+                    let filtered_txs = Array.filter<T.Transaction>(txs, func tx = tx.index > last_tx_index);
+
                     let new_bucket = Iter.toArray(
                         Itertools.take(
                             Itertools.chain(
                                 last_bucket.vals(),
-                                Iter.map(txs.vals(), store_tx),
+                                Iter.map(filtered_txs.vals(), store_tx),
                             ),
                             BUCKET_SIZE,
-                        ),
+                        )
                     );
 
                     if (new_bucket.size() == BUCKET_SIZE) {
                         let offset = (BUCKET_SIZE - last_bucket.size()) : Nat;
 
-                        txs_iter := Itertools.fromArraySlice(txs, offset, txs.size());
+                        txs_iter := Itertools.fromArraySlice(filtered_txs, offset, txs.size());
                     } else {
                         txs_iter := Itertools.empty();
                     };
@@ -160,7 +163,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             Iter.map(
                 Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
                 get_tx,
-            ),
+            )
         );
 
         { transactions };
