@@ -56,7 +56,7 @@ module {
 
     func create_canister_and_add_cycles(n : Float) {
         EC.add(
-            CREATE_CANISTER + Int.abs(Float.toInt(n * 1_000_000_000_000))
+            CREATE_CANISTER + Int.abs(Float.toInt(n * 1_000_000_000_000)),
         );
     };
 

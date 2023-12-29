@@ -44,6 +44,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
     stable let txStore = StableTrieMap.new<Nat, [MemoryBlock]>();
 
     public shared ({ caller }) func append_transactions(txs : [Transaction]) : async Result.Result<(), Text> {
+
         if (caller != ledger_canister_id) {
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
@@ -71,7 +72,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
                                 Iter.map(filtered_txs.vals(), store_tx),
                             ),
                             BUCKET_SIZE,
-                        )
+                        ),
                     );
 
                     if (new_bucket.size() == BUCKET_SIZE) {
@@ -163,7 +164,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             Iter.map(
                 Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
                 get_tx,
-            )
+            ),
         );
 
         { transactions };
