@@ -107,10 +107,8 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         );
 
         let last_bucket = switch (last_bucket_opt) {
-            case (?last_bucket) { last_bucket };
-            case (null) {
-                Debug.trap("Unexpected Error: Last Bucket not found");
-            };
+            case (?last_bucket) last_bucket;
+            case (null) Debug.trap("Unexpected Error: Last Bucket not found");
         };
 
         if (last_bucket.size() == 0) Debug.trap("Unexpected Error: Last Bucket is not filled");
