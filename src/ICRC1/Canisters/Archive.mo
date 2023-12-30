@@ -49,7 +49,10 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             return #err("Unauthorized Access: Only the ledger canister can access this archive canister");
         };
 
-        var txs_iter = txs.vals();
+        // Ensure no pre-registered transaction is stored
+        let last_tx_index = get_last_tx_index();
+        let filtered_txs = Array.filter<T.Transaction>(txs, func tx = tx.index > last_tx_index);
+        var txs_iter = filtered_txs.vals();
 
         if (trailing_txs > 0) {
             let last_bucket = StableTrieMap.get(
@@ -61,10 +64,6 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
 
             switch (last_bucket) {
                 case (?last_bucket) {
-                    // Ensure no pre-registered transaction is stored
-                    let last_tx_index = get_tx(last_bucket[last_bucket.size() - 1]).index;
-                    let filtered_txs = Array.filter<T.Transaction>(txs, func tx = tx.index > last_tx_index);
-
                     let new_bucket = Iter.toArray(
                         Itertools.take(
                             Itertools.chain(
@@ -72,7 +71,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
                                 Iter.map(filtered_txs.vals(), store_tx),
                             ),
                             BUCKET_SIZE,
-                        ),
+                        )
                     );
 
                     if (new_bucket.size() == BUCKET_SIZE) {
@@ -94,6 +93,29 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
         };
 
         #ok();
+    };
+
+    func get_last_tx_index() : Int {
+        if (total_txs() == 0) return -1;
+
+        let bucket_index = if (trailing_txs > 0) filled_buckets else Nat.max(filled_buckets - 1, 0);
+        let last_bucket_opt = StableTrieMap.get(
+            txStore,
+            Nat.equal,
+            U.hash,
+            bucket_index,
+        );
+
+        let last_bucket = switch (last_bucket_opt) {
+            case (?last_bucket) { last_bucket };
+            case (null) {
+                Debug.trap("Unexpected Error: Last Bucket not found");
+            };
+        };
+
+        if (last_bucket.size() == 0) Debug.trap("Unexpected Error: Last Bucket is not filled");
+
+        get_tx(last_bucket[last_bucket.size() - 1]).index;
     };
 
     func total_txs() : Nat {
@@ -164,7 +186,7 @@ shared ({ caller = ledger_canister_id }) actor class Archive() : async T.Archive
             Iter.map(
                 Itertools.take(iter, MAX_TRANSACTIONS_PER_REQUEST),
                 get_tx,
-            ),
+            )
         );
 
         { transactions };
