@@ -1,9 +1,9 @@
 name: Makefile CI
 
-on: 
+on:
   push:
     branches:
-      - main 
+      - main
       - dev
   pull_request_target:
     branches:
@@ -22,7 +22,7 @@ jobs:
       - uses: aviate-labs/setup-dfx@v0.2.3
         with:
           dfx-version: 0.15.1
-      
+
       - name: Cache Node modules
         uses: actions/cache@v2
         with:
@@ -31,16 +31,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Install moc version manager
-        run: | 
-          npm  --yes -g i mocv
-          mocv use 0.10.2
-          export DFX_MOC_PATH=$(mocv bin current)/moc
-
       - name: install mops
         run: |
-            npm --yes -g i ic-mops
-            mops i
+          npm --yes -g i ic-mops
+          mops i
 
       # - name: Detect warnings
       #   run: make no-warn
@@ -65,12 +59,6 @@ jobs:
         with:
           dfx-version: 0.15.1
 
-      - name: Install moc version manager
-        run: | 
-          npm  --yes -g i mocv
-          mocv use 0.10.2
-          export DFX_MOC_PATH=$(mocv bin current)/moc
-
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -80,8 +68,9 @@ jobs:
 
       - name: install mops
         run: |
-            npm --yes -g i ic-mops
-            mops i
+          npm --yes -g i ic-mops
+          mops i
+          mops toolchain use moc 0.10.2
 
       - name: Run reference tests
         run: |
@@ -90,6 +79,3 @@ jobs:
           dfx identity use icrc-ref-test
           dfx identity whoami
           make ref-test
-          
-
-      
