@@ -1,3 +1,8 @@
+
+
+# This repository moved to new location: [5000Slices-ICRC1:](https://github.com/5000slices1/ICRC1-Implementation-with-tests) https://github.com/5000slices1/ICRC1-Implementation-with-tests
+
+
 # Build-status
 
 [![Makefile CI](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml/badge.svg?branch=main)](https://github.com/fGhost713/ICRC1-Implementation-with-tests/actions/workflows/makefile.yml)
